@@ -31,3 +31,6 @@ build/
 
 ### VS Code ###
 .vscode/
+src/main/java/com/maher/booking_system/controller/TestController.java
+FIX_REPORT_AR.md
+ERRORS_AND_FIXES_REPORT.pdf

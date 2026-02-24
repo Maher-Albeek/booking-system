@@ -1,10 +1,12 @@
 package com.maher.booking_system.controller;
 
+import java.util.List;
+import java.util.Objects;
+
 import com.maher.booking_system.model.Booking;
 import com.maher.booking_system.service.BookingService;
+import org.springframework.lang.NonNull;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/bookings")
@@ -22,17 +24,20 @@ public class BookingController {
     }
 
     @GetMapping("/{id}")
-    public Booking getBookingById(@PathVariable Long id) {
+    public Booking getBookingById(@PathVariable @NonNull Long id) {
+        Objects.requireNonNull(id, "id must not be null");
         return bookingService.getBookingById(id);
     }
 
     @PostMapping
-    public Booking createBooking(@RequestBody Booking booking) {
-        return bookingService.createBooking(booking);
+    public @NonNull Booking createBooking(@RequestBody @NonNull Booking booking) {
+        Booking safeBooking = Objects.requireNonNull(booking, "booking must not be null");
+        return bookingService.createBooking(safeBooking);
     }
 
     @DeleteMapping("/{id}")
-    public void deleteBooking(@PathVariable Long id) {
+    public void deleteBooking(@PathVariable @NonNull Long id) {
+        Objects.requireNonNull(id, "id must not be null");
         bookingService.deleteBooking(id);
     }
 }

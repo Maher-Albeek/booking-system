@@ -6,7 +6,5 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface BookingRepository extends JpaRepository<Booking, Long> {
-    boolean existsByResourceIdAndTimeSlotId(int resourceId, int timeSlotId);
-    // هنا تقدر تضيف استعلامات مخصصة لو بدك
-    // مثال: List<Booking> findByStatus(String status);
+    boolean existsByResourceIdAndTimeSlotId(Long resourceId, Long timeSlotId);
 }

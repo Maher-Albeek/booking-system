@@ -1,5 +1,8 @@
 package com.maher.booking_system.service;
 
+import java.util.Objects;
+
+import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 import com.maher.booking_system.model.Resources;
 import com.maher.booking_system.repository.ResourcesRepository;
@@ -12,8 +15,9 @@ public class ResourcesService {
         this.resourcesRepository = resourcesRepository;
     }
 
-    public Resources createResource(Resources resource) {
-        return resourcesRepository.save(resource);
+    public @NonNull Resources createResource(@NonNull Resources resource) {
+        Resources safeResource = Objects.requireNonNull(resource, "resource must not be null");
+        return resourcesRepository.save(safeResource);
     }
 
     public Resources getResourceById(long id) {
