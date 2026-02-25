@@ -44,9 +44,8 @@ public class BookingController {
         return BookingMapper.toResponse(booking);
     }
 
-    @DeleteMapping("/{id}")
-    public void deleteBooking(@PathVariable @NonNull Long id) {
-        Objects.requireNonNull(id, "id must not be null");
-        bookingService.deleteBooking(id);
+    @PatchMapping("/{id}/cancel")
+    public void cancel(@PathVariable Long id) {
+        bookingService.cancelBooking(id);
     }
 }

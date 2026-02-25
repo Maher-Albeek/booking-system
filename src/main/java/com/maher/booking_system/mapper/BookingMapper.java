@@ -14,7 +14,7 @@ public final class BookingMapper {
         response.setUserId(booking.getUserId());
         response.setResourceId(booking.getResourceId());
         response.setTimeSlotId(booking.getTimeSlotId());
-        response.setStatus(booking.getStatus());
+        response.setStatus(booking.getStatus().name());
         response.setBookingTime(booking.getBookingTime());
         response.setCustomerName(booking.getCustomerName());
         response.setServiceName(booking.getServiceName());

@@ -17,11 +17,12 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.maher.booking_system.model.Booking;
 import com.maher.booking_system.repository.BookingRepository;
+import com.maher.booking_system.model.enums.BookingStatus;
 
 @Service
 public class BookingService {
 
-    private static final String CONFIRMED_STATUS = "CONFIRMED";
+    private static final BookingStatus CONFIRMED_STATUS = BookingStatus.CONFIRMED;
 
     private final BookingRepository bookingRepository;
     private final TimeSlotRepository timeSlotRepository;
@@ -67,7 +68,7 @@ public class BookingService {
         booking.setTimeSlotId(safeRequest.getTimeSlotId());
         booking.setCustomerName(safeRequest.getCustomerName());
         booking.setServiceName(safeRequest.getServiceName());
-        booking.setStatus(CONFIRMED_STATUS);
+        booking.setStatus(BookingStatus.CONFIRMED);
         booking.setBookingTime(LocalDateTime.now());
 
         slot.setAvailable(false);
@@ -89,15 +90,23 @@ public class BookingService {
     }
 
     @Transactional
-    public void deleteBooking(@NonNull Long id) {
-        Objects.requireNonNull(id, "id must not be null");
-        Booking booking = getBookingById(id);
-        if (booking.getTimeSlotId() != null) {
-            timeSlotRepository.findByIdForUpdate(booking.getTimeSlotId()).ifPresent(slot -> {
-                slot.setAvailable(true);
-                timeSlotRepository.save(slot);
-            });
+    public void cancelBooking(@NonNull Long bookingId) {
+        Objects.requireNonNull(bookingId, "bookingId must not be null");
+
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new NotFoundException("Booking not found"));
+
+        if (booking.getStatus() == BookingStatus.CANCELLED) {
+            throw new BadRequestException("Booking already cancelled");
         }
-        bookingRepository.delete(booking);
+
+        TimeSlot slot = timeSlotRepository.findByIdForUpdate(booking.getTimeSlotId())
+                .orElseThrow(() -> new NotFoundException("Slot not found"));
+
+        booking.setStatus(BookingStatus.CANCELLED);
+        slot.setAvailable(true);
+
+        bookingRepository.save(booking);
+        timeSlotRepository.save(slot);
     }
 }

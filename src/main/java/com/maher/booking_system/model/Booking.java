@@ -2,6 +2,7 @@ package com.maher.booking_system.model;
 
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
+import com.maher.booking_system.model.enums.BookingStatus;
 
 @Entity
 @Table(
@@ -23,8 +24,9 @@ public class Booking {
     @Column(name = "time_slot_id")
     private Long timeSlotId;
 
-    @Column(nullable = false, length = 50)
-    private String status;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private BookingStatus status;
 
     @Column(name = "booking_time")
     private LocalDateTime bookingTime;
@@ -47,8 +49,8 @@ public class Booking {
     public Long getTimeSlotId() { return timeSlotId; }
     public void setTimeSlotId(Long timeSlotId) { this.timeSlotId = timeSlotId; }
 
-    public String getStatus() { return status; }
-    public void setStatus(String status) { this.status = status; }
+    public BookingStatus getStatus() { return status; }
+    public void setStatus(BookingStatus status) { this.status = status; }
 
     public LocalDateTime getBookingTime() { return bookingTime; }
     public void setBookingTime(LocalDateTime bookingTime) { this.bookingTime = bookingTime; }
