@@ -3,7 +3,7 @@ package com.maher.booking_system.controller;
 import java.util.List;
 import java.util.Objects;
 
-import com.maher.booking_system.model.Time_slots;
+import com.maher.booking_system.model.TimeSlot;
 import com.maher.booking_system.service.Time_slotsService;
 import org.springframework.lang.NonNull;
 import org.springframework.web.bind.annotation.*;
@@ -20,14 +20,14 @@ public class Time_slotsController {
 
     // GET all time slots
     @GetMapping
-    public List<Time_slots> getAllTimeSlots() {
+    public List<TimeSlot> getAllTimeSlots() {
         return time_slotsService.getAllTimeSlots();
     }
 
     // POST create time slot
     @PostMapping
-    public @NonNull Time_slots createTimeSlot(@RequestBody @NonNull Time_slots time_slot) {
-        Time_slots safeTimeSlot = Objects.requireNonNull(time_slot, "time_slot must not be null");
+    public @NonNull TimeSlot createTimeSlot(@RequestBody @NonNull TimeSlot time_slot) {
+        TimeSlot safeTimeSlot = Objects.requireNonNull(time_slot, "time_slot must not be null");
         return time_slotsService.createTimeSlot(safeTimeSlot);
     }
 

@@ -1,38 +1,16 @@
-package com.maher.booking_system.model;
+package com.maher.booking_system.dto;
 
-import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
-@Entity
-@Table(
-        name = "bookings",
-        uniqueConstraints = @UniqueConstraint(name = "uq_bookings_time_slot", columnNames = "time_slot_id")
-)
-public class Booking {
+public class BookingResponse {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-
-    @Column(name = "user_id")
     private Long userId;
-
-    @Column(name = "resource_id")
     private Long resourceId;
-
-    @Column(name = "time_slot_id")
     private Long timeSlotId;
-
-    @Column(nullable = false, length = 50)
     private String status;
-
-    @Column(name = "booking_time")
     private LocalDateTime bookingTime;
-
-    @Column(name = "customer_name")
     private String customerName;
-
-    @Column(name = "service_name")
     private String serviceName;
 
     public Long getId() { return id; }

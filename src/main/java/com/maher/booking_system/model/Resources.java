@@ -10,6 +10,10 @@ public class Resources {
     private Long id;
 
     private String name;
+
+    @Column(name = "description")
+    private String description;
+
     private String type;
     private String location;
     private boolean active;
@@ -20,6 +24,9 @@ public class Resources {
 
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
+
+    public String getDescription() { return description; }
+    public void setDescription(String description) { this.description = description; }
 
     public String getType() { return type; }
     public void setType(String type) { this.type = type; }

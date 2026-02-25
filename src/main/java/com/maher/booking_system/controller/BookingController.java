@@ -1,8 +1,13 @@
 package com.maher.booking_system.controller;
 
+import com.maher.booking_system.mapper.BookingMapper;
+import jakarta.validation.Valid;
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
+import com.maher.booking_system.dto.BookingResponse;
+import com.maher.booking_system.dto.CreateBookingRequest;
 import com.maher.booking_system.model.Booking;
 import com.maher.booking_system.service.BookingService;
 import org.springframework.lang.NonNull;
@@ -19,20 +24,24 @@ public class BookingController {
     }
 
     @GetMapping
-    public List<Booking> getAllBookings() {
-        return bookingService.getAllBookings();
+    public List<BookingResponse> getAllBookings() {
+        return bookingService.getAllBookings()
+                .stream()
+                .map(BookingMapper::toResponse)
+                .collect(Collectors.toList());
     }
 
     @GetMapping("/{id}")
-    public Booking getBookingById(@PathVariable @NonNull Long id) {
+    public BookingResponse getBookingById(@PathVariable @NonNull Long id) {
         Objects.requireNonNull(id, "id must not be null");
-        return bookingService.getBookingById(id);
+        Booking booking = bookingService.getBookingById(id);
+        return BookingMapper.toResponse(booking);
     }
 
     @PostMapping
-    public @NonNull Booking createBooking(@RequestBody @NonNull Booking booking) {
-        Booking safeBooking = Objects.requireNonNull(booking, "booking must not be null");
-        return bookingService.createBooking(safeBooking);
+    public BookingResponse create(@Valid @RequestBody CreateBookingRequest request) {
+        Booking booking = bookingService.createBooking(request);
+        return BookingMapper.toResponse(booking);
     }
 
     @DeleteMapping("/{id}")

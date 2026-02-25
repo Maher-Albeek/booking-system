@@ -30,4 +30,7 @@ public class ResourcesService {
     public java.util.List<Resources> getAllResources() {
         return resourcesRepository.findAll();
     }
+    public java.util.List<Resources> getCars() {
+        return resourcesRepository.findByTypeAndActiveTrue("Car");
+    }
 }
