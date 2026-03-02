@@ -21,22 +21,22 @@ export class AuthStateService {
   readonly isAdmin = computed(() => this.user()?.role === 'ADMIN');
 
   login(identifier: string, password: string): Observable<AuthUser> {
-    return this.http
-      .post<AuthUser>('/api/auth/login', {
+    return this.persistSession(
+      this.http.post<AuthUser>('/api/auth/login', {
         identifier: identifier.trim(),
         password: password.trim()
       })
-      .pipe(
-        tap((user) => {
-          const normalizedUser = this.normalizeUser(user);
+    );
+  }
 
-          if (!normalizedUser) {
-            throw new Error('Login response did not contain a valid user session.');
-          }
-
-          this.persistUser(normalizedUser);
-        })
-      );
+  register(name: string, email: string, password: string): Observable<AuthUser> {
+    return this.persistSession(
+      this.http.post<AuthUser>('/api/auth/register', {
+        name: name.trim(),
+        email: email.trim(),
+        password: password.trim()
+      })
+    );
   }
 
   logout(): void {
@@ -51,6 +51,20 @@ export class AuthStateService {
 
   landingRoute(): '/admin' | '/user' {
     return this.isAdmin() ? '/admin' : '/user';
+  }
+
+  private persistSession(request: Observable<AuthUser>): Observable<AuthUser> {
+    return request.pipe(
+      tap((user) => {
+        const normalizedUser = this.normalizeUser(user);
+
+        if (!normalizedUser) {
+          throw new Error('Login response did not contain a valid user session.');
+        }
+
+        this.persistUser(normalizedUser);
+      })
+    );
   }
 
   private readUser(): AuthUser | null {

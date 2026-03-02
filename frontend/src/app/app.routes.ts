@@ -1,7 +1,7 @@
 import { Routes } from '@angular/router';
 
 import { AdminPageComponent } from './admin-page.component';
-import { adminGuard, authGuard, loginRedirectGuard } from './auth.guards';
+import { adminGuard, loginRedirectGuard } from './auth.guards';
 import { LoginPageComponent } from './login-page.component';
 import { UserPageComponent } from './user-page.component';
 
@@ -9,7 +9,7 @@ export const routes: Routes = [
   {
     path: '',
     pathMatch: 'full',
-    redirectTo: 'login'
+    redirectTo: 'user'
   },
   {
     path: 'login',
@@ -20,8 +20,7 @@ export const routes: Routes = [
   {
     path: 'user',
     component: UserPageComponent,
-    title: 'User Interface',
-    canActivate: [authGuard]
+    title: 'User Interface'
   },
   {
     path: 'admin',
@@ -31,6 +30,6 @@ export const routes: Routes = [
   },
   {
     path: '**',
-    redirectTo: 'login'
+    redirectTo: 'user'
   }
 ];

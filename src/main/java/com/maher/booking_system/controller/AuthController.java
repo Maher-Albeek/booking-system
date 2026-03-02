@@ -1,8 +1,10 @@
 package com.maher.booking_system.controller;
 
 import com.maher.booking_system.dto.AuthLoginRequest;
+import com.maher.booking_system.dto.AuthRegisterRequest;
 import com.maher.booking_system.dto.UserResponse;
 import com.maher.booking_system.service.UsersService;
+import jakarta.validation.Valid;
 import org.springframework.lang.NonNull;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -25,5 +27,11 @@ public class AuthController {
     public @NonNull UserResponse login(@RequestBody @NonNull AuthLoginRequest request) {
         AuthLoginRequest safeRequest = Objects.requireNonNull(request, "request must not be null");
         return usersService.authenticate(safeRequest.identifier(), safeRequest.password());
+    }
+
+    @PostMapping("/register")
+    public @NonNull UserResponse register(@Valid @RequestBody @NonNull AuthRegisterRequest request) {
+        AuthRegisterRequest safeRequest = Objects.requireNonNull(request, "request must not be null");
+        return usersService.registerUser(safeRequest.name(), safeRequest.email(), safeRequest.password());
     }
 }

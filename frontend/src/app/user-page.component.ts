@@ -3,7 +3,8 @@ import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
-import { finalize, forkJoin } from 'rxjs';
+import { RouterLink } from '@angular/router';
+import { finalize, forkJoin, of } from 'rxjs';
 
 import { AuthStateService } from './auth-state.service';
 
@@ -58,7 +59,7 @@ type CarSummary = Resource & {
 
 @Component({
   selector: 'app-user-page',
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, RouterLink],
   templateUrl: './user-page.component.html',
   styleUrl: './user-page.component.scss'
 })
@@ -97,14 +98,16 @@ export class UserPageComponent {
       note: 'Ready to reserve'
     },
     {
-      label: 'Confirmed Trips',
-      value: this.bookings().filter((booking) => booking.status === 'CONFIRMED').length,
-      note: 'Live reservations'
+      label: this.auth.isAuthenticated() ? 'Confirmed Trips' : 'Booking Access',
+      value: this.auth.isAuthenticated()
+        ? this.bookings().filter((booking) => booking.status === 'CONFIRMED').length
+        : 'Login',
+      note: this.auth.isAuthenticated() ? 'Live reservations' : 'Required to reserve'
     },
     {
-      label: 'Client Profiles',
-      value: this.users().length,
-      note: this.users().length ? 'Accounts available for booking' : 'No client records'
+      label: this.auth.isAuthenticated() ? 'Account Role' : 'Guest Mode',
+      value: this.auth.isAuthenticated() ? this.auth.user()?.role ?? 'USER' : 'Browse',
+      note: this.auth.isAuthenticated() ? 'Session active' : 'Registration available'
     }
   ]);
 
@@ -131,9 +134,19 @@ export class UserPageComponent {
     () => this.cars().find((car) => car.id === this.selectedCarId()) ?? null
   );
 
-  protected readonly selectedUser = computed(
-    () => this.users().find((user) => user.id === this.selectedUserId()) ?? null
-  );
+  protected readonly selectedUser = computed(() => {
+    if (!this.auth.isAdmin() && this.auth.user()) {
+      const authenticatedUser = this.auth.user()!;
+      return {
+        id: authenticatedUser.id,
+        name: authenticatedUser.name,
+        email: authenticatedUser.email,
+        role: authenticatedUser.role
+      };
+    }
+
+    return this.users().find((user) => user.id === this.selectedUserId()) ?? null;
+  });
 
   protected readonly canChooseUser = computed(
     () => this.auth.isAdmin() && this.users().length > 1
@@ -153,6 +166,10 @@ export class UserPageComponent {
   );
 
   protected readonly visibleBookings = computed(() => {
+    if (!this.auth.isAuthenticated()) {
+      return [];
+    }
+
     const authenticatedUserId = this.auth.user()?.id ?? null;
 
     if (!this.auth.isAdmin() && authenticatedUserId !== null) {
@@ -183,6 +200,7 @@ export class UserPageComponent {
     () =>
       this.loading() ||
       this.submitting() ||
+      !this.auth.isAuthenticated() ||
       this.selectedCar() === null ||
       this.selectedUser() === null ||
       this.selectedSlot() === null ||
@@ -225,6 +243,11 @@ export class UserPageComponent {
   }
 
   protected createBooking(): void {
+    if (!this.auth.isAuthenticated()) {
+      this.error.set('Login or register before creating a booking.');
+      return;
+    }
+
     const selectedCar = this.selectedCar();
     const selectedUser = this.selectedUser();
     const selectedSlot = this.selectedSlot();
@@ -268,6 +291,11 @@ export class UserPageComponent {
   }
 
   protected cancelBooking(bookingId: number): void {
+    if (!this.auth.isAuthenticated()) {
+      this.error.set('Login before managing bookings.');
+      return;
+    }
+
     this.cancellingId.set(bookingId);
     this.error.set(null);
     this.success.set(null);
@@ -336,11 +364,18 @@ export class UserPageComponent {
     this.loading.set(true);
     this.error.set(null);
 
+    const usersRequest = this.auth.isAdmin()
+      ? this.http.get<User[]>('/api/users')
+      : of([] as User[]);
+    const bookingsRequest = this.auth.isAuthenticated()
+      ? this.http.get<Booking[]>('/api/bookings')
+      : of([] as Booking[]);
+
     forkJoin({
       cars: this.http.get<Resource[]>('/api/resources/cars'),
-      users: this.http.get<User[]>('/api/users'),
+      users: usersRequest,
       timeSlots: this.http.get<TimeSlot[]>('/api/time_slots'),
-      bookings: this.http.get<Booking[]>('/api/bookings')
+      bookings: bookingsRequest
     })
       .pipe(
         takeUntilDestroyed(this.destroyRef),
@@ -376,7 +411,14 @@ export class UserPageComponent {
 
     const nextUser = this.auth.isAdmin()
       ? users.find((user) => user.id === this.selectedUserId()) ?? users[0] ?? null
-      : users.find((user) => user.id === authenticatedUser?.id) ?? null;
+      : authenticatedUser
+        ? {
+            id: authenticatedUser.id,
+            name: authenticatedUser.name,
+            email: authenticatedUser.email,
+            role: authenticatedUser.role
+          }
+        : null;
 
     this.selectedUserId.set(nextUser?.id ?? null);
 

@@ -27,7 +27,13 @@
   @if (!error() && loading()) {
     <section class="banner loading">
       <strong>Loading cars</strong>
-      <span>Fetching cars, users, time slots, and bookings.</span>
+      <span>
+        {{
+          auth.isAuthenticated()
+            ? 'Fetching cars, time slots, and booking data.'
+            : 'Fetching cars and open time slots.'
+        }}
+      </span>
     </section>
   }
 
@@ -35,6 +41,13 @@
     <section class="banner success">
       <strong>Updated</strong>
       <span>{{ success() }}</span>
+    </section>
+  }
+
+  @if (!auth.isAuthenticated()) {
+    <section class="banner info">
+      <strong>Guest access</strong>
+      <span>You can browse all available cars and slots now. Login or register before booking.</span>
     </section>
   }
 
@@ -82,8 +95,8 @@
                 <dd>{{ car.availableSlots }} / {{ car.totalSlots }}</dd>
               </div>
               <div>
-                <dt>Trips</dt>
-                <dd>{{ car.confirmedBookings }}</dd>
+                <dt>{{ auth.isAuthenticated() ? 'Trips' : 'Access' }}</dt>
+                <dd>{{ auth.isAuthenticated() ? car.confirmedBookings : 'Browse only' }}</dd>
               </div>
             </dl>
           </button>
@@ -118,48 +131,64 @@
       }
 
       <form class="booking-form" (ngSubmit)="createBooking()">
-        @if (canChooseUser()) {
-          <label class="field">
-            <span>Client profile</span>
-            <select
-              [ngModel]="selectedUserId()"
-              (ngModelChange)="selectUser($event)"
-              name="userId"
-            >
-              @for (user of users(); track user.id) {
-                <option [ngValue]="user.id">{{ user.name }}</option>
-              }
-            </select>
-          </label>
-        } @else if (selectedUser() || auth.user()) {
-          <section class="client-summary">
-            <span>Client profile</span>
-            <strong>{{ selectedUser()?.name || auth.user()!.name }}</strong>
-            <p>{{ selectedUser()?.email || auth.user()!.email || 'No email stored for this profile.' }}</p>
+        @if (!auth.isAuthenticated()) {
+          <section class="guest-panel">
+            <div>
+              <span>Booking access</span>
+              <strong>Sign in to confirm a reservation.</strong>
+              <p>Create a new user account if this is your first visit.</p>
+            </div>
+            <div class="guest-actions">
+              <a routerLink="/login" class="cta-link">Login</a>
+              <a routerLink="/login" [queryParams]="{ mode: 'register' }" class="secondary-link">
+                Register
+              </a>
+            </div>
           </section>
+        } @else {
+          @if (canChooseUser()) {
+            <label class="field">
+              <span>Client profile</span>
+              <select
+                [ngModel]="selectedUserId()"
+                (ngModelChange)="selectUser($event)"
+                name="userId"
+              >
+                @for (user of users(); track user.id) {
+                  <option [ngValue]="user.id">{{ user.name }}</option>
+                }
+              </select>
+            </label>
+          } @else if (selectedUser() || auth.user()) {
+            <section class="client-summary">
+              <span>Client profile</span>
+              <strong>{{ selectedUser()?.name || auth.user()!.name }}</strong>
+              <p>{{ selectedUser()?.email || auth.user()!.email || 'No email stored for this profile.' }}</p>
+            </section>
+          }
+
+          <label class="field">
+            <span>Customer name</span>
+            <input
+              type="text"
+              name="customerName"
+              [ngModel]="customerName()"
+              (ngModelChange)="customerName.set($event)"
+              placeholder="Enter the driver or customer name"
+            />
+          </label>
+
+          <label class="field">
+            <span>Trip label</span>
+            <input
+              type="text"
+              name="serviceName"
+              [ngModel]="serviceName()"
+              (ngModelChange)="serviceName.set($event)"
+              placeholder="Airport transfer, city trip, weekend drive..."
+            />
+          </label>
         }
-
-        <label class="field">
-          <span>Customer name</span>
-          <input
-            type="text"
-            name="customerName"
-            [ngModel]="customerName()"
-            (ngModelChange)="customerName.set($event)"
-            placeholder="Enter the driver or customer name"
-          />
-        </label>
-
-        <label class="field">
-          <span>Trip label</span>
-          <input
-            type="text"
-            name="serviceName"
-            [ngModel]="serviceName()"
-            (ngModelChange)="serviceName.set($event)"
-            placeholder="Airport transfer, city trip, weekend drive..."
-          />
-        </label>
 
         <section class="slot-picker">
           <div class="slot-header">
@@ -188,11 +217,18 @@
           }
         </section>
 
-        <button type="submit" class="submit-button" [disabled]="bookingDisabled()">
-          {{ submitting() ? 'Saving booking...' : 'Confirm booking' }}
-        </button>
+        @if (auth.isAuthenticated()) {
+          <button type="submit" class="submit-button" [disabled]="bookingDisabled()">
+            {{ submitting() ? 'Saving booking...' : 'Confirm booking' }}
+          </button>
 
-        <p class="form-note">Submitting this form sends a live <code>POST /api/bookings</code>.</p>
+          <p class="form-note">Submitting this form sends a live <code>POST /api/bookings</code>.</p>
+        } @else {
+          <p class="form-note">
+            Slot browsing stays open for guests. Login or register to send
+            <code>POST /api/bookings</code>.
+          </p>
+        }
       </form>
     </article>
 
@@ -205,46 +241,50 @@
       </div>
 
       <div class="reservation-list">
-        @for (booking of visibleBookings(); track booking.id) {
-          <section class="reservation-card">
-            <div class="reservation-topline">
-              <div>
-                <strong>{{ booking.customerName || 'Unnamed customer' }}</strong>
-                <p>{{ resourceLabel(booking.resourceId) }}</p>
+        @if (!auth.isAuthenticated()) {
+          <p class="empty-state">Login to view and manage your bookings.</p>
+        } @else {
+          @for (booking of visibleBookings(); track booking.id) {
+            <section class="reservation-card">
+              <div class="reservation-topline">
+                <div>
+                  <strong>{{ booking.customerName || 'Unnamed customer' }}</strong>
+                  <p>{{ resourceLabel(booking.resourceId) }}</p>
+                </div>
+                <span class="status-pill" [class.cancelled]="!isConfirmed(booking)">
+                  {{ booking.status }}
+                </span>
               </div>
-              <span class="status-pill" [class.cancelled]="!isConfirmed(booking)">
-                {{ booking.status }}
-              </span>
-            </div>
 
-            <dl>
-              <div>
-                <dt>Slot</dt>
-                <dd>{{ slotLabel(booking.timeSlotId) }}</dd>
-              </div>
-              <div>
-                <dt>Service</dt>
-                <dd>{{ booking.serviceName || 'No label provided' }}</dd>
-              </div>
-              <div>
-                <dt>Booked at</dt>
-                <dd>{{ formatDate(booking.bookingTime) }}</dd>
-              </div>
-            </dl>
+              <dl>
+                <div>
+                  <dt>Slot</dt>
+                  <dd>{{ slotLabel(booking.timeSlotId) }}</dd>
+                </div>
+                <div>
+                  <dt>Service</dt>
+                  <dd>{{ booking.serviceName || 'No label provided' }}</dd>
+                </div>
+                <div>
+                  <dt>Booked at</dt>
+                  <dd>{{ formatDate(booking.bookingTime) }}</dd>
+                </div>
+              </dl>
 
-            @if (isConfirmed(booking)) {
-              <button
-                type="button"
-                class="ghost-button"
-                (click)="cancelBooking(booking.id)"
-                [disabled]="cancellingId() === booking.id"
-              >
-                {{ cancellingId() === booking.id ? 'Cancelling...' : 'Cancel booking' }}
-              </button>
-            }
-          </section>
-        } @empty {
-          <p class="empty-state">No bookings available yet.</p>
+              @if (isConfirmed(booking)) {
+                <button
+                  type="button"
+                  class="ghost-button"
+                  (click)="cancelBooking(booking.id)"
+                  [disabled]="cancellingId() === booking.id"
+                >
+                  {{ cancellingId() === booking.id ? 'Cancelling...' : 'Cancel booking' }}
+                </button>
+              }
+            </section>
+          } @empty {
+            <p class="empty-state">No bookings available yet.</p>
+          }
         }
       </div>
     </article>

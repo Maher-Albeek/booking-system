@@ -121,6 +121,11 @@ code {
   border: 1px solid rgba(72, 165, 111, 0.28);
 }
 
+.banner.info {
+  background: rgba(88, 166, 255, 0.12);
+  border: 1px solid rgba(88, 166, 255, 0.24);
+}
+
 .stats {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -146,6 +151,7 @@ code {
 .car-card p,
 .selected-car p,
 .client-summary p,
+.guest-panel p,
 .reservation-card p {
   margin: 0;
   color: rgba(247, 242, 234, 0.7);
@@ -253,13 +259,15 @@ code {
 }
 
 .selected-car,
-.client-summary {
+.client-summary,
+.guest-panel {
   padding: 16px 18px;
   border-radius: 18px;
   background: rgba(255, 255, 255, 0.04);
 }
 
-.selected-car {
+.selected-car,
+.guest-panel {
   display: flex;
   justify-content: space-between;
   gap: 14px;
@@ -277,6 +285,36 @@ code {
   color: rgba(247, 242, 234, 0.72);
 }
 
+.guest-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.cta-link,
+.secondary-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  padding: 0 18px;
+  border-radius: 999px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.cta-link {
+  background: linear-gradient(135deg, #f8c46b, #d26a3b);
+  color: #111c2d;
+  box-shadow: 0 16px 34px rgba(210, 106, 59, 0.28);
+}
+
+.secondary-link {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.05);
+  color: #f7f2ea;
+}
+
 .booking-form {
   display: grid;
   gap: 16px;
@@ -290,6 +328,7 @@ code {
 
 .field span,
 .client-summary span,
+.guest-panel span,
 .slot-header span {
   color: rgba(247, 242, 234, 0.72);
   font-size: 0.8rem;
@@ -439,6 +478,7 @@ dd {
   .hero,
   .banner,
   .selected-car,
+  .guest-panel,
   .reservation-topline,
   .slot-header {
     flex-direction: column;

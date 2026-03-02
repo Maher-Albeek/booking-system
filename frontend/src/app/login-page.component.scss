@@ -23,8 +23,7 @@
 
 .login-copy,
 .login-form,
-.demo-panel,
-.demo-grid {
+.mode-switch {
   display: grid;
   gap: 12px;
 }
@@ -45,8 +44,7 @@ h1 {
 }
 
 .login-copy p:last-child,
-.demo-panel p,
-.demo-grid p {
+.login-link {
   margin: 0;
   color: rgba(247, 242, 234, 0.72);
 }
@@ -62,6 +60,28 @@ h1 {
   background: rgba(196, 78, 78, 0.14);
   border: 1px solid rgba(196, 78, 78, 0.32);
   color: #ffd8d2;
+}
+
+.mode-switch {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  padding: 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.mode-button {
+  border: 0;
+  border-radius: 999px;
+  padding: 12px 16px;
+  background: transparent;
+  color: rgba(247, 242, 234, 0.72);
+  box-shadow: none;
+}
+
+.mode-button.active {
+  background: linear-gradient(135deg, #f8c46b, #d26a3b);
+  color: #111c2d;
+  box-shadow: 0 16px 34px rgba(210, 106, 59, 0.2);
 }
 
 .field {
@@ -125,19 +145,17 @@ button:disabled {
   opacity: 0.75;
 }
 
-.demo-panel {
-  padding-top: 8px;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+.login-link {
+  text-align: center;
 }
 
-.demo-grid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+.login-link a {
+  color: #f8c46b;
+  text-decoration: none;
 }
 
-.demo-grid article {
-  padding: 16px;
-  border-radius: 20px;
-  background: rgba(255, 255, 255, 0.04);
+.login-link a:hover {
+  text-decoration: underline;
 }
 
 @media (max-width: 720px) {
@@ -148,9 +166,5 @@ button:disabled {
   .login-card {
     padding: 24px;
     border-radius: 26px;
-  }
-
-  .demo-grid {
-    grid-template-columns: 1fr;
   }
 }

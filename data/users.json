@@ -1,9 +1,13 @@
-[
-  {
-    "id": 1,
-    "name": "maher",
-    "email": "malbeek92@gmail.com",
-    "password": 123,
-    "role": "ADMIN"
-  }
-]
+[ {
+  "id" : 1,
+  "name" : "maher",
+  "email" : "malbeek92@gmail.com",
+  "password" : "123",
+  "role" : "ADMIN"
+}, {
+  "id" : 2,
+  "name" : "ad",
+  "email" : "roomgan@gmail.com",
+  "password" : "123123",
+  "role" : "USER"
+} ]

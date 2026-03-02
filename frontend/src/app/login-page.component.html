@@ -2,64 +2,122 @@
   <article class="login-card">
     <div class="login-copy">
       <p class="eyebrow">Booking System</p>
-      <h1>Sign in to continue</h1>
+      <h1>{{ mode() === 'login' ? 'Sign in to continue' : 'Create your user account' }}</h1>
       <p>
-        Use your booking account to open the customer page or the admin workspace. Your role
-        decides where the app sends you after login.
+        Browse cars as a guest, then sign in to book. If you do not have an account yet, register
+        here and the app will create a <code>USER</code> account for you.
       </p>
     </div>
 
-    @if (error()) {
-      <section class="login-banner error">
-        <strong>Authentication issue</strong>
-        <span>{{ error() }}</span>
-      </section>
+    <div class="mode-switch" aria-label="Authentication mode">
+      <button
+        type="button"
+        class="mode-button"
+        [class.active]="mode() === 'login'"
+        (click)="setMode('login')"
+      >
+        Login
+      </button>
+      <button
+        type="button"
+        class="mode-button"
+        [class.active]="mode() === 'register'"
+        (click)="setMode('register')"
+      >
+        Register
+      </button>
+    </div>
+
+    @if (mode() === 'login') {
+      @if (error()) {
+        <section class="login-banner error">
+          <strong>Authentication issue</strong>
+          <span>{{ error() }}</span>
+        </section>
+      }
+
+      <form class="login-form" (ngSubmit)="submit()">
+        <label class="field">
+          <span>Email or username</span>
+          <input
+            type="text"
+            name="identifier"
+            [ngModel]="identifier()"
+            (ngModelChange)="identifier.set($event)"
+            placeholder="user@example.com"
+            autocomplete="username"
+          />
+        </label>
+
+        <label class="field">
+          <span>Password</span>
+          <input
+            type="password"
+            name="password"
+            [ngModel]="password()"
+            (ngModelChange)="password.set($event)"
+            placeholder="Enter your password"
+            autocomplete="current-password"
+          />
+        </label>
+
+        <button type="submit" [disabled]="submitting()">
+          {{ submitting() ? 'Signing in...' : 'Login' }}
+        </button>
+      </form>
+    } @else {
+      @if (registerError()) {
+        <section class="login-banner error">
+          <strong>Registration issue</strong>
+          <span>{{ registerError() }}</span>
+        </section>
+      }
+
+      <form class="login-form" (ngSubmit)="submitRegistration()">
+        <label class="field">
+          <span>Name</span>
+          <input
+            type="text"
+            name="registerName"
+            [ngModel]="registerName()"
+            (ngModelChange)="registerName.set($event)"
+            placeholder="Enter your name"
+            autocomplete="name"
+          />
+        </label>
+
+        <label class="field">
+          <span>Email</span>
+          <input
+            type="email"
+            name="registerEmail"
+            [ngModel]="registerEmail()"
+            (ngModelChange)="registerEmail.set($event)"
+            placeholder="user@example.com"
+            autocomplete="email"
+          />
+        </label>
+
+        <label class="field">
+          <span>Password</span>
+          <input
+            type="password"
+            name="registerPassword"
+            [ngModel]="registerPassword()"
+            (ngModelChange)="registerPassword.set($event)"
+            placeholder="Minimum 6 characters"
+            autocomplete="new-password"
+          />
+        </label>
+
+        <button type="submit" [disabled]="registerSubmitting()">
+          {{ registerSubmitting() ? 'Creating account...' : 'Register as user' }}
+        </button>
+      </form>
     }
 
-    <form class="login-form" (ngSubmit)="submit()">
-      <label class="field">
-        <span>Email or username</span>
-        <input
-          type="text"
-          name="identifier"
-          [ngModel]="identifier()"
-          (ngModelChange)="identifier.set($event)"
-          placeholder="admin@booking.local"
-          autocomplete="username"
-        />
-      </label>
-
-      <label class="field">
-        <span>Password</span>
-        <input
-          type="password"
-          name="password"
-          [ngModel]="password()"
-          (ngModelChange)="password.set($event)"
-          placeholder="Enter your password"
-          autocomplete="current-password"
-        />
-      </label>
-
-      <button type="submit" [disabled]="submitting()">
-        {{ submitting() ? 'Signing in...' : 'Login' }}
-      </button>
-    </form>
-
-    <section class="demo-panel">
-      <p class="eyebrow">Demo accounts</p>
-      <div class="demo-grid">
-        <article>
-          <strong>Admin</strong>
-          <p><code>admin@booking.local</code></p>
-          <p><code>admin123</code></p>
-        </article>
-        <article>
-          <strong>User</strong>
-          <p><code>user@booking.local</code></p>
-          <p><code>user123</code></p>
-        </article>
-      </div>
-    </section>
+    <p class="login-link">
+      <a routerLink="/user">Continue as guest</a>
+    </p>
   </article>
 </section>

@@ -6,7 +6,6 @@ import com.maher.booking_system.repository.UsersRepository;
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
@@ -21,29 +20,23 @@ public class UsersService {
     }
 
     public @NonNull UserResponse createUsers(@NonNull Users users){
-        Users safeUser = Objects.requireNonNull(users, "users must not be null");
+        return createUser(users, false);
+    }
 
-        if(safeUser.getName() == null || safeUser.getName().isBlank() || safeUser.getEmail() == null || safeUser.getEmail().isBlank()) {
-            throw new IllegalArgumentException("Name and email cannot be null");
-        }
-        if(safeUser.getPassword() == null || safeUser.getPassword().trim().length() < 6) {
-            throw new IllegalArgumentException("Password must be at least 6 characters long");
-        }
-        safeUser.setName(safeUser.getName().trim());
-        safeUser.setEmail(safeUser.getEmail().trim());
-        safeUser.setPassword(safeUser.getPassword().trim());
-        safeUser.setRole(normalizeRole(safeUser.getRole()));
-
-        return toUserResponse(usersRepository.save(safeUser));
+    public @NonNull UserResponse registerUser(String name, String email, String password) {
+        Users user = new Users();
+        user.setName(name);
+        user.setEmail(email);
+        user.setPassword(password);
+        user.setRole("USER");
+        return createUser(user, true);
     }
 
     public Users getUsersById(long id){
-        ensureDefaultAccounts();
         return usersRepository.findById(id).orElse(null);
     }
 
     public List<Users> getAllUsers(){
-        ensureDefaultAccounts();
         return usersRepository.findAll();
     }
 
@@ -62,7 +55,7 @@ public class UsersService {
             throw new IllegalArgumentException("Email or username and password are required");
         }
 
-        return getAllUsers().stream()
+        return usersRepository.findAll().stream()
                 .filter(user -> matchesIdentifier(user, safeIdentifier))
                 .filter(user -> safePassword.equals(user.getPassword()))
                 .findFirst()
@@ -75,65 +68,42 @@ public class UsersService {
         usersRepository.deleteById(id);
     }
 
-    private void ensureDefaultAccounts() {
-        List<Users> existingUsers = new ArrayList<>(usersRepository.findAll());
-        boolean hasLoginReadyAccounts = existingUsers.stream().anyMatch(this::isLoginReady);
+    private @NonNull UserResponse createUser(@NonNull Users users, boolean forceUserRole) {
+        Users safeUser = Objects.requireNonNull(users, "users must not be null");
 
-        if (hasLoginReadyAccounts) {
-            return;
+        String normalizedName = safeUser.getName() == null ? "" : safeUser.getName().trim();
+        String normalizedEmail = safeUser.getEmail() == null ? "" : safeUser.getEmail().trim().toLowerCase(Locale.ROOT);
+        String normalizedPassword = safeUser.getPassword() == null ? "" : safeUser.getPassword().trim();
+
+        if(normalizedName.isBlank() || normalizedEmail.isBlank()) {
+            throw new IllegalArgumentException("Name and email cannot be null");
+        }
+        if(normalizedPassword.length() < 6) {
+            throw new IllegalArgumentException("Password must be at least 6 characters long");
         }
 
-        if (existingUsers.isEmpty()) {
-            usersRepository.save(buildDefaultUser("Demo User", "user@booking.local", "user123", "USER"));
-            usersRepository.save(buildDefaultUser("Demo Admin", "admin@booking.local", "admin123", "ADMIN"));
-            return;
+        if (emailExists(normalizedEmail)) {
+            throw new IllegalArgumentException("An account with this email already exists");
         }
 
-        boolean hasAdminAccount = existingUsers.stream()
-                .anyMatch(user -> "ADMIN".equals(normalizeRole(user.getRole())) && hasPassword(user));
+        safeUser.setName(normalizedName);
+        safeUser.setEmail(normalizedEmail);
+        safeUser.setPassword(normalizedPassword);
+        safeUser.setRole(forceUserRole ? "USER" : normalizeRole(safeUser.getRole()));
 
-        for (Users user : existingUsers) {
-            if (user.getName() == null || user.getName().isBlank()) {
-                user.setName("User " + user.getId());
-            }
-
-            if (user.getEmail() == null || user.getEmail().isBlank()) {
-                user.setEmail(("user" + user.getId() + "@booking.local").toLowerCase(Locale.ROOT));
-            }
-
-            if (!hasPassword(user)) {
-                user.setPassword("user123");
-            }
-
-            user.setRole(hasAdminAccount ? normalizeRole(user.getRole()) : "ADMIN");
-            hasAdminAccount = true;
-            usersRepository.save(user);
-        }
+        return toUserResponse(usersRepository.save(safeUser));
     }
 
     private boolean matchesIdentifier(Users user, String identifier) {
         return identifier.equalsIgnoreCase(user.getEmail()) || identifier.equalsIgnoreCase(user.getName());
     }
 
-    private boolean isLoginReady(Users user) {
-        return hasPassword(user)
-                && user.getName() != null
-                && !user.getName().isBlank()
-                && user.getEmail() != null
-                && !user.getEmail().isBlank();
-    }
-
-    private boolean hasPassword(Users user) {
-        return user.getPassword() != null && !user.getPassword().trim().isBlank();
-    }
-
-    private Users buildDefaultUser(String name, String email, String password, String role) {
-        Users user = new Users();
-        user.setName(name);
-        user.setEmail(email);
-        user.setPassword(password);
-        user.setRole(role);
-        return user;
+    private boolean emailExists(String email) {
+        return usersRepository.findAll().stream()
+                .map(Users::getEmail)
+                .filter(Objects::nonNull)
+                .map(existingEmail -> existingEmail.trim().toLowerCase(Locale.ROOT))
+                .anyMatch(email::equals);
     }
 
     private String normalizeRole(String role) {
