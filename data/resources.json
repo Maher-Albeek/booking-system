@@ -1,0 +1,18 @@
+[
+  {
+    "id": 3,
+    "name": "BMW X5",
+    "description": "SUV 2022",
+    "type": "CAR",
+    "location": "Berlin",
+    "active": true
+  },
+  {
+    "id": 4,
+    "name": "Audi A4",
+    "description": "Sedan",
+    "type": "CAR",
+    "location": "Berlin",
+    "active": true
+  }
+]
