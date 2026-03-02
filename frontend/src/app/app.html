@@ -1,58 +1,26 @@
 <main class="app-shell">
-  <header class="app-chrome">
-    <div class="brand-block">
-      <p class="eyebrow">Booking System</p>
-      <strong>Route-aware frontend shell</strong>
-      <span>One Angular app, two interfaces.</span>
-    </div>
+  @if (auth.isAuthenticated()) {
+    <header class="app-chrome">
+      <div class="brand-block">
+        <p class="eyebrow">Booking System</p>
+        <strong>{{ pageTitle() }}</strong>
+        <span>{{ pageSummary() }}</span>
+      </div>
 
-    <nav class="route-switcher" aria-label="Interface switcher">
-      <a routerLink="/user" routerLinkActive="active" class="route-link">User Interface</a>
-      <a routerLink="/admin" routerLinkActive="active" class="route-link">Admin Interface</a>
-    </nav>
+      <nav class="route-switcher" aria-label="Interface switcher">
+        <a routerLink="/user" routerLinkActive="active" class="route-link">User Page</a>
+        @if (auth.isAdmin()) {
+          <a routerLink="/admin" routerLinkActive="active" class="route-link">Admin Page</a>
+        }
+      </nav>
 
-    <div class="session-chip">
-      <span>{{ access.alias() || 'Local operator' }}</span>
-      <strong>{{ access.role() === 'ADMIN' ? 'Admin mode' : 'User mode' }}</strong>
-    </div>
-  </header>
-
-  <section class="access-panel">
-    <div class="access-copy">
-      <p class="eyebrow">Quick login</p>
-      <h1>{{ pageTitle() }}</h1>
-      <p>{{ pageSummary() }}</p>
-      <p class="access-note">
-        This selector is local to the browser. The backend APIs still do not enforce real
-        authentication or role checks.
-      </p>
-    </div>
-
-    <form class="access-form" (ngSubmit)="openSelectedInterface()">
-      <label class="field">
-        <span>Role</span>
-        <select [ngModel]="access.role()" (ngModelChange)="setRole($event)" name="role">
-          <option value="USER">User</option>
-          <option value="ADMIN">Admin</option>
-        </select>
-      </label>
-
-      <label class="field">
-        <span>Display name</span>
-        <input
-          type="text"
-          name="alias"
-          [ngModel]="access.alias()"
-          (ngModelChange)="setAlias($event)"
-          placeholder="Operator name"
-        />
-      </label>
-
-      <button type="submit">
-        Open {{ access.role() === 'ADMIN' ? 'Admin' : 'User' }} Interface
-      </button>
-    </form>
-  </section>
+      <div class="session-chip">
+        <span>{{ auth.user()?.name }}</span>
+        <strong>{{ auth.user()?.role === 'ADMIN' ? 'Administrator' : 'Customer' }}</strong>
+        <button type="button" class="logout-button" (click)="logout()">Logout</button>
+      </div>
+    </header>
+  }
 
   <router-outlet></router-outlet>
 </main>

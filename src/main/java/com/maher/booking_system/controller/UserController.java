@@ -1,5 +1,6 @@
 package com.maher.booking_system.controller;
 
+import com.maher.booking_system.dto.UserResponse;
 import com.maher.booking_system.model.Users;
 import com.maher.booking_system.service.UsersService;
 import org.springframework.lang.NonNull;
@@ -19,12 +20,12 @@ public class UserController {
     }
 
     @GetMapping
-    public List<Users> getAllUsers() {
-        return usersService.getAllUsers();
+    public List<UserResponse> getAllUsers() {
+        return usersService.getAllUserResponses();
     }
 
     @PostMapping
-    public @NonNull Users createUser(@RequestBody @NonNull Users user) {
+    public @NonNull UserResponse createUser(@RequestBody @NonNull Users user) {
         Users safeUser = Objects.requireNonNull(user, "user must not be null");
         return usersService.createUsers(safeUser);
     }

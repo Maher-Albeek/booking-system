@@ -118,7 +118,7 @@
       }
 
       <form class="booking-form" (ngSubmit)="createBooking()">
-        @if (users().length > 1) {
+        @if (canChooseUser()) {
           <label class="field">
             <span>Client profile</span>
             <select
@@ -131,11 +131,11 @@
               }
             </select>
           </label>
-        } @else if (selectedUser()) {
+        } @else if (selectedUser() || auth.user()) {
           <section class="client-summary">
             <span>Client profile</span>
-            <strong>{{ selectedUser()!.name }}</strong>
-            <p>{{ selectedUser()!.email || 'No email stored for this profile.' }}</p>
+            <strong>{{ selectedUser()?.name || auth.user()!.name }}</strong>
+            <p>{{ selectedUser()?.email || auth.user()!.email || 'No email stored for this profile.' }}</p>
           </section>
         }
 

@@ -1,11 +1,11 @@
-@if (!access.isAdmin()) {
+@if (!auth.isAdmin()) {
   <main class="admin-shell">
     <section class="locked-panel">
       <p class="eyebrow">Admin access required</p>
-      <h2>Switch the local role selector to Admin</h2>
+      <h2>You must sign in as an admin to open this page</h2>
       <p>
-        The <code>/admin</code> route is available, but these management tools only render when the
-        access selector in the header is set to Admin.
+        The <code>/admin</code> route is protected. Use an administrator account on the login page
+        to access these management tools.
       </p>
     </section>
   </main>

@@ -5,6 +5,8 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { finalize, forkJoin } from 'rxjs';
 
+import { AuthStateService } from './auth-state.service';
+
 type Resource = {
   id: number;
   name: string;
@@ -64,6 +66,7 @@ export class UserPageComponent {
   private readonly http = inject(HttpClient);
   private readonly destroyRef = inject(DestroyRef);
 
+  protected readonly auth = inject(AuthStateService);
   protected readonly title = 'Book Your Next Car';
   protected readonly loading = signal(true);
   protected readonly submitting = signal(false);
@@ -132,6 +135,10 @@ export class UserPageComponent {
     () => this.users().find((user) => user.id === this.selectedUserId()) ?? null
   );
 
+  protected readonly canChooseUser = computed(
+    () => this.auth.isAdmin() && this.users().length > 1
+  );
+
   protected readonly availableSlots = computed(() =>
     [...this.timeSlots()]
       .filter((slot) => slot.resourceId === this.selectedCarId() && slot.available)
@@ -146,6 +153,18 @@ export class UserPageComponent {
   );
 
   protected readonly visibleBookings = computed(() => {
+    const authenticatedUserId = this.auth.user()?.id ?? null;
+
+    if (!this.auth.isAdmin() && authenticatedUserId !== null) {
+      return [...this.bookings()]
+        .filter((booking) => booking.userId === authenticatedUserId)
+        .sort((left, right) => {
+          const leftTime = left.bookingTime ? new Date(left.bookingTime).getTime() : 0;
+          const rightTime = right.bookingTime ? new Date(right.bookingTime).getTime() : 0;
+          return rightTime - leftTime;
+        });
+    }
+
     const selectedUserId = this.selectedUserId();
     const hasUserScopedBookings = this.bookings().some((booking) => booking.userId === selectedUserId);
     const relevantBookings =
@@ -186,6 +205,10 @@ export class UserPageComponent {
   }
 
   protected selectUser(userId: number | null): void {
+    if (!this.auth.isAdmin()) {
+      return;
+    }
+
     const previousUser = this.selectedUser();
     const nextUser = this.users().find((user) => user.id === userId) ?? null;
 
@@ -345,17 +368,24 @@ export class UserPageComponent {
   private syncDefaults(cars: Resource[], users: User[], timeSlots: TimeSlot[]): void {
     const selectedCarId = this.selectedCarId();
     const selectedUser = this.selectedUser();
+    const authenticatedUser = this.auth.user();
 
     if (!cars.some((car) => car.id === selectedCarId)) {
       this.selectedCarId.set(cars[0]?.id ?? null);
     }
 
-    const nextUser = users.find((user) => user.id === this.selectedUserId()) ?? users[0] ?? null;
+    const nextUser = this.auth.isAdmin()
+      ? users.find((user) => user.id === this.selectedUserId()) ?? users[0] ?? null
+      : users.find((user) => user.id === authenticatedUser?.id) ?? null;
 
     this.selectedUserId.set(nextUser?.id ?? null);
 
-    if (!this.customerName().trim() || this.customerName() === selectedUser?.name) {
-      this.customerName.set(nextUser?.name ?? '');
+    if (
+      !this.customerName().trim() ||
+      this.customerName() === selectedUser?.name ||
+      this.customerName() === authenticatedUser?.name
+    ) {
+      this.customerName.set(nextUser?.name ?? authenticatedUser?.name ?? '');
     }
 
     const isSelectedSlotStillValid = timeSlots.some(

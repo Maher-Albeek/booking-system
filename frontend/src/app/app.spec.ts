@@ -18,13 +18,12 @@ describe('App', () => {
     expect(app).toBeTruthy();
   });
 
-  it('should render the quick login heading', () => {
+  it('should render the application shell', () => {
     const fixture = TestBed.createComponent(App);
     fixture.detectChanges();
 
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.textContent).toContain('Quick login');
-    expect(compiled.textContent).toContain('User Interface');
-    expect(compiled.textContent).toContain('Admin Interface');
+    expect(compiled.querySelector('main.app-shell')).toBeTruthy();
+    expect(compiled.querySelector('router-outlet')).toBeTruthy();
   });
 });

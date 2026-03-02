@@ -5,7 +5,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { finalize, forkJoin, Observable } from 'rxjs';
 
-import { AccessStateService } from './access-state.service';
+import { AuthStateService } from './auth-state.service';
 
 type Resource = {
   id: number;
@@ -54,7 +54,7 @@ export class AdminPageComponent {
   private readonly http = inject(HttpClient);
   private readonly destroyRef = inject(DestroyRef);
 
-  protected readonly access = inject(AccessStateService);
+  protected readonly auth = inject(AuthStateService);
   protected readonly loading = signal(true);
   protected readonly busyKey = signal<string | null>(null);
   protected readonly error = signal<string | null>(null);
@@ -127,7 +127,7 @@ export class AdminPageComponent {
 
   constructor() {
     effect(() => {
-      if (this.access.isAdmin()) {
+      if (this.auth.isAdmin()) {
         this.loadData();
       } else {
         this.loading.set(false);
@@ -136,7 +136,7 @@ export class AdminPageComponent {
   }
 
   protected reload(): void {
-    if (this.access.isAdmin()) {
+    if (this.auth.isAdmin()) {
       this.loadData();
     }
   }
