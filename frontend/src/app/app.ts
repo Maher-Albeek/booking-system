@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
@@ -31,25 +31,27 @@ type TimeSlot = {
 
 type Booking = {
   id: number;
-  userId: number;
+  userId: number | null;
   resourceId: number;
   timeSlotId: number;
   status: string;
-  bookingTime: string;
+  bookingTime: string | null;
+  customerName: string;
+  serviceName: string | null;
+};
+
+type BookingRequest = {
+  userId: number;
+  resourceId: number;
+  timeSlotId: number;
   customerName: string;
   serviceName: string;
 };
 
-type ResourceSummary = {
-  id: number;
-  name: string;
-  description: string;
-  type: string;
-  location: string;
-  active: boolean;
+type CarSummary = Resource & {
   totalSlots: number;
   availableSlots: number;
-  bookings: number;
+  confirmedBookings: number;
 };
 
 @Component({
@@ -62,173 +64,222 @@ export class App {
   private readonly http = inject(HttpClient);
   private readonly destroyRef = inject(DestroyRef);
 
-  protected readonly title = 'Booking System';
+  protected readonly title = 'Book Your Next Car';
   protected readonly loading = signal(true);
+  protected readonly submitting = signal(false);
+  protected readonly cancellingId = signal<number | null>(null);
   protected readonly error = signal<string | null>(null);
-  protected readonly resources = signal<Resource[]>([]);
+  protected readonly success = signal<string | null>(null);
+
+  protected readonly cars = signal<Resource[]>([]);
   protected readonly users = signal<User[]>([]);
   protected readonly timeSlots = signal<TimeSlot[]>([]);
   protected readonly bookings = signal<Booking[]>([]);
-  protected readonly resourceSearch = signal('');
-  protected readonly selectedType = signal('all');
-  protected readonly selectedLocation = signal('all');
-  protected readonly showActiveOnly = signal(false);
-  protected readonly bookingSearch = signal('');
-  protected readonly bookingStatus = signal('all');
 
-  protected readonly stats = computed(() => {
-    const resources = this.resources();
-    const users = this.users();
+  protected readonly selectedCarId = signal<number | null>(null);
+  protected readonly selectedUserId = signal<number | null>(null);
+  protected readonly selectedTimeSlotId = signal<number | null>(null);
+  protected readonly customerName = signal('');
+  protected readonly serviceName = signal('');
+
+  protected readonly stats = computed(() => [
+    {
+      label: 'Available Cars',
+      value: this.cars().filter((car) => car.active).length,
+      note: `${this.cars().length} cars loaded`
+    },
+    {
+      label: 'Open Slots',
+      value: this.timeSlots().filter((slot) => slot.available).length,
+      note: 'Ready to reserve'
+    },
+    {
+      label: 'Confirmed Trips',
+      value: this.bookings().filter((booking) => booking.status === 'CONFIRMED').length,
+      note: 'Live reservations'
+    },
+    {
+      label: 'Client Profiles',
+      value: this.users().length,
+      note: this.users().length ? 'Accounts available for booking' : 'No client records'
+    }
+  ]);
+
+  protected readonly carSummaries = computed<CarSummary[]>(() => {
+    const bookings = this.bookings();
     const timeSlots = this.timeSlots();
-    const bookings = this.bookings();
 
-    return [
-      {
-        label: 'Resources',
-        value: resources.length,
-        note: `${resources.filter((resource) => resource.active).length} active`
-      },
-      {
-        label: 'Users',
-        value: users.length,
-        note: users.length ? 'Ready to book' : 'No users loaded'
-      },
-      {
-        label: 'Open Slots',
-        value: timeSlots.filter((slot) => slot.available).length,
-        note: `${timeSlots.length} slots total`
-      },
-      {
-        label: 'Bookings',
-        value: bookings.length,
-        note: bookings.length ? 'Live reservation data' : 'No bookings yet'
-      }
-    ];
+    return [...this.cars()]
+      .sort((left, right) => left.name.localeCompare(right.name))
+      .map((car) => {
+        const slots = timeSlots.filter((slot) => slot.resourceId === car.id);
+        return {
+          ...car,
+          totalSlots: slots.length,
+          availableSlots: slots.filter((slot) => slot.available).length,
+          confirmedBookings: bookings.filter(
+            (booking) => booking.resourceId === car.id && booking.status === 'CONFIRMED'
+          ).length
+        };
+      });
   });
 
-  protected readonly resourceTypes = computed(() =>
-    [...new Set(this.resources().map((resource) => resource.type).filter(Boolean))].sort()
+  protected readonly selectedCar = computed(
+    () => this.cars().find((car) => car.id === this.selectedCarId()) ?? null
   );
 
-  protected readonly resourceLocations = computed(() =>
-    [...new Set(this.resources().map((resource) => resource.location).filter(Boolean))].sort()
+  protected readonly selectedUser = computed(
+    () => this.users().find((user) => user.id === this.selectedUserId()) ?? null
   );
 
-  protected readonly bookingStatuses = computed(() =>
-    [...new Set(this.bookings().map((booking) => booking.status).filter(Boolean))].sort()
+  protected readonly availableSlots = computed(() =>
+    [...this.timeSlots()]
+      .filter(
+        (slot) => slot.resourceId === this.selectedCarId() && slot.available
+      )
+      .sort(
+        (left, right) =>
+          new Date(left.startTime).getTime() - new Date(right.startTime).getTime()
+      )
   );
 
-  protected readonly resourceSummaries = computed<ResourceSummary[]>(() => {
-    const slots = this.timeSlots();
-    const bookings = this.bookings();
+  protected readonly selectedSlot = computed(
+    () => this.availableSlots().find((slot) => slot.id === this.selectedTimeSlotId()) ?? null
+  );
 
-    return this.resources().map((resource) => {
-      const resourceSlots = slots.filter((slot) => slot.resourceId === resource.id);
-      const resourceBookings = bookings.filter((booking) => booking.resourceId === resource.id);
+  protected readonly visibleBookings = computed(() => {
+    const selectedUserId = this.selectedUserId();
+    const hasUserScopedBookings = this.bookings().some((booking) => booking.userId === selectedUserId);
+    const relevantBookings =
+      selectedUserId !== null && hasUserScopedBookings
+        ? this.bookings().filter((booking) => booking.userId === selectedUserId)
+        : this.bookings();
 
-      return {
-        id: resource.id,
-        name: resource.name,
-        description: resource.description,
-        type: resource.type,
-        location: resource.location,
-        active: resource.active,
-        totalSlots: resourceSlots.length,
-        availableSlots: resourceSlots.filter((slot) => slot.available).length,
-        bookings: resourceBookings.length
-      };
-    });
-  });
-
-  protected readonly filteredResourceSummaries = computed(() => {
-    const search = this.resourceSearch().trim().toLowerCase();
-    const selectedType = this.selectedType();
-    const selectedLocation = this.selectedLocation();
-    const showActiveOnly = this.showActiveOnly();
-
-    return this.resourceSummaries().filter((resource) => {
-      const matchesSearch =
-        !search ||
-        resource.name.toLowerCase().includes(search) ||
-        resource.description.toLowerCase().includes(search) ||
-        resource.location.toLowerCase().includes(search);
-      const matchesType = selectedType === 'all' || resource.type === selectedType;
-      const matchesLocation = selectedLocation === 'all' || resource.location === selectedLocation;
-      const matchesActive = !showActiveOnly || resource.active;
-
-      return matchesSearch && matchesType && matchesLocation && matchesActive;
-    });
-  });
-
-  protected readonly recentBookings = computed(() =>
-    [...this.bookings()].sort((left, right) => {
+    return [...relevantBookings].sort((left, right) => {
       const leftTime = left.bookingTime ? new Date(left.bookingTime).getTime() : 0;
       const rightTime = right.bookingTime ? new Date(right.bookingTime).getTime() : 0;
       return rightTime - leftTime;
-    })
-  );
-
-  protected readonly filteredBookings = computed(() => {
-    const search = this.bookingSearch().trim().toLowerCase();
-    const status = this.bookingStatus();
-
-    return this.recentBookings().filter((booking) => {
-      const resourceName = this.resourceLabel(booking.resourceId).toLowerCase();
-      const userName = this.userLabel(booking.userId).toLowerCase();
-      const slot = this.slotLabel(booking.timeSlotId).toLowerCase();
-      const matchesSearch =
-        !search ||
-        booking.customerName.toLowerCase().includes(search) ||
-        booking.serviceName.toLowerCase().includes(search) ||
-        resourceName.includes(search) ||
-        userName.includes(search) ||
-        slot.includes(search);
-      const matchesStatus = status === 'all' || booking.status === status;
-
-      return matchesSearch && matchesStatus;
     });
   });
 
+  protected readonly bookingDisabled = computed(
+    () =>
+      this.loading() ||
+      this.submitting() ||
+      this.selectedCar() === null ||
+      this.selectedUser() === null ||
+      this.selectedSlot() === null ||
+      !this.customerName().trim() ||
+      !this.serviceName().trim()
+  );
+
   constructor() {
-    this.loadDashboard();
+    this.loadData();
   }
 
   protected reload(): void {
-    this.loadDashboard();
+    this.loadData();
   }
 
-  protected resetResourceFilters(): void {
-    this.resourceSearch.set('');
-    this.selectedType.set('all');
-    this.selectedLocation.set('all');
-    this.showActiveOnly.set(false);
+  protected selectCar(carId: number): void {
+    this.selectedCarId.set(carId);
+    this.selectedTimeSlotId.set(null);
+    this.success.set(null);
   }
 
-  protected resetBookingFilters(): void {
-    this.bookingSearch.set('');
-    this.bookingStatus.set('all');
+  protected selectUser(userId: number | null): void {
+    const previousUser = this.selectedUser();
+    const nextUser = this.users().find((user) => user.id === userId) ?? null;
+
+    this.selectedUserId.set(nextUser?.id ?? null);
+
+    if (!this.customerName().trim() || this.customerName() === previousUser?.name) {
+      this.customerName.set(nextUser?.name ?? '');
+    }
+  }
+
+  protected chooseTimeSlot(slotId: number): void {
+    this.selectedTimeSlotId.set(slotId);
+    this.success.set(null);
+  }
+
+  protected createBooking(): void {
+    const selectedCar = this.selectedCar();
+    const selectedUser = this.selectedUser();
+    const selectedSlot = this.selectedSlot();
+    const customerName = this.customerName().trim();
+    const serviceName = this.serviceName().trim();
+
+    if (!selectedCar || !selectedUser || !selectedSlot || !customerName || !serviceName) {
+      this.error.set('Choose a car, select a slot, and complete the booking form.');
+      return;
+    }
+
+    const payload: BookingRequest = {
+      userId: selectedUser.id,
+      resourceId: selectedCar.id,
+      timeSlotId: selectedSlot.id,
+      customerName,
+      serviceName
+    };
+
+    this.submitting.set(true);
+    this.error.set(null);
+    this.success.set(null);
+
+    this.http
+      .post<Booking>('/api/bookings', payload)
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        finalize(() => this.submitting.set(false))
+      )
+      .subscribe({
+        next: () => {
+          this.selectedTimeSlotId.set(null);
+          this.serviceName.set('');
+          this.success.set(`Booking confirmed for ${selectedCar.name}.`);
+          this.loadData();
+        },
+        error: (error: HttpErrorResponse) => {
+          this.error.set(this.readApiError(error, 'Booking could not be created.'));
+        }
+      });
+  }
+
+  protected cancelBooking(bookingId: number): void {
+    this.cancellingId.set(bookingId);
+    this.error.set(null);
+    this.success.set(null);
+
+    this.http
+      .patch<void>(`/api/bookings/${bookingId}/cancel`, {})
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        finalize(() => this.cancellingId.set(null))
+      )
+      .subscribe({
+        next: () => {
+          this.success.set('Booking cancelled and slot reopened.');
+          this.loadData();
+        },
+        error: (error: HttpErrorResponse) => {
+          this.error.set(this.readApiError(error, 'Booking could not be cancelled.'));
+        }
+      });
   }
 
   protected resourceLabel(resourceId: number): string {
-    return this.resources().find((resource) => resource.id === resourceId)?.name ?? `#${resourceId}`;
-  }
-
-  protected userLabel(userId: number): string {
-    return this.users().find((user) => user.id === userId)?.name ?? `#${userId}`;
+    return this.cars().find((car) => car.id === resourceId)?.name ?? `Car #${resourceId}`;
   }
 
   protected slotLabel(timeSlotId: number): string {
     const slot = this.timeSlots().find((item) => item.id === timeSlotId);
-    if (!slot) {
-      return `#${timeSlotId}`;
-    }
-
-    return `${this.formatDate(slot.startTime)} -> ${this.formatDate(slot.endTime)}`;
+    return slot ? this.formatSlotRange(slot) : `Slot #${timeSlotId}`;
   }
 
   protected formatDate(value: string | null | undefined): string {
     if (!value) {
-      return 'Not set';
+      return 'Not recorded';
     }
 
     return new Intl.DateTimeFormat('en-GB', {
@@ -237,12 +288,35 @@ export class App {
     }).format(new Date(value));
   }
 
-  private loadDashboard(): void {
+  protected formatDay(value: string): string {
+    return new Intl.DateTimeFormat('en-GB', {
+      weekday: 'short',
+      day: 'numeric',
+      month: 'short'
+    }).format(new Date(value));
+  }
+
+  protected formatTime(value: string): string {
+    return new Intl.DateTimeFormat('en-GB', {
+      hour: '2-digit',
+      minute: '2-digit'
+    }).format(new Date(value));
+  }
+
+  protected formatSlotRange(slot: TimeSlot): string {
+    return `${this.formatDay(slot.startTime)} | ${this.formatTime(slot.startTime)} - ${this.formatTime(slot.endTime)}`;
+  }
+
+  protected isConfirmed(booking: Booking): boolean {
+    return booking.status === 'CONFIRMED';
+  }
+
+  private loadData(): void {
     this.loading.set(true);
     this.error.set(null);
 
     forkJoin({
-      resources: this.http.get<Resource[]>('/api/resources'),
+      cars: this.http.get<Resource[]>('/api/resources/cars'),
       users: this.http.get<User[]>('/api/users'),
       timeSlots: this.http.get<TimeSlot[]>('/api/time_slots'),
       bookings: this.http.get<Booking[]>('/api/bookings')
@@ -252,17 +326,72 @@ export class App {
         finalize(() => this.loading.set(false))
       )
       .subscribe({
-        next: ({ resources, users, timeSlots, bookings }) => {
-          this.resources.set(resources);
+        next: ({ cars, users, timeSlots, bookings }) => {
+          this.cars.set(cars);
           this.users.set(users);
           this.timeSlots.set(timeSlots);
           this.bookings.set(bookings);
+          this.syncDefaults(cars, users, timeSlots);
         },
-        error: () => {
+        error: (error: HttpErrorResponse) => {
           this.error.set(
-            'Frontend is running, but the API did not respond. Start the Spring Boot server and reload.'
+            this.readApiError(
+              error,
+              'Frontend is running, but the booking API did not respond. Start the Spring Boot server and reload.'
+            )
           );
         }
       });
+  }
+
+  private syncDefaults(cars: Resource[], users: User[], timeSlots: TimeSlot[]): void {
+    const selectedCarId = this.selectedCarId();
+    const selectedUser = this.selectedUser();
+
+    if (!cars.some((car) => car.id === selectedCarId)) {
+      this.selectedCarId.set(cars[0]?.id ?? null);
+    }
+
+    const nextUser =
+      users.find((user) => user.id === this.selectedUserId()) ??
+      users[0] ??
+      null;
+
+    this.selectedUserId.set(nextUser?.id ?? null);
+
+    if (!this.customerName().trim() || this.customerName() === selectedUser?.name) {
+      this.customerName.set(nextUser?.name ?? '');
+    }
+
+    const isSelectedSlotStillValid = timeSlots.some(
+      (slot) =>
+        slot.id === this.selectedTimeSlotId() &&
+        slot.resourceId === this.selectedCarId() &&
+        slot.available
+    );
+
+    if (!isSelectedSlotStillValid) {
+      this.selectedTimeSlotId.set(null);
+    }
+  }
+
+  private readApiError(error: HttpErrorResponse, fallback: string): string {
+    if (typeof error.error === 'string' && error.error.trim()) {
+      return error.error;
+    }
+
+    if (error.error && typeof error.error === 'object') {
+      const message = (error.error as { message?: string }).message;
+      if (message) {
+        return message;
+      }
+
+      const errors = (error.error as { errors?: Record<string, string> }).errors;
+      if (errors) {
+        return Object.values(errors).join(' ');
+      }
+    }
+
+    return fallback;
   }
 }

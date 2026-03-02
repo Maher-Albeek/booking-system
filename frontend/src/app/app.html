@@ -1,31 +1,40 @@
-<main class="shell">
+<main class="client-shell">
   <section class="hero">
-    <div>
-      <p class="eyebrow">Angular frontend for your Spring booking backend</p>
+    <div class="hero-copy">
+      <p class="eyebrow">Client booking interface</p>
       <h1>{{ title }}</h1>
-      <p class="hero-copy">
-        A base dashboard that reads live data from the existing JSON-backed API and surfaces
-        resources, users, time slots, and bookings in one place.
+      <p>
+        Pick a car, choose an open pickup slot, and confirm the reservation directly against the
+        Spring API.
       </p>
     </div>
 
     <div class="hero-actions">
-      <button type="button" (click)="reload()" [disabled]="loading()">
-        {{ loading() ? 'Loading...' : 'Refresh data' }}
+      <button type="button" (click)="reload()" [disabled]="loading() || submitting()">
+        {{ loading() ? 'Refreshing...' : 'Refresh availability' }}
       </button>
-      <p class="hero-hint">API base: <code>/api</code> via Angular dev proxy</p>
+      <p class="hero-hint">API base: <code>/api</code></p>
     </div>
   </section>
 
   @if (error()) {
     <section class="banner error">
-      <strong>Connection issue</strong>
+      <strong>Booking API issue</strong>
       <span>{{ error() }}</span>
     </section>
-  } @else if (loading()) {
+  }
+
+  @if (!error() && loading()) {
     <section class="banner loading">
-      <strong>Loading dashboard</strong>
-      <span>Fetching resources, users, bookings, and time slots from the backend.</span>
+      <strong>Loading cars</strong>
+      <span>Fetching cars, users, time slots, and bookings.</span>
+    </section>
+  }
+
+  @if (success()) {
+    <section class="banner success">
+      <strong>Updated</strong>
+      <span>{{ success() }}</span>
     </section>
   }
 
@@ -39,214 +48,204 @@
     }
   </section>
 
-  <section class="grid">
-    <article class="panel panel-wide">
+  <section class="layout">
+    <article class="panel fleet-panel">
       <div class="panel-header">
         <div>
-          <p class="eyebrow">Resources</p>
-          <h3>Fleet and capacity</h3>
+          <p class="eyebrow">Fleet</p>
+          <h3>Choose your car</h3>
         </div>
       </div>
 
-      <div class="filters">
-        <label class="field">
-          <span>Search</span>
-          <input
-            type="text"
-            [ngModel]="resourceSearch()"
-            (ngModelChange)="resourceSearch.set($event)"
-            placeholder="BMW, Berlin, SUV..."
-          />
-        </label>
-
-        <label class="field">
-          <span>Type</span>
-          <select [ngModel]="selectedType()" (ngModelChange)="selectedType.set($event)">
-            <option value="all">All types</option>
-            @for (type of resourceTypes(); track type) {
-              <option [value]="type">{{ type }}</option>
-            }
-          </select>
-        </label>
-
-        <label class="field">
-          <span>Location</span>
-          <select [ngModel]="selectedLocation()" (ngModelChange)="selectedLocation.set($event)">
-            <option value="all">All locations</option>
-            @for (location of resourceLocations(); track location) {
-              <option [value]="location">{{ location }}</option>
-            }
-          </select>
-        </label>
-
-        <div class="field checkbox-field">
-          <span>State</span>
-          <label class="checkbox">
-            <input
-              type="checkbox"
-              [ngModel]="showActiveOnly()"
-              (ngModelChange)="showActiveOnly.set($event)"
-            />
-            <span>Active only</span>
-          </label>
-        </div>
-
-        <button type="button" class="ghost-button" (click)="resetResourceFilters()">
-          Reset
-        </button>
-      </div>
-
-      <div class="resource-list">
-        @for (resource of filteredResourceSummaries(); track resource.id) {
-          <section class="resource-card">
-            <div class="resource-topline">
-              <span class="resource-type">{{ resource.type }}</span>
-              <span class="resource-status" [class.inactive]="!resource.active">
-                {{ resource.active ? 'Active' : 'Inactive' }}
-              </span>
+      <div class="car-grid">
+        @for (car of carSummaries(); track car.id) {
+          <button
+            type="button"
+            class="car-card"
+            [class.selected]="car.id === selectedCarId()"
+            [class.inactive]="!car.active"
+            (click)="selectCar(car.id)"
+          >
+            <div class="car-topline">
+              <span class="car-type">{{ car.type }}</span>
+              <span class="car-status">{{ car.active ? 'Available' : 'Inactive' }}</span>
             </div>
-            <h4>{{ resource.name }}</h4>
-            <p>{{ resource.description || 'No description provided.' }}</p>
+            <h4>{{ car.name }}</h4>
+            <p>{{ car.description || 'No description provided.' }}</p>
             <dl>
               <div>
                 <dt>Location</dt>
-                <dd>{{ resource.location }}</dd>
+                <dd>{{ car.location }}</dd>
               </div>
               <div>
-                <dt>Slots</dt>
-                <dd>{{ resource.availableSlots }} / {{ resource.totalSlots }} open</dd>
+                <dt>Open slots</dt>
+                <dd>{{ car.availableSlots }} / {{ car.totalSlots }}</dd>
               </div>
               <div>
-                <dt>Bookings</dt>
-                <dd>{{ resource.bookings }}</dd>
+                <dt>Trips</dt>
+                <dd>{{ car.confirmedBookings }}</dd>
               </div>
             </dl>
-          </section>
+          </button>
         } @empty {
-          <p class="empty-state">No resources match the current filters.</p>
+          <p class="empty-state">No cars were returned by <code>/api/resources/cars</code>.</p>
         }
       </div>
     </article>
 
-    <article class="panel">
+    <article class="panel booking-panel">
       <div class="panel-header">
         <div>
-          <p class="eyebrow">Users</p>
-          <h3>Current accounts</h3>
+          <p class="eyebrow">Reserve</p>
+          <h3>Complete your booking</h3>
         </div>
       </div>
 
-      <div class="user-list">
-        @for (user of users(); track user.id) {
-          <section class="user-row">
-            <div>
-              <strong>{{ user.name }}</strong>
-              <p>{{ user.email || 'No email stored' }}</p>
-            </div>
-            <span>{{ user.role || 'Role pending' }}</span>
+      @if (selectedCar()) {
+        <section class="selected-car">
+          <div>
+            <strong>{{ selectedCar()!.name }}</strong>
+            <p>{{ selectedCar()!.description }} | {{ selectedCar()!.location }}</p>
+          </div>
+          @if (selectedSlot()) {
+            <span class="slot-summary">{{ formatSlotRange(selectedSlot()!) }}</span>
+          } @else {
+            <span class="slot-summary muted">No pickup slot selected</span>
+          }
+        </section>
+      } @else {
+        <p class="empty-state">Select a car from the fleet to begin.</p>
+      }
+
+      <form class="booking-form" (ngSubmit)="createBooking()">
+        @if (users().length > 1) {
+          <label class="field">
+            <span>Client profile</span>
+            <select
+              [ngModel]="selectedUserId()"
+              (ngModelChange)="selectUser($event)"
+              name="userId"
+            >
+              @for (user of users(); track user.id) {
+                <option [ngValue]="user.id">{{ user.name }}</option>
+              }
+            </select>
+          </label>
+        } @else if (selectedUser()) {
+          <section class="client-summary">
+            <span>Client profile</span>
+            <strong>{{ selectedUser()!.name }}</strong>
+            <p>{{ selectedUser()!.email || 'No email stored for this profile.' }}</p>
           </section>
-        } @empty {
-          <p class="empty-state">No users available.</p>
         }
-      </div>
-    </article>
 
-    <article class="panel panel-wide">
-      <div class="panel-header">
-        <div>
-          <p class="eyebrow">Bookings</p>
-          <h3>Reservation activity</h3>
-        </div>
-      </div>
-
-      <div class="filters booking-filters">
         <label class="field">
-          <span>Search</span>
+          <span>Customer name</span>
           <input
             type="text"
-            [ngModel]="bookingSearch()"
-            (ngModelChange)="bookingSearch.set($event)"
-            placeholder="Customer, service, resource..."
+            name="customerName"
+            [ngModel]="customerName()"
+            (ngModelChange)="customerName.set($event)"
+            placeholder="Enter the driver or customer name"
           />
         </label>
 
         <label class="field">
-          <span>Status</span>
-          <select [ngModel]="bookingStatus()" (ngModelChange)="bookingStatus.set($event)">
-            <option value="all">All statuses</option>
-            @for (status of bookingStatuses(); track status) {
-              <option [value]="status">{{ status }}</option>
-            }
-          </select>
+          <span>Trip label</span>
+          <input
+            type="text"
+            name="serviceName"
+            [ngModel]="serviceName()"
+            (ngModelChange)="serviceName.set($event)"
+            placeholder="Airport transfer, city trip, weekend drive..."
+          />
         </label>
 
-        <button type="button" class="ghost-button" (click)="resetBookingFilters()">
-          Reset
-        </button>
-      </div>
+        <section class="slot-picker">
+          <div class="slot-header">
+            <span>Pickup slots</span>
+            <strong>{{ availableSlots().length }} available</strong>
+          </div>
 
-      @if (filteredBookings().length) {
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Customer</th>
-                <th>Service</th>
-                <th>Resource</th>
-                <th>Time slot</th>
-                <th>Status</th>
-                <th>Booked at</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (booking of filteredBookings(); track booking.id) {
-                <tr>
-                  <td>
-                    <strong>{{ booking.customerName }}</strong>
-                    <p>{{ userLabel(booking.userId) }}</p>
-                  </td>
-                  <td>{{ booking.serviceName }}</td>
-                  <td>{{ resourceLabel(booking.resourceId) }}</td>
-                  <td>{{ slotLabel(booking.timeSlotId) }}</td>
-                  <td>
-                    <span class="status-pill">{{ booking.status }}</span>
-                  </td>
-                  <td>{{ formatDate(booking.bookingTime) }}</td>
-                </tr>
+          @if (availableSlots().length) {
+            <div class="slot-grid">
+              @for (slot of availableSlots(); track slot.id) {
+                <button
+                  type="button"
+                  class="slot-card"
+                  [class.selected]="slot.id === selectedTimeSlotId()"
+                  (click)="chooseTimeSlot(slot.id)"
+                >
+                  <span>{{ formatDay(slot.startTime) }}</span>
+                  <strong>{{ formatTime(slot.startTime) }} - {{ formatTime(slot.endTime) }}</strong>
+                </button>
               }
-            </tbody>
-          </table>
-        </div>
-      } @else {
-        <p class="empty-state">No bookings match the current filters.</p>
-      }
+            </div>
+          } @else {
+            <p class="empty-state small">
+              This car currently has no open slots. Choose another car or add more time slots.
+            </p>
+          }
+        </section>
+
+        <button type="submit" class="submit-button" [disabled]="bookingDisabled()">
+          {{ submitting() ? 'Saving booking...' : 'Confirm booking' }}
+        </button>
+
+        <p class="form-note">Submitting this form sends a live <code>POST /api/bookings</code>.</p>
+      </form>
     </article>
 
-    <article class="panel">
+    <article class="panel reservations-panel">
       <div class="panel-header">
         <div>
-          <p class="eyebrow">API snapshot</p>
-          <h3>Project structure</h3>
+          <p class="eyebrow">Reservations</p>
+          <h3>Current bookings</h3>
         </div>
       </div>
 
-      <div class="meta-list">
-        <section>
-          <strong>Backend</strong>
-          <p>Spring Boot REST API with JSON persistence in the <code>data/</code> directory.</p>
-        </section>
-        <section>
-          <strong>Frontend</strong>
-          <p>Angular 21 standalone app served locally on <code>http://localhost:4200</code>.</p>
-        </section>
-        <section>
-          <strong>Endpoints</strong>
-          <p><code>/api/resources</code>, <code>/api/users</code>, <code>/api/time_slots</code>, <code>/api/bookings</code></p>
-        </section>
-        <section>
-          <strong>Time slots loaded</strong>
-          <p>{{ timeSlots().length }} records currently available.</p>
-        </section>
+      <div class="reservation-list">
+        @for (booking of visibleBookings(); track booking.id) {
+          <section class="reservation-card">
+            <div class="reservation-topline">
+              <div>
+                <strong>{{ booking.customerName || 'Unnamed customer' }}</strong>
+                <p>{{ resourceLabel(booking.resourceId) }}</p>
+              </div>
+              <span class="status-pill" [class.cancelled]="!isConfirmed(booking)">
+                {{ booking.status }}
+              </span>
+            </div>
+
+            <dl>
+              <div>
+                <dt>Slot</dt>
+                <dd>{{ slotLabel(booking.timeSlotId) }}</dd>
+              </div>
+              <div>
+                <dt>Service</dt>
+                <dd>{{ booking.serviceName || 'No label provided' }}</dd>
+              </div>
+              <div>
+                <dt>Booked at</dt>
+                <dd>{{ formatDate(booking.bookingTime) }}</dd>
+              </div>
+            </dl>
+
+            @if (isConfirmed(booking)) {
+              <button
+                type="button"
+                class="ghost-button"
+                (click)="cancelBooking(booking.id)"
+                [disabled]="cancellingId() === booking.id"
+              >
+                {{ cancellingId() === booking.id ? 'Cancelling...' : 'Cancel booking' }}
+              </button>
+            }
+          </section>
+        } @empty {
+          <p class="empty-state">No bookings available yet.</p>
+        }
       </div>
     </article>
   </section>

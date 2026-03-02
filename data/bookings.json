@@ -1,32 +1,32 @@
 [
-    {
-        "id": 1,
-        "customerName": "John Doe",
-        "date": "2024-07-01",
-        "time": "18:00",
-        "numberOfGuests": 4,
-        "status": "CONFIRMED",
-        "resourceId": 1,
-        "timeSlotId": 1
-    },
-    {
-        "id": 2,
-        "customerName": "Jane Smith",
-        "date": "2024-07-01",
-        "time": "19:00",
-        "numberOfGuests": 2,
-        "status": "CONFIRMED",
-        "resourceId": 2,
-        "timeSlotId": 2
-    },
-    {
-        "id": 3,
-        "customerName": "Alice Johnson",
-        "date": "2024-07-01",
-        "time": "20:00",
-        "numberOfGuests": 6,
-        "status": "CANCELLED",
-        "resourceId": 3,
-        "timeSlotId": 3
-    }
+  {
+    "id": 1,
+    "userId": 1,
+    "resourceId": 3,
+    "timeSlotId": 1,
+    "status": "CONFIRMED",
+    "bookingTime": "2026-03-01T09:15:00",
+    "customerName": "Maher",
+    "serviceName": "Airport pickup"
+  },
+  {
+    "id": 2,
+    "userId": 1,
+    "resourceId": 5,
+    "timeSlotId": 5,
+    "status": "CONFIRMED",
+    "bookingTime": "2026-03-01T11:40:00",
+    "customerName": "Maher",
+    "serviceName": "Client meeting transfer"
+  },
+  {
+    "id": 3,
+    "userId": 1,
+    "resourceId": 8,
+    "timeSlotId": 12,
+    "status": "CANCELLED",
+    "bookingTime": "2026-02-28T17:05:00",
+    "customerName": "Maher",
+    "serviceName": "Weekend drive"
+  }
 ]

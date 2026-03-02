@@ -27,7 +27,7 @@
     "id": 6,
     "name": "Volkswagen Golf",
     "description": "Compact Car",
-    "type": "CAR",
+    "type": "suv",
     "location": "Berlin",
     "active": true
   },

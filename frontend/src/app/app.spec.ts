@@ -23,7 +23,7 @@ describe('App', () => {
     const fixture = TestBed.createComponent(App);
     const app = fixture.componentInstance;
 
-    httpTesting.expectOne('/api/resources').flush([]);
+    httpTesting.expectOne('/api/resources/cars').flush([]);
     httpTesting.expectOne('/api/users').flush([]);
     httpTesting.expectOne('/api/time_slots').flush([]);
     httpTesting.expectOne('/api/bookings').flush([]);
@@ -31,10 +31,10 @@ describe('App', () => {
     expect(app).toBeTruthy();
   });
 
-  it('should render dashboard title', async () => {
+  it('should render the client booking title', async () => {
     const fixture = TestBed.createComponent(App);
 
-    httpTesting.expectOne('/api/resources').flush([]);
+    httpTesting.expectOne('/api/resources/cars').flush([]);
     httpTesting.expectOne('/api/users').flush([]);
     httpTesting.expectOne('/api/time_slots').flush([]);
     httpTesting.expectOne('/api/bookings').flush([]);
@@ -43,6 +43,6 @@ describe('App', () => {
     await fixture.whenStable();
 
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('h1')?.textContent).toContain('Booking System');
+    expect(compiled.querySelector('h1')?.textContent).toContain('Book Your Next Car');
   });
 });
