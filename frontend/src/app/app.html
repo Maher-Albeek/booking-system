@@ -1,0 +1,179 @@
+<main class="shell">
+  <section class="hero">
+    <div>
+      <p class="eyebrow">Angular frontend for your Spring booking backend</p>
+      <h1>{{ title }}</h1>
+      <p class="hero-copy">
+        A base dashboard that reads live data from the existing JSON-backed API and surfaces
+        resources, users, time slots, and bookings in one place.
+      </p>
+    </div>
+
+    <div class="hero-actions">
+      <button type="button" (click)="reload()" [disabled]="loading()">
+        {{ loading() ? 'Loading...' : 'Refresh data' }}
+      </button>
+      <p class="hero-hint">API base: <code>/api</code> via Angular dev proxy</p>
+    </div>
+  </section>
+
+  @if (error()) {
+    <section class="banner error">
+      <strong>Connection issue</strong>
+      <span>{{ error() }}</span>
+    </section>
+  } @else if (loading()) {
+    <section class="banner loading">
+      <strong>Loading dashboard</strong>
+      <span>Fetching resources, users, bookings, and time slots from the backend.</span>
+    </section>
+  }
+
+  <section class="stats">
+    @for (stat of stats(); track stat.label) {
+      <article class="stat-card">
+        <p>{{ stat.label }}</p>
+        <h2>{{ stat.value }}</h2>
+        <span>{{ stat.note }}</span>
+      </article>
+    }
+  </section>
+
+  <section class="grid">
+    <article class="panel panel-wide">
+      <div class="panel-header">
+        <div>
+          <p class="eyebrow">Resources</p>
+          <h3>Fleet and capacity</h3>
+        </div>
+      </div>
+
+      <div class="resource-list">
+        @for (resource of resourceSummaries(); track resource.id) {
+          <section class="resource-card">
+            <div class="resource-topline">
+              <span class="resource-type">{{ resource.type }}</span>
+              <span class="resource-status" [class.inactive]="!resource.active">
+                {{ resource.active ? 'Active' : 'Inactive' }}
+              </span>
+            </div>
+            <h4>{{ resource.name }}</h4>
+            <p>{{ resource.description || 'No description provided.' }}</p>
+            <dl>
+              <div>
+                <dt>Location</dt>
+                <dd>{{ resource.location }}</dd>
+              </div>
+              <div>
+                <dt>Slots</dt>
+                <dd>{{ resource.availableSlots }} / {{ resource.totalSlots }} open</dd>
+              </div>
+              <div>
+                <dt>Bookings</dt>
+                <dd>{{ resource.bookings }}</dd>
+              </div>
+            </dl>
+          </section>
+        } @empty {
+          <p class="empty-state">No resources returned by <code>/api/resources</code>.</p>
+        }
+      </div>
+    </article>
+
+    <article class="panel">
+      <div class="panel-header">
+        <div>
+          <p class="eyebrow">Users</p>
+          <h3>Current accounts</h3>
+        </div>
+      </div>
+
+      <div class="user-list">
+        @for (user of users(); track user.id) {
+          <section class="user-row">
+            <div>
+              <strong>{{ user.name }}</strong>
+              <p>{{ user.email || 'No email stored' }}</p>
+            </div>
+            <span>{{ user.role || 'Role pending' }}</span>
+          </section>
+        } @empty {
+          <p class="empty-state">No users available.</p>
+        }
+      </div>
+    </article>
+
+    <article class="panel panel-wide">
+      <div class="panel-header">
+        <div>
+          <p class="eyebrow">Bookings</p>
+          <h3>Reservation activity</h3>
+        </div>
+      </div>
+
+      @if (recentBookings().length) {
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Customer</th>
+                <th>Service</th>
+                <th>Resource</th>
+                <th>Time slot</th>
+                <th>Status</th>
+                <th>Booked at</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (booking of recentBookings(); track booking.id) {
+                <tr>
+                  <td>
+                    <strong>{{ booking.customerName }}</strong>
+                    <p>{{ userLabel(booking.userId) }}</p>
+                  </td>
+                  <td>{{ booking.serviceName }}</td>
+                  <td>{{ resourceLabel(booking.resourceId) }}</td>
+                  <td>{{ slotLabel(booking.timeSlotId) }}</td>
+                  <td>
+                    <span class="status-pill">{{ booking.status }}</span>
+                  </td>
+                  <td>{{ formatDate(booking.bookingTime) }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      } @else {
+        <p class="empty-state">No bookings stored yet. New bookings will appear here.</p>
+      }
+    </article>
+
+    <article class="panel">
+      <div class="panel-header">
+        <div>
+          <p class="eyebrow">API snapshot</p>
+          <h3>Project structure</h3>
+        </div>
+      </div>
+
+      <div class="meta-list">
+        <section>
+          <strong>Backend</strong>
+          <p>Spring Boot REST API with JSON persistence in the <code>data/</code> directory.</p>
+        </section>
+        <section>
+          <strong>Frontend</strong>
+          <p>Angular 21 standalone app served locally on <code>http://localhost:4200</code>.</p>
+        </section>
+        <section>
+          <strong>Endpoints</strong>
+          <p><code>/api/resources</code>, <code>/api/users</code>, <code>/api/time_slots</code>, <code>/api/bookings</code></p>
+        </section>
+        <section>
+          <strong>Time slots loaded</strong>
+          <p>{{ timeSlots().length }} records currently available.</p>
+        </section>
+      </div>
+    </article>
+  </section>
+</main>

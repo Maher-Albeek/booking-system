@@ -1,0 +1,25 @@
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;700&display=swap');
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  background:
+    radial-gradient(circle at top, rgba(255, 140, 66, 0.18), transparent 30%),
+    linear-gradient(180deg, #081121 0%, #0d1b31 52%, #07101d 100%);
+  font-family: 'Space Grotesk', 'Segoe UI Variable', sans-serif;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}

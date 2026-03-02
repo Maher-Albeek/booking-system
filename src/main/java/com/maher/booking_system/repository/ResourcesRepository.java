@@ -21,7 +21,8 @@ public class ResourcesRepository extends JsonRepositorySupport<Resources> {
 
     public List<Resources> findByTypeAndActiveTrue(String type) {
         return findAll().stream()
-                .filter(resource -> type.equals(resource.getType()) && resource.isActive())
+                .filter(resource -> resource.isActive())
+                .filter(resource -> resource.getType() != null && resource.getType().equalsIgnoreCase(type))
                 .toList();
     }
 }
