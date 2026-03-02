@@ -1,7 +1,7 @@
 package com.maher.booking_system.controller;
 
 import com.maher.booking_system.model.Users;
-import com.maher.booking_system.repository.UsersRepository;
+import com.maher.booking_system.service.UsersService;
 import org.springframework.lang.NonNull;
 import org.springframework.web.bind.annotation.*;
 
@@ -12,29 +12,26 @@ import java.util.Objects;
 @RequestMapping("/api/users")
 public class UserController {
 
-    private final UsersRepository usersRepository;
+    private final UsersService usersService;
 
-    public UserController(UsersRepository usersRepository) {
-        this.usersRepository = usersRepository;
+    public UserController(UsersService usersService) {
+        this.usersService = usersService;
     }
 
-    // GET all users
     @GetMapping
     public List<Users> getAllUsers() {
-        return usersRepository.findAll();
+        return usersService.getAllUsers();
     }
-    
 
-    // POST create user
     @PostMapping
     public @NonNull Users createUser(@RequestBody @NonNull Users user) {
         Users safeUser = Objects.requireNonNull(user, "user must not be null");
-        return usersRepository.save(safeUser);
+        return usersService.createUsers(safeUser);
     }
 
     @DeleteMapping("/{id}")
     public void deleteUser(@PathVariable @NonNull Long id) {
         Objects.requireNonNull(id, "id must not be null");
-        usersRepository.deleteById(id);
+        usersService.deleteUser(id);
     }
 }

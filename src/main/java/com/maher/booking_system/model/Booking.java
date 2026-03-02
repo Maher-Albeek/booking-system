@@ -1,40 +1,18 @@
 package com.maher.booking_system.model;
 
-import jakarta.persistence.*;
-import java.time.LocalDateTime;
 import com.maher.booking_system.model.enums.BookingStatus;
 
-@Entity
-@Table(
-        name = "bookings",
-        uniqueConstraints = @UniqueConstraint(name = "uq_bookings_time_slot", columnNames = "time_slot_id")
-)
+import java.time.LocalDateTime;
+
 public class Booking {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-
-    @Column(name = "user_id")
     private Long userId;
-
-    @Column(name = "resource_id")
     private Long resourceId;
-
-    @Column(name = "time_slot_id")
     private Long timeSlotId;
-
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
     private BookingStatus status;
-
-    @Column(name = "booking_time")
     private LocalDateTime bookingTime;
-
-    @Column(name = "customer_name")
     private String customerName;
-
-    @Column(name = "service_name")
     private String serviceName;
 
     public Long getId() { return id; }

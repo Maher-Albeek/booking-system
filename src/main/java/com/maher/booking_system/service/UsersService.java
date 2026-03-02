@@ -1,12 +1,12 @@
 package com.maher.booking_system.service;
 
-import java.util.List;
-import java.util.Objects;
-
-import org.springframework.lang.NonNull;
-import org.springframework.stereotype.Service;
 import com.maher.booking_system.model.Users;
 import com.maher.booking_system.repository.UsersRepository;
+import org.springframework.lang.NonNull;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+import java.util.Objects;
 
 @Service
 public class UsersService {
@@ -34,5 +34,10 @@ public class UsersService {
 
     public List<Users> getAllUsers(){
         return usersRepository.findAll();
+    }
+
+    public void deleteUser(@NonNull Long id) {
+        Objects.requireNonNull(id, "id must not be null");
+        usersRepository.deleteById(id);
     }
 }
