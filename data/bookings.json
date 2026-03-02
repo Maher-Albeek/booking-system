@@ -1,32 +1,37 @@
-[
-  {
-    "id": 1,
-    "userId": 1,
-    "resourceId": 3,
-    "timeSlotId": 1,
-    "status": "CONFIRMED",
-    "bookingTime": "2026-03-01T09:15:00",
-    "customerName": "Maher",
-    "serviceName": "Airport pickup"
-  },
-  {
-    "id": 2,
-    "userId": 1,
-    "resourceId": 5,
-    "timeSlotId": 5,
-    "status": "CONFIRMED",
-    "bookingTime": "2026-03-01T11:40:00",
-    "customerName": "Maher",
-    "serviceName": "Client meeting transfer"
-  },
-  {
-    "id": 3,
-    "userId": 1,
-    "resourceId": 8,
-    "timeSlotId": 12,
-    "status": "CANCELLED",
-    "bookingTime": "2026-02-28T17:05:00",
-    "customerName": "Maher",
-    "serviceName": "Weekend drive"
-  }
-]
+[ {
+  "id" : 1,
+  "userId" : 1,
+  "resourceId" : 3,
+  "timeSlotId" : 1,
+  "status" : "CANCELLED",
+  "bookingTime" : "2026-03-01T09:15:00",
+  "customerName" : "Maher",
+  "serviceName" : "Airport pickup"
+}, {
+  "id" : 2,
+  "userId" : 1,
+  "resourceId" : 5,
+  "timeSlotId" : 5,
+  "status" : "CANCELLED",
+  "bookingTime" : "2026-03-01T11:40:00",
+  "customerName" : "Maher",
+  "serviceName" : "Client meeting transfer"
+}, {
+  "id" : 3,
+  "userId" : 1,
+  "resourceId" : 8,
+  "timeSlotId" : 12,
+  "status" : "CANCELLED",
+  "bookingTime" : "2026-02-28T17:05:00",
+  "customerName" : "Maher",
+  "serviceName" : "Weekend drive"
+}, {
+  "id" : 4,
+  "userId" : 1,
+  "resourceId" : 4,
+  "timeSlotId" : 4,
+  "status" : "CANCELLED",
+  "bookingTime" : "2026-03-02T02:12:04.4802616",
+  "customerName" : "maher",
+  "serviceName" : "a"
+} ]

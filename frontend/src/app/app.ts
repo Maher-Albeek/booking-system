@@ -1,397 +1,60 @@
 import { CommonModule } from '@angular/common';
-import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
-import { finalize, forkJoin } from 'rxjs';
+import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { filter } from 'rxjs';
 
-type Resource = {
-  id: number;
-  name: string;
-  description: string;
-  type: string;
-  location: string;
-  active: boolean;
-};
-
-type User = {
-  id: number;
-  name: string;
-  email: string | null;
-  role: string | null;
-};
-
-type TimeSlot = {
-  id: number;
-  startTime: string;
-  endTime: string;
-  resourceId: number;
-  available: boolean;
-};
-
-type Booking = {
-  id: number;
-  userId: number | null;
-  resourceId: number;
-  timeSlotId: number;
-  status: string;
-  bookingTime: string | null;
-  customerName: string;
-  serviceName: string | null;
-};
-
-type BookingRequest = {
-  userId: number;
-  resourceId: number;
-  timeSlotId: number;
-  customerName: string;
-  serviceName: string;
-};
-
-type CarSummary = Resource & {
-  totalSlots: number;
-  availableSlots: number;
-  confirmedBookings: number;
-};
+import { AccessRole, AccessStateService } from './access-state.service';
 
 @Component({
   selector: 'app-root',
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, RouterLink, RouterLinkActive, RouterOutlet],
   templateUrl: './app.html',
   styleUrl: './app.scss'
 })
 export class App {
-  private readonly http = inject(HttpClient);
+  private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
 
-  protected readonly title = 'Book Your Next Car';
-  protected readonly loading = signal(true);
-  protected readonly submitting = signal(false);
-  protected readonly cancellingId = signal<number | null>(null);
-  protected readonly error = signal<string | null>(null);
-  protected readonly success = signal<string | null>(null);
+  protected readonly access = inject(AccessStateService);
+  protected readonly activeView = signal<'user' | 'admin'>('user');
 
-  protected readonly cars = signal<Resource[]>([]);
-  protected readonly users = signal<User[]>([]);
-  protected readonly timeSlots = signal<TimeSlot[]>([]);
-  protected readonly bookings = signal<Booking[]>([]);
-
-  protected readonly selectedCarId = signal<number | null>(null);
-  protected readonly selectedUserId = signal<number | null>(null);
-  protected readonly selectedTimeSlotId = signal<number | null>(null);
-  protected readonly customerName = signal('');
-  protected readonly serviceName = signal('');
-
-  protected readonly stats = computed(() => [
-    {
-      label: 'Available Cars',
-      value: this.cars().filter((car) => car.active).length,
-      note: `${this.cars().length} cars loaded`
-    },
-    {
-      label: 'Open Slots',
-      value: this.timeSlots().filter((slot) => slot.available).length,
-      note: 'Ready to reserve'
-    },
-    {
-      label: 'Confirmed Trips',
-      value: this.bookings().filter((booking) => booking.status === 'CONFIRMED').length,
-      note: 'Live reservations'
-    },
-    {
-      label: 'Client Profiles',
-      value: this.users().length,
-      note: this.users().length ? 'Accounts available for booking' : 'No client records'
-    }
-  ]);
-
-  protected readonly carSummaries = computed<CarSummary[]>(() => {
-    const bookings = this.bookings();
-    const timeSlots = this.timeSlots();
-
-    return [...this.cars()]
-      .sort((left, right) => left.name.localeCompare(right.name))
-      .map((car) => {
-        const slots = timeSlots.filter((slot) => slot.resourceId === car.id);
-        return {
-          ...car,
-          totalSlots: slots.length,
-          availableSlots: slots.filter((slot) => slot.available).length,
-          confirmedBookings: bookings.filter(
-            (booking) => booking.resourceId === car.id && booking.status === 'CONFIRMED'
-          ).length
-        };
-      });
-  });
-
-  protected readonly selectedCar = computed(
-    () => this.cars().find((car) => car.id === this.selectedCarId()) ?? null
+  protected readonly pageTitle = computed(() =>
+    this.activeView() === 'admin' ? 'Admin operations interface' : 'Customer booking interface'
   );
 
-  protected readonly selectedUser = computed(
-    () => this.users().find((user) => user.id === this.selectedUserId()) ?? null
-  );
-
-  protected readonly availableSlots = computed(() =>
-    [...this.timeSlots()]
-      .filter(
-        (slot) => slot.resourceId === this.selectedCarId() && slot.available
-      )
-      .sort(
-        (left, right) =>
-          new Date(left.startTime).getTime() - new Date(right.startTime).getTime()
-      )
-  );
-
-  protected readonly selectedSlot = computed(
-    () => this.availableSlots().find((slot) => slot.id === this.selectedTimeSlotId()) ?? null
-  );
-
-  protected readonly visibleBookings = computed(() => {
-    const selectedUserId = this.selectedUserId();
-    const hasUserScopedBookings = this.bookings().some((booking) => booking.userId === selectedUserId);
-    const relevantBookings =
-      selectedUserId !== null && hasUserScopedBookings
-        ? this.bookings().filter((booking) => booking.userId === selectedUserId)
-        : this.bookings();
-
-    return [...relevantBookings].sort((left, right) => {
-      const leftTime = left.bookingTime ? new Date(left.bookingTime).getTime() : 0;
-      const rightTime = right.bookingTime ? new Date(right.bookingTime).getTime() : 0;
-      return rightTime - leftTime;
-    });
-  });
-
-  protected readonly bookingDisabled = computed(
-    () =>
-      this.loading() ||
-      this.submitting() ||
-      this.selectedCar() === null ||
-      this.selectedUser() === null ||
-      this.selectedSlot() === null ||
-      !this.customerName().trim() ||
-      !this.serviceName().trim()
+  protected readonly pageSummary = computed(() =>
+    this.activeView() === 'admin'
+      ? 'Create and remove fleet cars, time slots, and user accounts from the same Angular app.'
+      : 'Browse available cars, reserve an open slot, and manage live bookings against the Spring API.'
   );
 
   constructor() {
-    this.loadData();
-  }
+    this.syncActiveView(this.router.url);
 
-  protected reload(): void {
-    this.loadData();
-  }
-
-  protected selectCar(carId: number): void {
-    this.selectedCarId.set(carId);
-    this.selectedTimeSlotId.set(null);
-    this.success.set(null);
-  }
-
-  protected selectUser(userId: number | null): void {
-    const previousUser = this.selectedUser();
-    const nextUser = this.users().find((user) => user.id === userId) ?? null;
-
-    this.selectedUserId.set(nextUser?.id ?? null);
-
-    if (!this.customerName().trim() || this.customerName() === previousUser?.name) {
-      this.customerName.set(nextUser?.name ?? '');
-    }
-  }
-
-  protected chooseTimeSlot(slotId: number): void {
-    this.selectedTimeSlotId.set(slotId);
-    this.success.set(null);
-  }
-
-  protected createBooking(): void {
-    const selectedCar = this.selectedCar();
-    const selectedUser = this.selectedUser();
-    const selectedSlot = this.selectedSlot();
-    const customerName = this.customerName().trim();
-    const serviceName = this.serviceName().trim();
-
-    if (!selectedCar || !selectedUser || !selectedSlot || !customerName || !serviceName) {
-      this.error.set('Choose a car, select a slot, and complete the booking form.');
-      return;
-    }
-
-    const payload: BookingRequest = {
-      userId: selectedUser.id,
-      resourceId: selectedCar.id,
-      timeSlotId: selectedSlot.id,
-      customerName,
-      serviceName
-    };
-
-    this.submitting.set(true);
-    this.error.set(null);
-    this.success.set(null);
-
-    this.http
-      .post<Booking>('/api/bookings', payload)
+    this.router.events
       .pipe(
-        takeUntilDestroyed(this.destroyRef),
-        finalize(() => this.submitting.set(false))
+        filter((event): event is NavigationEnd => event instanceof NavigationEnd),
+        takeUntilDestroyed(this.destroyRef)
       )
-      .subscribe({
-        next: () => {
-          this.selectedTimeSlotId.set(null);
-          this.serviceName.set('');
-          this.success.set(`Booking confirmed for ${selectedCar.name}.`);
-          this.loadData();
-        },
-        error: (error: HttpErrorResponse) => {
-          this.error.set(this.readApiError(error, 'Booking could not be created.'));
-        }
-      });
+      .subscribe((event) => this.syncActiveView(event.urlAfterRedirects));
   }
 
-  protected cancelBooking(bookingId: number): void {
-    this.cancellingId.set(bookingId);
-    this.error.set(null);
-    this.success.set(null);
-
-    this.http
-      .patch<void>(`/api/bookings/${bookingId}/cancel`, {})
-      .pipe(
-        takeUntilDestroyed(this.destroyRef),
-        finalize(() => this.cancellingId.set(null))
-      )
-      .subscribe({
-        next: () => {
-          this.success.set('Booking cancelled and slot reopened.');
-          this.loadData();
-        },
-        error: (error: HttpErrorResponse) => {
-          this.error.set(this.readApiError(error, 'Booking could not be cancelled.'));
-        }
-      });
+  protected setRole(role: AccessRole): void {
+    this.access.setRole(role);
   }
 
-  protected resourceLabel(resourceId: number): string {
-    return this.cars().find((car) => car.id === resourceId)?.name ?? `Car #${resourceId}`;
+  protected setAlias(alias: string): void {
+    this.access.setAlias(alias);
   }
 
-  protected slotLabel(timeSlotId: number): string {
-    const slot = this.timeSlots().find((item) => item.id === timeSlotId);
-    return slot ? this.formatSlotRange(slot) : `Slot #${timeSlotId}`;
+  protected openSelectedInterface(): void {
+    void this.router.navigate([this.access.isAdmin() ? '/admin' : '/user']);
   }
 
-  protected formatDate(value: string | null | undefined): string {
-    if (!value) {
-      return 'Not recorded';
-    }
-
-    return new Intl.DateTimeFormat('en-GB', {
-      dateStyle: 'medium',
-      timeStyle: 'short'
-    }).format(new Date(value));
-  }
-
-  protected formatDay(value: string): string {
-    return new Intl.DateTimeFormat('en-GB', {
-      weekday: 'short',
-      day: 'numeric',
-      month: 'short'
-    }).format(new Date(value));
-  }
-
-  protected formatTime(value: string): string {
-    return new Intl.DateTimeFormat('en-GB', {
-      hour: '2-digit',
-      minute: '2-digit'
-    }).format(new Date(value));
-  }
-
-  protected formatSlotRange(slot: TimeSlot): string {
-    return `${this.formatDay(slot.startTime)} | ${this.formatTime(slot.startTime)} - ${this.formatTime(slot.endTime)}`;
-  }
-
-  protected isConfirmed(booking: Booking): boolean {
-    return booking.status === 'CONFIRMED';
-  }
-
-  private loadData(): void {
-    this.loading.set(true);
-    this.error.set(null);
-
-    forkJoin({
-      cars: this.http.get<Resource[]>('/api/resources/cars'),
-      users: this.http.get<User[]>('/api/users'),
-      timeSlots: this.http.get<TimeSlot[]>('/api/time_slots'),
-      bookings: this.http.get<Booking[]>('/api/bookings')
-    })
-      .pipe(
-        takeUntilDestroyed(this.destroyRef),
-        finalize(() => this.loading.set(false))
-      )
-      .subscribe({
-        next: ({ cars, users, timeSlots, bookings }) => {
-          this.cars.set(cars);
-          this.users.set(users);
-          this.timeSlots.set(timeSlots);
-          this.bookings.set(bookings);
-          this.syncDefaults(cars, users, timeSlots);
-        },
-        error: (error: HttpErrorResponse) => {
-          this.error.set(
-            this.readApiError(
-              error,
-              'Frontend is running, but the booking API did not respond. Start the Spring Boot server and reload.'
-            )
-          );
-        }
-      });
-  }
-
-  private syncDefaults(cars: Resource[], users: User[], timeSlots: TimeSlot[]): void {
-    const selectedCarId = this.selectedCarId();
-    const selectedUser = this.selectedUser();
-
-    if (!cars.some((car) => car.id === selectedCarId)) {
-      this.selectedCarId.set(cars[0]?.id ?? null);
-    }
-
-    const nextUser =
-      users.find((user) => user.id === this.selectedUserId()) ??
-      users[0] ??
-      null;
-
-    this.selectedUserId.set(nextUser?.id ?? null);
-
-    if (!this.customerName().trim() || this.customerName() === selectedUser?.name) {
-      this.customerName.set(nextUser?.name ?? '');
-    }
-
-    const isSelectedSlotStillValid = timeSlots.some(
-      (slot) =>
-        slot.id === this.selectedTimeSlotId() &&
-        slot.resourceId === this.selectedCarId() &&
-        slot.available
-    );
-
-    if (!isSelectedSlotStillValid) {
-      this.selectedTimeSlotId.set(null);
-    }
-  }
-
-  private readApiError(error: HttpErrorResponse, fallback: string): string {
-    if (typeof error.error === 'string' && error.error.trim()) {
-      return error.error;
-    }
-
-    if (error.error && typeof error.error === 'object') {
-      const message = (error.error as { message?: string }).message;
-      if (message) {
-        return message;
-      }
-
-      const errors = (error.error as { errors?: Record<string, string> }).errors;
-      if (errors) {
-        return Object.values(errors).join(' ');
-      }
-    }
-
-    return fallback;
+  private syncActiveView(url: string): void {
+    const path = url.split('?')[0];
+    this.activeView.set(path.startsWith('/admin') ? 'admin' : 'user');
   }
 }

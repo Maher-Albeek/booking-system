@@ -1,0 +1,283 @@
+@if (!access.isAdmin()) {
+  <main class="admin-shell">
+    <section class="locked-panel">
+      <p class="eyebrow">Admin access required</p>
+      <h2>Switch the local role selector to Admin</h2>
+      <p>
+        The <code>/admin</code> route is available, but these management tools only render when the
+        access selector in the header is set to Admin.
+      </p>
+    </section>
+  </main>
+} @else {
+  <main class="admin-shell">
+    <section class="hero">
+      <div class="hero-copy">
+        <p class="eyebrow">Admin interface</p>
+        <h2>Manage cars, slots, and users</h2>
+        <p>
+          Use the live Spring endpoints to maintain the fleet, open or remove time slots, and
+          create or delete user accounts.
+        </p>
+      </div>
+
+      <div class="hero-actions">
+        <button type="button" (click)="reload()" [disabled]="loading() || busyKey() !== null">
+          {{ loading() ? 'Refreshing...' : 'Refresh admin data' }}
+        </button>
+        <p class="hero-hint">Route: <code>/admin</code> | API base: <code>/api</code></p>
+      </div>
+    </section>
+
+    @if (error()) {
+      <section class="banner error">
+        <strong>Admin API issue</strong>
+        <span>{{ error() }}</span>
+      </section>
+    }
+
+    @if (!error() && loading()) {
+      <section class="banner loading">
+        <strong>Loading admin data</strong>
+        <span>Fetching cars, users, time slots, and bookings.</span>
+      </section>
+    }
+
+    @if (success()) {
+      <section class="banner success">
+        <strong>Updated</strong>
+        <span>{{ success() }}</span>
+      </section>
+    }
+
+    <section class="stats">
+      @for (stat of stats(); track stat.label) {
+        <article class="stat-card">
+          <p>{{ stat.label }}</p>
+          <h3>{{ stat.value }}</h3>
+          <span>{{ stat.note }}</span>
+        </article>
+      }
+    </section>
+
+    <section class="admin-layout">
+      <article class="panel">
+        <div class="panel-header">
+          <div>
+            <p class="eyebrow">Cars</p>
+            <h3>Manage fleet cars</h3>
+          </div>
+        </div>
+
+        <form class="admin-form" (ngSubmit)="createCar()">
+          <label class="field">
+            <span>Car name</span>
+            <input
+              type="text"
+              name="carName"
+              [(ngModel)]="carDraft.name"
+              placeholder="BMW X5"
+            />
+          </label>
+
+          <label class="field">
+            <span>Description</span>
+            <input
+              type="text"
+              name="carDescription"
+              [(ngModel)]="carDraft.description"
+              placeholder="Premium transfer vehicle"
+            />
+          </label>
+
+          <label class="field">
+            <span>Location</span>
+            <input
+              type="text"
+              name="carLocation"
+              [(ngModel)]="carDraft.location"
+              placeholder="Berlin Garage"
+            />
+          </label>
+
+          <label class="checkbox-field">
+            <input type="checkbox" name="carActive" [(ngModel)]="carDraft.active" />
+            <span>Active and bookable</span>
+          </label>
+
+          <button type="submit" [disabled]="isBusy('create-car')">
+            {{ isBusy('create-car') ? 'Saving car...' : 'Add car' }}
+          </button>
+        </form>
+
+        <div class="admin-list">
+          @for (car of cars(); track car.id) {
+            <section class="list-card">
+              <div class="list-topline">
+                <div>
+                  <strong>{{ car.name }}</strong>
+                  <p>{{ car.location }}</p>
+                </div>
+                <span class="pill" [class.muted]="!car.active">
+                  {{ car.active ? 'Active' : 'Inactive' }}
+                </span>
+              </div>
+
+              <p>{{ car.description || 'No description provided.' }}</p>
+
+              <button
+                type="button"
+                class="ghost-button"
+                (click)="deleteCar(car.id)"
+                [disabled]="isBusy('delete-car-' + car.id)"
+              >
+                {{ isBusy('delete-car-' + car.id) ? 'Deleting...' : 'Delete car' }}
+              </button>
+            </section>
+          } @empty {
+            <p class="empty-state">No cars are currently available in <code>/api/resources</code>.</p>
+          }
+        </div>
+      </article>
+
+      <article class="panel">
+        <div class="panel-header">
+          <div>
+            <p class="eyebrow">Time slots</p>
+            <h3>Manage availability windows</h3>
+          </div>
+        </div>
+
+        <form class="admin-form" (ngSubmit)="createTimeSlot()">
+          <label class="field">
+            <span>Car</span>
+            <select name="slotResource" [(ngModel)]="slotDraft.resourceId">
+              @for (car of cars(); track car.id) {
+                <option [ngValue]="car.id">{{ car.name }}</option>
+              }
+            </select>
+          </label>
+
+          <label class="field">
+            <span>Start time</span>
+            <input type="datetime-local" name="slotStart" [(ngModel)]="slotDraft.startTime" />
+          </label>
+
+          <label class="field">
+            <span>End time</span>
+            <input type="datetime-local" name="slotEnd" [(ngModel)]="slotDraft.endTime" />
+          </label>
+
+          <label class="checkbox-field">
+            <input type="checkbox" name="slotAvailable" [(ngModel)]="slotDraft.available" />
+            <span>Slot starts as available</span>
+          </label>
+
+          <button type="submit" [disabled]="!cars().length || isBusy('create-slot')">
+            {{ isBusy('create-slot') ? 'Saving slot...' : 'Add time slot' }}
+          </button>
+        </form>
+
+        <div class="admin-list">
+          @for (slot of orderedSlots(); track slot.id) {
+            <section class="list-card">
+              <div class="list-topline">
+                <div>
+                  <strong>{{ resourceLabel(slot.resourceId) }}</strong>
+                  <p>{{ formatDate(slot.startTime) }} to {{ formatDate(slot.endTime) }}</p>
+                </div>
+                <span class="pill" [class.muted]="!slot.available">
+                  {{ slot.available ? 'Available' : 'Closed' }}
+                </span>
+              </div>
+
+              <button
+                type="button"
+                class="ghost-button"
+                (click)="deleteTimeSlot(slot.id)"
+                [disabled]="isBusy('delete-slot-' + slot.id)"
+              >
+                {{ isBusy('delete-slot-' + slot.id) ? 'Deleting...' : 'Delete slot' }}
+              </button>
+            </section>
+          } @empty {
+            <p class="empty-state">No time slots exist yet.</p>
+          }
+        </div>
+      </article>
+
+      <article class="panel users-panel">
+        <div class="panel-header">
+          <div>
+            <p class="eyebrow">Users</p>
+            <h3>Manage user accounts</h3>
+          </div>
+        </div>
+
+        <form class="admin-form" (ngSubmit)="createUser()">
+          <label class="field">
+            <span>Name</span>
+            <input type="text" name="userName" [(ngModel)]="userDraft.name" placeholder="Maher" />
+          </label>
+
+          <label class="field">
+            <span>Email</span>
+            <input
+              type="email"
+              name="userEmail"
+              [(ngModel)]="userDraft.email"
+              placeholder="maher@example.com"
+            />
+          </label>
+
+          <label class="field">
+            <span>Password</span>
+            <input
+              type="password"
+              name="userPassword"
+              [(ngModel)]="userDraft.password"
+              placeholder="At least 6 characters"
+            />
+          </label>
+
+          <label class="field">
+            <span>Role</span>
+            <select name="userRole" [(ngModel)]="userDraft.role">
+              <option value="USER">User</option>
+              <option value="ADMIN">Admin</option>
+            </select>
+          </label>
+
+          <button type="submit" [disabled]="isBusy('create-user')">
+            {{ isBusy('create-user') ? 'Saving user...' : 'Add user' }}
+          </button>
+        </form>
+
+        <div class="admin-list">
+          @for (user of orderedUsers(); track user.id) {
+            <section class="list-card">
+              <div class="list-topline">
+                <div>
+                  <strong>{{ user.name }}</strong>
+                  <p>{{ user.email || 'No email stored.' }}</p>
+                </div>
+                <span class="pill">{{ roleLabel(user.role) }}</span>
+              </div>
+
+              <button
+                type="button"
+                class="ghost-button"
+                (click)="deleteUser(user.id)"
+                [disabled]="isBusy('delete-user-' + user.id)"
+              >
+                {{ isBusy('delete-user-' + user.id) ? 'Deleting...' : 'Delete user' }}
+              </button>
+            </section>
+          } @empty {
+            <p class="empty-state">No users are currently stored.</p>
+          }
+        </div>
+      </article>
+    </section>
+  </main>
+}

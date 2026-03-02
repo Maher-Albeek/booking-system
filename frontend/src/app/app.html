@@ -1,252 +1,58 @@
-<main class="client-shell">
-  <section class="hero">
-    <div class="hero-copy">
-      <p class="eyebrow">Client booking interface</p>
-      <h1>{{ title }}</h1>
-      <p>
-        Pick a car, choose an open pickup slot, and confirm the reservation directly against the
-        Spring API.
+<main class="app-shell">
+  <header class="app-chrome">
+    <div class="brand-block">
+      <p class="eyebrow">Booking System</p>
+      <strong>Route-aware frontend shell</strong>
+      <span>One Angular app, two interfaces.</span>
+    </div>
+
+    <nav class="route-switcher" aria-label="Interface switcher">
+      <a routerLink="/user" routerLinkActive="active" class="route-link">User Interface</a>
+      <a routerLink="/admin" routerLinkActive="active" class="route-link">Admin Interface</a>
+    </nav>
+
+    <div class="session-chip">
+      <span>{{ access.alias() || 'Local operator' }}</span>
+      <strong>{{ access.role() === 'ADMIN' ? 'Admin mode' : 'User mode' }}</strong>
+    </div>
+  </header>
+
+  <section class="access-panel">
+    <div class="access-copy">
+      <p class="eyebrow">Quick login</p>
+      <h1>{{ pageTitle() }}</h1>
+      <p>{{ pageSummary() }}</p>
+      <p class="access-note">
+        This selector is local to the browser. The backend APIs still do not enforce real
+        authentication or role checks.
       </p>
     </div>
 
-    <div class="hero-actions">
-      <button type="button" (click)="reload()" [disabled]="loading() || submitting()">
-        {{ loading() ? 'Refreshing...' : 'Refresh availability' }}
+    <form class="access-form" (ngSubmit)="openSelectedInterface()">
+      <label class="field">
+        <span>Role</span>
+        <select [ngModel]="access.role()" (ngModelChange)="setRole($event)" name="role">
+          <option value="USER">User</option>
+          <option value="ADMIN">Admin</option>
+        </select>
+      </label>
+
+      <label class="field">
+        <span>Display name</span>
+        <input
+          type="text"
+          name="alias"
+          [ngModel]="access.alias()"
+          (ngModelChange)="setAlias($event)"
+          placeholder="Operator name"
+        />
+      </label>
+
+      <button type="submit">
+        Open {{ access.role() === 'ADMIN' ? 'Admin' : 'User' }} Interface
       </button>
-      <p class="hero-hint">API base: <code>/api</code></p>
-    </div>
+    </form>
   </section>
 
-  @if (error()) {
-    <section class="banner error">
-      <strong>Booking API issue</strong>
-      <span>{{ error() }}</span>
-    </section>
-  }
-
-  @if (!error() && loading()) {
-    <section class="banner loading">
-      <strong>Loading cars</strong>
-      <span>Fetching cars, users, time slots, and bookings.</span>
-    </section>
-  }
-
-  @if (success()) {
-    <section class="banner success">
-      <strong>Updated</strong>
-      <span>{{ success() }}</span>
-    </section>
-  }
-
-  <section class="stats">
-    @for (stat of stats(); track stat.label) {
-      <article class="stat-card">
-        <p>{{ stat.label }}</p>
-        <h2>{{ stat.value }}</h2>
-        <span>{{ stat.note }}</span>
-      </article>
-    }
-  </section>
-
-  <section class="layout">
-    <article class="panel fleet-panel">
-      <div class="panel-header">
-        <div>
-          <p class="eyebrow">Fleet</p>
-          <h3>Choose your car</h3>
-        </div>
-      </div>
-
-      <div class="car-grid">
-        @for (car of carSummaries(); track car.id) {
-          <button
-            type="button"
-            class="car-card"
-            [class.selected]="car.id === selectedCarId()"
-            [class.inactive]="!car.active"
-            (click)="selectCar(car.id)"
-          >
-            <div class="car-topline">
-              <span class="car-type">{{ car.type }}</span>
-              <span class="car-status">{{ car.active ? 'Available' : 'Inactive' }}</span>
-            </div>
-            <h4>{{ car.name }}</h4>
-            <p>{{ car.description || 'No description provided.' }}</p>
-            <dl>
-              <div>
-                <dt>Location</dt>
-                <dd>{{ car.location }}</dd>
-              </div>
-              <div>
-                <dt>Open slots</dt>
-                <dd>{{ car.availableSlots }} / {{ car.totalSlots }}</dd>
-              </div>
-              <div>
-                <dt>Trips</dt>
-                <dd>{{ car.confirmedBookings }}</dd>
-              </div>
-            </dl>
-          </button>
-        } @empty {
-          <p class="empty-state">No cars were returned by <code>/api/resources/cars</code>.</p>
-        }
-      </div>
-    </article>
-
-    <article class="panel booking-panel">
-      <div class="panel-header">
-        <div>
-          <p class="eyebrow">Reserve</p>
-          <h3>Complete your booking</h3>
-        </div>
-      </div>
-
-      @if (selectedCar()) {
-        <section class="selected-car">
-          <div>
-            <strong>{{ selectedCar()!.name }}</strong>
-            <p>{{ selectedCar()!.description }} | {{ selectedCar()!.location }}</p>
-          </div>
-          @if (selectedSlot()) {
-            <span class="slot-summary">{{ formatSlotRange(selectedSlot()!) }}</span>
-          } @else {
-            <span class="slot-summary muted">No pickup slot selected</span>
-          }
-        </section>
-      } @else {
-        <p class="empty-state">Select a car from the fleet to begin.</p>
-      }
-
-      <form class="booking-form" (ngSubmit)="createBooking()">
-        @if (users().length > 1) {
-          <label class="field">
-            <span>Client profile</span>
-            <select
-              [ngModel]="selectedUserId()"
-              (ngModelChange)="selectUser($event)"
-              name="userId"
-            >
-              @for (user of users(); track user.id) {
-                <option [ngValue]="user.id">{{ user.name }}</option>
-              }
-            </select>
-          </label>
-        } @else if (selectedUser()) {
-          <section class="client-summary">
-            <span>Client profile</span>
-            <strong>{{ selectedUser()!.name }}</strong>
-            <p>{{ selectedUser()!.email || 'No email stored for this profile.' }}</p>
-          </section>
-        }
-
-        <label class="field">
-          <span>Customer name</span>
-          <input
-            type="text"
-            name="customerName"
-            [ngModel]="customerName()"
-            (ngModelChange)="customerName.set($event)"
-            placeholder="Enter the driver or customer name"
-          />
-        </label>
-
-        <label class="field">
-          <span>Trip label</span>
-          <input
-            type="text"
-            name="serviceName"
-            [ngModel]="serviceName()"
-            (ngModelChange)="serviceName.set($event)"
-            placeholder="Airport transfer, city trip, weekend drive..."
-          />
-        </label>
-
-        <section class="slot-picker">
-          <div class="slot-header">
-            <span>Pickup slots</span>
-            <strong>{{ availableSlots().length }} available</strong>
-          </div>
-
-          @if (availableSlots().length) {
-            <div class="slot-grid">
-              @for (slot of availableSlots(); track slot.id) {
-                <button
-                  type="button"
-                  class="slot-card"
-                  [class.selected]="slot.id === selectedTimeSlotId()"
-                  (click)="chooseTimeSlot(slot.id)"
-                >
-                  <span>{{ formatDay(slot.startTime) }}</span>
-                  <strong>{{ formatTime(slot.startTime) }} - {{ formatTime(slot.endTime) }}</strong>
-                </button>
-              }
-            </div>
-          } @else {
-            <p class="empty-state small">
-              This car currently has no open slots. Choose another car or add more time slots.
-            </p>
-          }
-        </section>
-
-        <button type="submit" class="submit-button" [disabled]="bookingDisabled()">
-          {{ submitting() ? 'Saving booking...' : 'Confirm booking' }}
-        </button>
-
-        <p class="form-note">Submitting this form sends a live <code>POST /api/bookings</code>.</p>
-      </form>
-    </article>
-
-    <article class="panel reservations-panel">
-      <div class="panel-header">
-        <div>
-          <p class="eyebrow">Reservations</p>
-          <h3>Current bookings</h3>
-        </div>
-      </div>
-
-      <div class="reservation-list">
-        @for (booking of visibleBookings(); track booking.id) {
-          <section class="reservation-card">
-            <div class="reservation-topline">
-              <div>
-                <strong>{{ booking.customerName || 'Unnamed customer' }}</strong>
-                <p>{{ resourceLabel(booking.resourceId) }}</p>
-              </div>
-              <span class="status-pill" [class.cancelled]="!isConfirmed(booking)">
-                {{ booking.status }}
-              </span>
-            </div>
-
-            <dl>
-              <div>
-                <dt>Slot</dt>
-                <dd>{{ slotLabel(booking.timeSlotId) }}</dd>
-              </div>
-              <div>
-                <dt>Service</dt>
-                <dd>{{ booking.serviceName || 'No label provided' }}</dd>
-              </div>
-              <div>
-                <dt>Booked at</dt>
-                <dd>{{ formatDate(booking.bookingTime) }}</dd>
-              </div>
-            </dl>
-
-            @if (isConfirmed(booking)) {
-              <button
-                type="button"
-                class="ghost-button"
-                (click)="cancelBooking(booking.id)"
-                [disabled]="cancellingId() === booking.id"
-              >
-                {{ cancellingId() === booking.id ? 'Cancelling...' : 'Cancel booking' }}
-              </button>
-            }
-          </section>
-        } @empty {
-          <p class="empty-state">No bookings available yet.</p>
-        }
-      </div>
-    </article>
-  </section>
+  <router-outlet></router-outlet>
 </main>
