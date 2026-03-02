@@ -14,5 +14,53 @@
     "type": "CAR",
     "location": "Berlin",
     "active": true
+  },
+  {
+    "id": 5,
+    "name": "Mercedes-Benz C-Class",
+    "description": "Luxury Sedan",
+    "type": "CAR",
+    "location": "Berlin",
+    "active": true
+  },
+  {
+    "id": 6,
+    "name": "Volkswagen Golf",
+    "description": "Compact Car",
+    "type": "CAR",
+    "location": "Berlin",
+    "active": true
+  },
+  {
+    "id": 7,
+    "name": "Porsche 911",
+    "description": "Sports Car",
+    "type": "CAR",
+    "location": "Berlin",
+    "active": true
+  },
+  {
+    "id": 8,
+    "name": "Tesla Model 3",
+    "description": "Electric Sedan",
+    "type": "CAR",
+    "location": "Berlin",
+    "active": true
+  },
+  {
+    "id": 9,
+    "name": "Ford Mustang",
+    "description": "Muscle Car",
+    "type": "CAR",
+    "location": "Berlin",
+    "active": true
+  },
+  {
+    "id": 10,
+    "name": "Chevrolet Camaro",
+    "description": "Muscle Car",
+    "type": "CAR",
+    "location": "Berlin",
+    "active": true
   }
 ]

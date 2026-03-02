@@ -1,1 +1,23 @@
-[]
+[
+    {
+        "id": 1,
+        "customerName": "John Doe",
+        "date": "2024-07-01",
+        "time": "18:00",
+        "numberOfGuests": 4
+    },
+    {
+        "id": 2,
+        "customerName": "Jane Smith",
+        "date": "2024-07-02",
+        "time": "19:00",
+        "numberOfGuests": 2
+    },
+    {
+        "id": 3,
+        "customerName": "Alice Johnson",
+        "date": "2024-07-03",
+        "time": "20:00",
+        "numberOfGuests": 6
+    }
+]
