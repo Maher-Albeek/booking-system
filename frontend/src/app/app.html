@@ -48,8 +48,56 @@
         </div>
       </div>
 
+      <div class="filters">
+        <label class="field">
+          <span>Search</span>
+          <input
+            type="text"
+            [ngModel]="resourceSearch()"
+            (ngModelChange)="resourceSearch.set($event)"
+            placeholder="BMW, Berlin, SUV..."
+          />
+        </label>
+
+        <label class="field">
+          <span>Type</span>
+          <select [ngModel]="selectedType()" (ngModelChange)="selectedType.set($event)">
+            <option value="all">All types</option>
+            @for (type of resourceTypes(); track type) {
+              <option [value]="type">{{ type }}</option>
+            }
+          </select>
+        </label>
+
+        <label class="field">
+          <span>Location</span>
+          <select [ngModel]="selectedLocation()" (ngModelChange)="selectedLocation.set($event)">
+            <option value="all">All locations</option>
+            @for (location of resourceLocations(); track location) {
+              <option [value]="location">{{ location }}</option>
+            }
+          </select>
+        </label>
+
+        <div class="field checkbox-field">
+          <span>State</span>
+          <label class="checkbox">
+            <input
+              type="checkbox"
+              [ngModel]="showActiveOnly()"
+              (ngModelChange)="showActiveOnly.set($event)"
+            />
+            <span>Active only</span>
+          </label>
+        </div>
+
+        <button type="button" class="ghost-button" (click)="resetResourceFilters()">
+          Reset
+        </button>
+      </div>
+
       <div class="resource-list">
-        @for (resource of resourceSummaries(); track resource.id) {
+        @for (resource of filteredResourceSummaries(); track resource.id) {
           <section class="resource-card">
             <div class="resource-topline">
               <span class="resource-type">{{ resource.type }}</span>
@@ -75,7 +123,7 @@
             </dl>
           </section>
         } @empty {
-          <p class="empty-state">No resources returned by <code>/api/resources</code>.</p>
+          <p class="empty-state">No resources match the current filters.</p>
         }
       </div>
     </article>
@@ -111,7 +159,33 @@
         </div>
       </div>
 
-      @if (recentBookings().length) {
+      <div class="filters booking-filters">
+        <label class="field">
+          <span>Search</span>
+          <input
+            type="text"
+            [ngModel]="bookingSearch()"
+            (ngModelChange)="bookingSearch.set($event)"
+            placeholder="Customer, service, resource..."
+          />
+        </label>
+
+        <label class="field">
+          <span>Status</span>
+          <select [ngModel]="bookingStatus()" (ngModelChange)="bookingStatus.set($event)">
+            <option value="all">All statuses</option>
+            @for (status of bookingStatuses(); track status) {
+              <option [value]="status">{{ status }}</option>
+            }
+          </select>
+        </label>
+
+        <button type="button" class="ghost-button" (click)="resetBookingFilters()">
+          Reset
+        </button>
+      </div>
+
+      @if (filteredBookings().length) {
         <div class="table-wrap">
           <table>
             <thead>
@@ -125,7 +199,7 @@
               </tr>
             </thead>
             <tbody>
-              @for (booking of recentBookings(); track booking.id) {
+              @for (booking of filteredBookings(); track booking.id) {
                 <tr>
                   <td>
                     <strong>{{ booking.customerName }}</strong>
@@ -144,7 +218,7 @@
           </table>
         </div>
       } @else {
-        <p class="empty-state">No bookings stored yet. New bookings will appear here.</p>
+        <p class="empty-state">No bookings match the current filters.</p>
       }
     </article>
 

@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { FormsModule } from '@angular/forms';
 import { finalize, forkJoin } from 'rxjs';
 
 type Resource = {
@@ -53,7 +54,7 @@ type ResourceSummary = {
 
 @Component({
   selector: 'app-root',
-  imports: [CommonModule],
+  imports: [CommonModule, FormsModule],
   templateUrl: './app.html',
   styleUrl: './app.scss'
 })
@@ -68,6 +69,12 @@ export class App {
   protected readonly users = signal<User[]>([]);
   protected readonly timeSlots = signal<TimeSlot[]>([]);
   protected readonly bookings = signal<Booking[]>([]);
+  protected readonly resourceSearch = signal('');
+  protected readonly selectedType = signal('all');
+  protected readonly selectedLocation = signal('all');
+  protected readonly showActiveOnly = signal(false);
+  protected readonly bookingSearch = signal('');
+  protected readonly bookingStatus = signal('all');
 
   protected readonly stats = computed(() => {
     const resources = this.resources();
@@ -99,6 +106,18 @@ export class App {
     ];
   });
 
+  protected readonly resourceTypes = computed(() =>
+    [...new Set(this.resources().map((resource) => resource.type).filter(Boolean))].sort()
+  );
+
+  protected readonly resourceLocations = computed(() =>
+    [...new Set(this.resources().map((resource) => resource.location).filter(Boolean))].sort()
+  );
+
+  protected readonly bookingStatuses = computed(() =>
+    [...new Set(this.bookings().map((booking) => booking.status).filter(Boolean))].sort()
+  );
+
   protected readonly resourceSummaries = computed<ResourceSummary[]>(() => {
     const slots = this.timeSlots();
     const bookings = this.bookings();
@@ -121,6 +140,26 @@ export class App {
     });
   });
 
+  protected readonly filteredResourceSummaries = computed(() => {
+    const search = this.resourceSearch().trim().toLowerCase();
+    const selectedType = this.selectedType();
+    const selectedLocation = this.selectedLocation();
+    const showActiveOnly = this.showActiveOnly();
+
+    return this.resourceSummaries().filter((resource) => {
+      const matchesSearch =
+        !search ||
+        resource.name.toLowerCase().includes(search) ||
+        resource.description.toLowerCase().includes(search) ||
+        resource.location.toLowerCase().includes(search);
+      const matchesType = selectedType === 'all' || resource.type === selectedType;
+      const matchesLocation = selectedLocation === 'all' || resource.location === selectedLocation;
+      const matchesActive = !showActiveOnly || resource.active;
+
+      return matchesSearch && matchesType && matchesLocation && matchesActive;
+    });
+  });
+
   protected readonly recentBookings = computed(() =>
     [...this.bookings()].sort((left, right) => {
       const leftTime = left.bookingTime ? new Date(left.bookingTime).getTime() : 0;
@@ -129,12 +168,45 @@ export class App {
     })
   );
 
+  protected readonly filteredBookings = computed(() => {
+    const search = this.bookingSearch().trim().toLowerCase();
+    const status = this.bookingStatus();
+
+    return this.recentBookings().filter((booking) => {
+      const resourceName = this.resourceLabel(booking.resourceId).toLowerCase();
+      const userName = this.userLabel(booking.userId).toLowerCase();
+      const slot = this.slotLabel(booking.timeSlotId).toLowerCase();
+      const matchesSearch =
+        !search ||
+        booking.customerName.toLowerCase().includes(search) ||
+        booking.serviceName.toLowerCase().includes(search) ||
+        resourceName.includes(search) ||
+        userName.includes(search) ||
+        slot.includes(search);
+      const matchesStatus = status === 'all' || booking.status === status;
+
+      return matchesSearch && matchesStatus;
+    });
+  });
+
   constructor() {
     this.loadDashboard();
   }
 
   protected reload(): void {
     this.loadDashboard();
+  }
+
+  protected resetResourceFilters(): void {
+    this.resourceSearch.set('');
+    this.selectedType.set('all');
+    this.selectedLocation.set('all');
+    this.showActiveOnly.set(false);
+  }
+
+  protected resetBookingFilters(): void {
+    this.bookingSearch.set('');
+    this.bookingStatus.set('all');
   }
 
   protected resourceLabel(resourceId: number): string {

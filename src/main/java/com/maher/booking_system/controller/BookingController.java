@@ -39,13 +39,13 @@ public class BookingController {
     }
 
     @PostMapping
-    public BookingResponse create(@Valid @RequestBody CreateBookingRequest request) {
+    public BookingResponse create(@Valid @NonNull @RequestBody CreateBookingRequest request) {
         Booking booking = bookingService.createBooking(request);
         return BookingMapper.toResponse(booking);
     }
 
     @PatchMapping("/{id}/cancel")
-    public void cancel(@PathVariable Long id) {
+    public void cancel(@PathVariable @NonNull Long id) {
         bookingService.cancelBooking(id);
     }
 }

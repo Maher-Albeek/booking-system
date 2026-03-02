@@ -4,20 +4,29 @@
         "customerName": "John Doe",
         "date": "2024-07-01",
         "time": "18:00",
-        "numberOfGuests": 4
+        "numberOfGuests": 4,
+        "status": "CONFIRMED",
+        "resourceId": 1,
+        "timeSlotId": 1
     },
     {
         "id": 2,
         "customerName": "Jane Smith",
-        "date": "2024-07-02",
+        "date": "2024-07-01",
         "time": "19:00",
-        "numberOfGuests": 2
+        "numberOfGuests": 2,
+        "status": "CONFIRMED",
+        "resourceId": 2,
+        "timeSlotId": 2
     },
     {
         "id": 3,
         "customerName": "Alice Johnson",
-        "date": "2024-07-03",
+        "date": "2024-07-01",
         "time": "20:00",
-        "numberOfGuests": 6
+        "numberOfGuests": 6,
+        "status": "CANCELLED",
+        "resourceId": 3,
+        "timeSlotId": 3
     }
 ]
