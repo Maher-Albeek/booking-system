@@ -14,10 +14,65 @@
         }
       </nav>
 
-      <div class="session-chip">
-        <span>{{ auth.user()?.name }}</span>
-        <strong>{{ auth.user()?.role === 'ADMIN' ? 'Administrator' : 'Customer' }}</strong>
-        <button type="button" class="logout-button" (click)="logout()">Logout</button>
+      <div class="user-menu-shell">
+        <button
+          type="button"
+          class="user-menu-trigger"
+          [attr.aria-expanded]="userMenuOpen()"
+          aria-haspopup="menu"
+          (click)="toggleUserMenu()"
+        >
+          <span class="avatar-circle">
+            @if (auth.user()?.avatarUrl) {
+              <img [src]="auth.user()?.avatarUrl" alt="User avatar" />
+            } @else {
+              <span>{{ userInitials() }}</span>
+            }
+          </span>
+
+          <span class="user-menu-copy">
+            <span>{{ auth.user()?.name }}</span>
+            <strong>{{ auth.user()?.role === 'ADMIN' ? 'Administrator' : 'Customer' }}</strong>
+          </span>
+
+          <svg class="menu-chevron" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M7 10l5 5 5-5" />
+          </svg>
+        </button>
+
+        @if (userMenuOpen()) {
+          <div class="user-menu" role="menu">
+            <a routerLink="/user" fragment="account" class="menu-link" role="menuitem" (click)="closeUserMenu()">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12 12a4 4 0 1 0-4-4 4 4 0 0 0 4 4zm0 2c-4.42 0-8 1.79-8 4v2h16v-2c0-2.21-3.58-4-8-4z" />
+              </svg>
+              <span>Manage account</span>
+            </a>
+
+            <a routerLink="/user" fragment="reservations" class="menu-link" role="menuitem" (click)="closeUserMenu()">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M7 3v2H5a2 2 0 0 0-2 2v11a3 3 0 0 0 3 3h12a3 3 0 0 0 3-3V7a2 2 0 0 0-2-2h-2V3h-2v2H9V3zm11 8H6v7a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1z" />
+              </svg>
+              <span>My bookings</span>
+            </a>
+
+            @if (auth.isAdmin()) {
+              <a routerLink="/admin" class="menu-link" role="menuitem" (click)="closeUserMenu()">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M3 12l9-8 9 8-2 0v8h-5v-5H10v5H5v-8z" />
+                </svg>
+                <span>Admin tools</span>
+              </a>
+            }
+
+            <button type="button" class="menu-link logout-link" role="menuitem" (click)="logout()">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M10 17l1.41-1.41L8.83 13H20v-2H8.83l2.58-2.59L10 7l-5 5zm-5 2h7v2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7v2H5z" />
+              </svg>
+              <span>Logout</span>
+            </button>
+          </div>
+        }
       </div>
     </header>
   }

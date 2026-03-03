@@ -6,7 +6,53 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { finalize, forkJoin, of } from 'rxjs';
 
-import { AuthStateService } from './auth-state.service';
+import { AuthStateService, AuthUser } from './auth-state.service';
+
+const PAYMENT_METHOD_OPTIONS = [
+  'PayPal',
+  'Master Card',
+  'Visa',
+  'Klarna',
+  'Giro Card'
+] as const;
+
+type PaymentMethod = (typeof PAYMENT_METHOD_OPTIONS)[number];
+
+const PAYMENT_METHOD_META: Record<
+  PaymentMethod,
+  { shortLabel: string; hint: string; accent: string; foreground: string }
+> = {
+  PayPal: {
+    shortLabel: 'PP',
+    hint: 'Wallet checkout',
+    accent: '#1d4ed8',
+    foreground: '#eff6ff'
+  },
+  'Master Card': {
+    shortLabel: 'MC',
+    hint: 'Credit card',
+    accent: '#ea580c',
+    foreground: '#fff7ed'
+  },
+  Visa: {
+    shortLabel: 'VI',
+    hint: 'Card payment',
+    accent: '#2563eb',
+    foreground: '#eff6ff'
+  },
+  Klarna: {
+    shortLabel: 'K',
+    hint: 'Pay later',
+    accent: '#f472b6',
+    foreground: '#500724'
+  },
+  'Giro Card': {
+    shortLabel: 'GC',
+    hint: 'Debit card',
+    accent: '#16a34a',
+    foreground: '#f0fdf4'
+  }
+};
 
 type Resource = {
   id: number;
@@ -27,6 +73,16 @@ type User = {
   name: string;
   email: string | null;
   role: string | null;
+  firstName: string | null;
+  lastName: string | null;
+  address: string | null;
+  birthDate: string | null;
+  avatarUrl: string | null;
+  paymentMethods: PaymentMethod[];
+};
+
+type UserResponse = Omit<User, 'paymentMethods'> & {
+  paymentMethods?: string[] | null;
 };
 
 type TimeSlot = {
@@ -46,6 +102,11 @@ type Booking = {
   bookingTime: string | null;
   customerName: string;
   serviceName: string | null;
+  firstName: string | null;
+  lastName: string | null;
+  address: string | null;
+  birthDate: string | null;
+  paymentMethod: string | null;
 };
 
 type BookingRequest = {
@@ -54,12 +115,26 @@ type BookingRequest = {
   timeSlotId: number;
   customerName: string;
   serviceName: string;
+  firstName: string;
+  lastName: string;
+  address: string;
+  birthDate: string;
+  paymentMethod: PaymentMethod;
 };
 
 type CarSummary = Resource & {
   totalSlots: number;
   availableSlots: number;
   confirmedBookings: number;
+};
+
+type AccountDraft = {
+  firstName: string;
+  lastName: string;
+  address: string;
+  birthDate: string;
+  avatarUrl: string;
+  paymentMethods: PaymentMethod[];
 };
 
 @Component({
@@ -74,8 +149,12 @@ export class UserPageComponent {
 
   protected readonly auth = inject(AuthStateService);
   protected readonly title = 'Book Your Next Car';
+  protected readonly supportedPaymentMethods = PAYMENT_METHOD_OPTIONS;
+  protected readonly paymentMethodMeta = PAYMENT_METHOD_META;
   protected readonly loading = signal(true);
   protected readonly submitting = signal(false);
+  protected readonly accountSaving = signal(false);
+  protected readonly avatarUploading = signal(false);
   protected readonly cancellingId = signal<number | null>(null);
   protected readonly error = signal<string | null>(null);
   protected readonly success = signal<string | null>(null);
@@ -85,12 +164,19 @@ export class UserPageComponent {
   protected readonly users = signal<User[]>([]);
   protected readonly timeSlots = signal<TimeSlot[]>([]);
   protected readonly bookings = signal<Booking[]>([]);
+  protected readonly profileUser = signal<User | null>(null);
 
   protected readonly selectedCarId = signal<number | null>(null);
   protected readonly selectedUserId = signal<number | null>(null);
   protected readonly selectedTimeSlotId = signal<number | null>(null);
-  protected readonly customerName = signal('');
+  protected readonly bookingFirstName = signal('');
+  protected readonly bookingLastName = signal('');
+  protected readonly bookingAddress = signal('');
+  protected readonly bookingBirthDate = signal('');
+  protected readonly bookingPaymentMethod = signal<PaymentMethod | ''>('');
   protected readonly serviceName = signal('');
+
+  protected accountDraft: AccountDraft = this.emptyAccountDraft();
 
   protected readonly stats = computed(() => [
     {
@@ -111,9 +197,13 @@ export class UserPageComponent {
       note: this.auth.isAuthenticated() ? 'Live reservations' : 'Required to reserve'
     },
     {
-      label: this.auth.isAuthenticated() ? 'Account Role' : 'Guest Mode',
-      value: this.auth.isAuthenticated() ? this.auth.user()?.role ?? 'USER' : 'Browse',
-      note: this.auth.isAuthenticated() ? 'Session active' : 'Registration available'
+      label: this.auth.isAuthenticated() ? 'Profile Ready' : 'Guest Mode',
+      value: this.auth.isAuthenticated()
+        ? `${this.accountCompleteness().completed}/${this.accountCompleteness().total}`
+        : 'Browse',
+      note: this.auth.isAuthenticated()
+        ? 'Booking profile fields saved'
+        : 'Registration available'
     }
   ]);
 
@@ -142,15 +232,31 @@ export class UserPageComponent {
 
   protected readonly selectedCarPhotos = computed(() => this.selectedCar()?.photoUrls ?? []);
 
+  protected readonly accountUser = computed(
+    () => this.profileUser() ?? this.toLocalUser(this.auth.user())
+  );
+
+  protected readonly avatarInitials = computed(() => this.buildInitials(this.accountUser()));
+
+  protected readonly accountCompleteness = computed(() => {
+    const user = this.accountUser();
+    const completed = [
+      user?.firstName,
+      user?.lastName,
+      user?.address,
+      user?.birthDate,
+      user?.paymentMethods.length ? 'yes' : null
+    ].filter((value) => !!value).length;
+
+    return {
+      completed,
+      total: 5
+    };
+  });
+
   protected readonly selectedUser = computed(() => {
-    if (!this.auth.isAdmin() && this.auth.user()) {
-      const authenticatedUser = this.auth.user()!;
-      return {
-        id: authenticatedUser.id,
-        name: authenticatedUser.name,
-        email: authenticatedUser.email,
-        role: authenticatedUser.role
-      };
+    if (!this.auth.isAdmin()) {
+      return this.profileUser() ?? this.toLocalUser(this.auth.user());
     }
 
     return this.users().find((user) => user.id === this.selectedUserId()) ?? null;
@@ -212,7 +318,11 @@ export class UserPageComponent {
       this.selectedCar() === null ||
       this.selectedUser() === null ||
       this.selectedSlot() === null ||
-      !this.customerName().trim() ||
+      !this.bookingFirstName().trim() ||
+      !this.bookingLastName().trim() ||
+      !this.bookingAddress().trim() ||
+      !this.bookingBirthDate().trim() ||
+      !this.bookingPaymentMethod() ||
       !this.serviceName().trim()
   );
 
@@ -233,6 +343,7 @@ export class UserPageComponent {
   protected openReservationModal(carId: number): void {
     this.selectedCarId.set(carId);
     this.selectedTimeSlotId.set(this.firstAvailableSlotId(carId));
+    this.syncBookingFieldsFromUser(this.selectedUser(), this.selectedUser(), true);
     this.error.set(null);
     this.success.set(null);
     this.reservationModalOpen.set(true);
@@ -257,15 +368,104 @@ export class UserPageComponent {
     const nextUser = this.users().find((user) => user.id === userId) ?? null;
 
     this.selectedUserId.set(nextUser?.id ?? null);
-
-    if (!this.customerName().trim() || this.customerName() === previousUser?.name) {
-      this.customerName.set(nextUser?.name ?? '');
-    }
+    this.syncBookingFieldsFromUser(nextUser, previousUser);
   }
 
   protected chooseTimeSlot(slotId: number): void {
     this.selectedTimeSlotId.set(slotId);
     this.success.set(null);
+  }
+
+  protected async onAvatarInputChange(event: Event): Promise<void> {
+    const input = event.target as HTMLInputElement | null;
+    const file = input?.files?.[0] ?? null;
+
+    if (input) {
+      input.value = '';
+    }
+
+    if (!file) {
+      return;
+    }
+
+    if (!file.type.startsWith('image/')) {
+      this.error.set('Only image files can be used as an avatar.');
+      return;
+    }
+
+    this.avatarUploading.set(true);
+    this.error.set(null);
+
+    try {
+      const avatarUrl = await this.readFileAsDataUrl(file);
+      this.accountDraft = {
+        ...this.accountDraft,
+        avatarUrl
+      };
+    } catch {
+      this.error.set('The selected image could not be loaded.');
+    } finally {
+      this.avatarUploading.set(false);
+    }
+  }
+
+  protected removeAvatar(): void {
+    this.accountDraft = {
+      ...this.accountDraft,
+      avatarUrl: ''
+    };
+  }
+
+  protected isAccountPaymentMethodSelected(method: PaymentMethod): boolean {
+    return this.accountDraft.paymentMethods.includes(method);
+  }
+
+  protected toggleAccountPaymentMethod(method: PaymentMethod, checked: boolean): void {
+    const nextMethods = checked
+      ? [...this.accountDraft.paymentMethods, method]
+      : this.accountDraft.paymentMethods.filter((entry) => entry !== method);
+
+    this.accountDraft = {
+      ...this.accountDraft,
+      paymentMethods: this.sortPaymentMethods(nextMethods)
+    };
+  }
+
+  protected saveAccount(): void {
+    const authenticatedUser = this.auth.user();
+
+    if (!authenticatedUser) {
+      this.error.set('Login before updating your account.');
+      return;
+    }
+
+    this.accountSaving.set(true);
+    this.error.set(null);
+    this.success.set(null);
+
+    this.http
+      .put<UserResponse>(`/api/users/${authenticatedUser.id}`, {
+        firstName: this.accountDraft.firstName.trim(),
+        lastName: this.accountDraft.lastName.trim(),
+        address: this.accountDraft.address.trim(),
+        birthDate: this.accountDraft.birthDate.trim(),
+        avatarUrl: this.accountDraft.avatarUrl.trim(),
+        paymentMethods: this.accountDraft.paymentMethods
+      })
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        finalize(() => this.accountSaving.set(false))
+      )
+      .subscribe({
+        next: (user) => {
+          const normalizedUser = this.normalizeUser(user);
+          this.applyProfileUser(normalizedUser);
+          this.success.set('Your account information has been updated.');
+        },
+        error: (error: HttpErrorResponse) => {
+          this.error.set(this.readApiError(error, 'Account information could not be saved.'));
+        }
+      });
   }
 
   protected createBooking(): void {
@@ -277,11 +477,25 @@ export class UserPageComponent {
     const selectedCar = this.selectedCar();
     const selectedUser = this.selectedUser();
     const selectedSlot = this.selectedSlot();
-    const customerName = this.customerName().trim();
+    const firstName = this.bookingFirstName().trim();
+    const lastName = this.bookingLastName().trim();
+    const address = this.bookingAddress().trim();
+    const birthDate = this.bookingBirthDate().trim();
+    const paymentMethod = this.bookingPaymentMethod();
     const serviceName = this.serviceName().trim();
 
-    if (!selectedCar || !selectedUser || !selectedSlot || !customerName || !serviceName) {
-      this.error.set('Choose a car, select a slot, and complete the booking form.');
+    if (
+      !selectedCar ||
+      !selectedUser ||
+      !selectedSlot ||
+      !firstName ||
+      !lastName ||
+      !address ||
+      !birthDate ||
+      !paymentMethod ||
+      !serviceName
+    ) {
+      this.error.set('Choose a car, select a slot, and complete all required booking details.');
       return;
     }
 
@@ -289,8 +503,13 @@ export class UserPageComponent {
       userId: selectedUser.id,
       resourceId: selectedCar.id,
       timeSlotId: selectedSlot.id,
-      customerName,
-      serviceName
+      customerName: `${firstName} ${lastName}`,
+      serviceName,
+      firstName,
+      lastName,
+      address,
+      birthDate,
+      paymentMethod
     };
 
     this.submitting.set(true);
@@ -364,6 +583,16 @@ export class UserPageComponent {
     }).format(new Date(value));
   }
 
+  protected formatCalendarDate(value: string | null | undefined): string {
+    if (!value) {
+      return 'Not recorded';
+    }
+
+    return new Intl.DateTimeFormat('de-DE', {
+      dateStyle: 'medium'
+    }).format(new Date(value));
+  }
+
   protected formatDay(value: string): string {
     return new Intl.DateTimeFormat('en-GB', {
       weekday: 'short',
@@ -395,36 +624,57 @@ export class UserPageComponent {
     return Math.max((car?.photoUrls?.length ?? 0) - 1, 0);
   }
 
+  protected bookingContactName(booking: Booking): string {
+    const name = [booking.firstName, booking.lastName].filter(Boolean).join(' ').trim();
+    return name || booking.customerName || 'Unnamed customer';
+  }
+
   private loadData(): void {
     this.loading.set(true);
     this.error.set(null);
 
+    const authenticatedUser = this.auth.user();
     const usersRequest = this.auth.isAdmin()
-      ? this.http.get<User[]>('/api/users')
-      : of([] as User[]);
+      ? this.http.get<UserResponse[]>('/api/users')
+      : of([] as UserResponse[]);
     const bookingsRequest = this.auth.isAuthenticated()
       ? this.http.get<Booking[]>('/api/bookings')
       : of([] as Booking[]);
+    const profileRequest =
+      authenticatedUser !== null
+        ? this.http.get<UserResponse>(`/api/users/${authenticatedUser.id}`)
+        : of(null);
 
     forkJoin({
       cars: this.http.get<ResourceResponse[]>('/api/resources/cars'),
       users: usersRequest,
       timeSlots: this.http.get<TimeSlot[]>('/api/time_slots'),
-      bookings: bookingsRequest
+      bookings: bookingsRequest,
+      profile: profileRequest
     })
       .pipe(
         takeUntilDestroyed(this.destroyRef),
         finalize(() => this.loading.set(false))
       )
       .subscribe({
-        next: ({ cars, users, timeSlots, bookings }) => {
+        next: ({ cars, users, timeSlots, bookings, profile }) => {
           const normalizedCars = cars.map((car) => this.normalizeResource(car));
+          const normalizedUsers = users.map((user) => this.normalizeUser(user));
+          const normalizedProfile = profile ? this.normalizeUser(profile) : null;
 
           this.cars.set(normalizedCars);
-          this.users.set(users);
+          this.users.set(normalizedUsers);
           this.timeSlots.set(timeSlots);
           this.bookings.set(bookings);
-          this.syncDefaults(normalizedCars, users, timeSlots);
+
+          if (normalizedProfile) {
+            this.applyProfileUser(normalizedProfile);
+          } else {
+            this.profileUser.set(null);
+            this.accountDraft = this.emptyAccountDraft();
+          }
+
+          this.syncDefaults(normalizedCars, normalizedUsers, timeSlots, normalizedProfile);
         },
         error: (error: HttpErrorResponse) => {
           this.error.set(
@@ -437,10 +687,14 @@ export class UserPageComponent {
       });
   }
 
-  private syncDefaults(cars: Resource[], users: User[], timeSlots: TimeSlot[]): void {
+  private syncDefaults(
+    cars: Resource[],
+    users: User[],
+    timeSlots: TimeSlot[],
+    profile: User | null
+  ): void {
     const selectedCarId = this.selectedCarId();
-    const selectedUser = this.selectedUser();
-    const authenticatedUser = this.auth.user();
+    const previousUser = this.selectedUser();
 
     if (!cars.some((car) => car.id === selectedCarId)) {
       this.selectedCarId.set(cars[0]?.id ?? null);
@@ -448,24 +702,10 @@ export class UserPageComponent {
 
     const nextUser = this.auth.isAdmin()
       ? users.find((user) => user.id === this.selectedUserId()) ?? users[0] ?? null
-      : authenticatedUser
-        ? {
-            id: authenticatedUser.id,
-            name: authenticatedUser.name,
-            email: authenticatedUser.email,
-            role: authenticatedUser.role
-          }
-        : null;
+      : profile ?? this.toLocalUser(this.auth.user());
 
     this.selectedUserId.set(nextUser?.id ?? null);
-
-    if (
-      !this.customerName().trim() ||
-      this.customerName() === selectedUser?.name ||
-      this.customerName() === authenticatedUser?.name
-    ) {
-      this.customerName.set(nextUser?.name ?? authenticatedUser?.name ?? '');
-    }
+    this.syncBookingFieldsFromUser(nextUser, previousUser);
 
     const isSelectedSlotStillValid = timeSlots.some(
       (slot) =>
@@ -483,6 +723,60 @@ export class UserPageComponent {
     }
   }
 
+  private applyProfileUser(user: User): void {
+    const previousProfile = this.profileUser();
+
+    this.profileUser.set(user);
+    this.accountDraft = this.accountDraftFromUser(user);
+    this.auth.syncUser(this.toAuthUser(user));
+
+    if (!this.auth.isAdmin()) {
+      this.selectedUserId.set(user.id);
+      this.syncBookingFieldsFromUser(user, previousProfile, true);
+    }
+  }
+
+  private syncBookingFieldsFromUser(
+    nextUser: User | null,
+    previousUser: User | null,
+    force = false
+  ): void {
+    if (!nextUser) {
+      return;
+    }
+
+    const previousFirstName = previousUser?.firstName ?? '';
+    const previousLastName = previousUser?.lastName ?? '';
+    const previousAddress = previousUser?.address ?? '';
+    const previousBirthDate = previousUser?.birthDate ?? '';
+    const previousPaymentMethod = this.preferredPaymentMethod(previousUser) ?? '';
+    const nextPaymentMethod = this.preferredPaymentMethod(nextUser) ?? '';
+
+    if (force || !this.bookingFirstName().trim() || this.bookingFirstName() === previousFirstName) {
+      this.bookingFirstName.set(nextUser.firstName ?? '');
+    }
+
+    if (force || !this.bookingLastName().trim() || this.bookingLastName() === previousLastName) {
+      this.bookingLastName.set(nextUser.lastName ?? '');
+    }
+
+    if (force || !this.bookingAddress().trim() || this.bookingAddress() === previousAddress) {
+      this.bookingAddress.set(nextUser.address ?? '');
+    }
+
+    if (force || !this.bookingBirthDate().trim() || this.bookingBirthDate() === previousBirthDate) {
+      this.bookingBirthDate.set(nextUser.birthDate ?? '');
+    }
+
+    if (
+      force ||
+      !this.bookingPaymentMethod() ||
+      this.bookingPaymentMethod() === previousPaymentMethod
+    ) {
+      this.bookingPaymentMethod.set(nextPaymentMethod);
+    }
+  }
+
   private firstAvailableSlotId(carId: number): number | null {
     return [...this.timeSlots()]
       .filter((slot) => slot.resourceId === carId && slot.available)
@@ -490,6 +784,114 @@ export class UserPageComponent {
         (left, right) =>
           new Date(left.startTime).getTime() - new Date(right.startTime).getTime()
       )[0]?.id ?? null;
+  }
+
+  private emptyAccountDraft(): AccountDraft {
+    return {
+      firstName: '',
+      lastName: '',
+      address: '',
+      birthDate: '',
+      avatarUrl: '',
+      paymentMethods: []
+    };
+  }
+
+  private accountDraftFromUser(user: User | null): AccountDraft {
+    if (!user) {
+      return this.emptyAccountDraft();
+    }
+
+    return {
+      firstName: user.firstName ?? '',
+      lastName: user.lastName ?? '',
+      address: user.address ?? '',
+      birthDate: user.birthDate ?? '',
+      avatarUrl: user.avatarUrl ?? '',
+      paymentMethods: [...user.paymentMethods]
+    };
+  }
+
+  private preferredPaymentMethod(user: User | null): PaymentMethod | '' {
+    return user?.paymentMethods[0] ?? '';
+  }
+
+  private sortPaymentMethods(methods: PaymentMethod[]): PaymentMethod[] {
+    return [...new Set(methods)].sort(
+      (left, right) =>
+        this.supportedPaymentMethods.indexOf(left) - this.supportedPaymentMethods.indexOf(right)
+    );
+  }
+
+  private normalizeResource(resource: ResourceResponse): Resource {
+    return {
+      ...resource,
+      photoUrls: Array.isArray(resource.photoUrls) ? resource.photoUrls : []
+    };
+  }
+
+  private normalizeUser(user: UserResponse): User {
+    return {
+      id: user.id,
+      name: user.name,
+      email: user.email ?? null,
+      role: user.role ?? 'USER',
+      firstName: user.firstName ?? null,
+      lastName: user.lastName ?? null,
+      address: user.address ?? null,
+      birthDate: user.birthDate ?? null,
+      avatarUrl: user.avatarUrl ?? null,
+      paymentMethods: this.normalizePaymentMethods(user.paymentMethods)
+    };
+  }
+
+  private toLocalUser(user: AuthUser | null): User | null {
+    if (!user) {
+      return null;
+    }
+
+    return {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      address: user.address,
+      birthDate: user.birthDate,
+      avatarUrl: user.avatarUrl,
+      paymentMethods: this.normalizePaymentMethods(user.paymentMethods)
+    };
+  }
+
+  private toAuthUser(user: User): AuthUser {
+    return {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role === 'ADMIN' ? 'ADMIN' : 'USER',
+      firstName: user.firstName,
+      lastName: user.lastName,
+      address: user.address,
+      birthDate: user.birthDate,
+      avatarUrl: user.avatarUrl,
+      paymentMethods: [...user.paymentMethods]
+    };
+  }
+
+  private normalizePaymentMethods(values: string[] | null | undefined): PaymentMethod[] {
+    return this.supportedPaymentMethods.filter((method) => values?.includes(method));
+  }
+
+  private buildInitials(user: User | null): string {
+    const source = `${user?.firstName ?? ''} ${user?.lastName ?? ''}`.trim() || user?.name || 'U';
+
+    return source
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part[0]?.toUpperCase() ?? '')
+      .join('');
   }
 
   private readApiError(error: HttpErrorResponse, fallback: string): string {
@@ -512,10 +914,21 @@ export class UserPageComponent {
     return fallback;
   }
 
-  private normalizeResource(resource: ResourceResponse): Resource {
-    return {
-      ...resource,
-      photoUrls: Array.isArray(resource.photoUrls) ? resource.photoUrls : []
-    };
+  private readFileAsDataUrl(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+
+      reader.onload = () => {
+        if (typeof reader.result === 'string') {
+          resolve(reader.result);
+          return;
+        }
+
+        reject(new Error('Avatar could not be read.'));
+      };
+
+      reader.onerror = () => reject(reader.error ?? new Error('Avatar could not be read.'));
+      reader.readAsDataURL(file);
+    });
   }
 }

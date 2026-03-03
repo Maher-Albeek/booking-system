@@ -18,6 +18,7 @@ export class App {
 
   protected readonly auth = inject(AuthStateService);
   protected readonly activeView = signal<'login' | 'user' | 'admin'>('login');
+  protected readonly userMenuOpen = signal(false);
 
   protected readonly pageTitle = computed(() =>
     this.activeView() === 'admin'
@@ -35,6 +36,18 @@ export class App {
         : 'Authenticate with your booking account to open the correct page for your role.'
   );
 
+  protected readonly userInitials = computed(() => {
+    const user = this.auth.user();
+    const source = `${user?.firstName ?? ''} ${user?.lastName ?? ''}`.trim() || user?.name || 'U';
+
+    return source
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part[0]?.toUpperCase() ?? '')
+      .join('');
+  });
+
   constructor() {
     this.syncActiveView(this.router.url);
 
@@ -43,10 +56,22 @@ export class App {
         filter((event): event is NavigationEnd => event instanceof NavigationEnd),
         takeUntilDestroyed(this.destroyRef)
       )
-      .subscribe((event) => this.syncActiveView(event.urlAfterRedirects));
+      .subscribe((event) => {
+        this.userMenuOpen.set(false);
+        this.syncActiveView(event.urlAfterRedirects);
+      });
+  }
+
+  protected toggleUserMenu(): void {
+    this.userMenuOpen.update((value) => !value);
+  }
+
+  protected closeUserMenu(): void {
+    this.userMenuOpen.set(false);
   }
 
   protected logout(): void {
+    this.userMenuOpen.set(false);
     this.auth.logout();
     void this.router.navigate(['/login']);
   }

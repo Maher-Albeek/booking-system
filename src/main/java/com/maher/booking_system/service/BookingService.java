@@ -12,7 +12,9 @@ import com.maher.booking_system.repository.TimeSlotRepository;
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.Objects;
 
@@ -62,8 +64,13 @@ public class BookingService {
         booking.setUserId(safeRequest.getUserId());
         booking.setResourceId(safeRequest.getResourceId());
         booking.setTimeSlotId(safeRequest.getTimeSlotId());
-        booking.setCustomerName(safeRequest.getCustomerName());
-        booking.setServiceName(safeRequest.getServiceName());
+        booking.setFirstName(normalizeRequiredText(safeRequest.getFirstName(), "firstName"));
+        booking.setLastName(normalizeRequiredText(safeRequest.getLastName(), "lastName"));
+        booking.setAddress(normalizeRequiredText(safeRequest.getAddress(), "address"));
+        booking.setBirthDate(normalizeBirthDate(safeRequest.getBirthDate()));
+        booking.setPaymentMethod(PaymentMethodCatalog.normalizeRequired(safeRequest.getPaymentMethod(), "paymentMethod"));
+        booking.setCustomerName(buildCustomerName(booking.getFirstName(), booking.getLastName()));
+        booking.setServiceName(normalizeRequiredText(safeRequest.getServiceName(), "serviceName"));
         booking.setStatus(CONFIRMED_STATUS);
         booking.setBookingTime(LocalDateTime.now());
 
@@ -99,5 +106,25 @@ public class BookingService {
 
         bookingRepository.save(booking);
         timeSlotRepository.save(slot);
+    }
+
+    private String normalizeRequiredText(String value, String fieldName) {
+        if (value == null || value.trim().isBlank()) {
+            throw new BadRequestException(fieldName + " is required");
+        }
+        return value.trim();
+    }
+
+    private String normalizeBirthDate(String value) {
+        String normalized = normalizeRequiredText(value, "birthDate");
+        try {
+            return LocalDate.parse(normalized).toString();
+        } catch (DateTimeParseException ex) {
+            throw new BadRequestException("birthDate must use the YYYY-MM-DD format");
+        }
+    }
+
+    private String buildCustomerName(String firstName, String lastName) {
+        return firstName + " " + lastName;
     }
 }

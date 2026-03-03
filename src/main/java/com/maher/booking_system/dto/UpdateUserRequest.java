@@ -2,11 +2,7 @@ package com.maher.booking_system.dto;
 
 import java.util.List;
 
-public record UserResponse(
-        Long id,
-        String name,
-        String email,
-        String role,
+public record UpdateUserRequest(
         String firstName,
         String lastName,
         String address,

@@ -9,6 +9,12 @@ export type AuthUser = {
   name: string;
   email: string | null;
   role: AuthRole;
+  firstName: string | null;
+  lastName: string | null;
+  address: string | null;
+  birthDate: string | null;
+  avatarUrl: string | null;
+  paymentMethods: string[];
 };
 
 @Injectable({ providedIn: 'root' })
@@ -51,6 +57,16 @@ export class AuthStateService {
 
   landingRoute(): '/admin' | '/user' {
     return this.isAdmin() ? '/admin' : '/user';
+  }
+
+  syncUser(user: Partial<AuthUser>): void {
+    const normalizedUser = this.normalizeUser(user);
+
+    if (!normalizedUser) {
+      throw new Error('User session update did not contain a valid user.');
+    }
+
+    this.persistUser(normalizedUser);
   }
 
   private persistSession(request: Observable<AuthUser>): Observable<AuthUser> {
@@ -99,7 +115,15 @@ export class AuthStateService {
       id: user.id,
       name: user.name,
       email: user.email ?? null,
-      role: user.role === 'ADMIN' ? 'ADMIN' : 'USER'
+      role: user.role === 'ADMIN' ? 'ADMIN' : 'USER',
+      firstName: user.firstName ?? null,
+      lastName: user.lastName ?? null,
+      address: user.address ?? null,
+      birthDate: user.birthDate ?? null,
+      avatarUrl: user.avatarUrl ?? null,
+      paymentMethods: Array.isArray(user.paymentMethods)
+        ? user.paymentMethods.filter((value): value is string => typeof value === 'string')
+        : []
     };
   }
 }

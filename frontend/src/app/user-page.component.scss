@@ -62,7 +62,49 @@ h2 {
   min-width: 220px;
 }
 
-button {
+.button-content,
+.shortcut-link,
+.cta-link,
+.secondary-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.button-icon,
+.shortcut-link svg,
+.cta-link svg,
+.secondary-link svg {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  fill: currentColor;
+}
+
+.hero-shortcuts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.shortcut-link {
+  min-height: 46px;
+  padding: 0 16px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  color: #f7f2ea;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.shortcut-link:hover {
+  border-color: rgba(248, 196, 107, 0.38);
+  background: rgba(248, 196, 107, 0.14);
+}
+
+button,
+.upload-button {
   border: 0;
   border-radius: 999px;
   padding: 14px 20px;
@@ -79,13 +121,25 @@ button {
   box-shadow: 0 16px 34px rgba(210, 106, 59, 0.28);
 }
 
-button:hover:enabled {
+button:hover:enabled,
+.upload-button:hover {
   transform: translateY(-1px);
 }
 
 button:disabled {
   opacity: 0.68;
   cursor: progress;
+}
+
+.upload-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+
+.upload-button input {
+  display: none;
 }
 
 code {
@@ -152,7 +206,8 @@ code {
 .selected-car p,
 .client-summary p,
 .guest-panel p,
-.reservation-card p {
+.reservation-card p,
+.avatar-actions p {
   margin: 0;
   color: rgba(247, 242, 234, 0.7);
 }
@@ -162,6 +217,258 @@ code {
   font-size: 2.5rem;
 }
 
+.panel {
+  padding: 24px;
+}
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+  margin-bottom: 20px;
+}
+
+.panel-header h3 {
+  margin: 4px 0 0;
+  font-size: 1.5rem;
+}
+
+.profile-pill,
+.slot-summary,
+.car-type,
+.car-status,
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.profile-pill,
+.slot-summary {
+  background: rgba(248, 196, 107, 0.14);
+  color: #f8c46b;
+}
+
+.account-panel {
+  margin-top: 24px;
+}
+
+.account-grid {
+  display: grid;
+  grid-template-columns: minmax(220px, 280px) minmax(0, 1fr);
+  gap: 22px;
+}
+
+.avatar-panel,
+.selected-car,
+.client-summary,
+.guest-panel,
+.payment-methods {
+  padding: 16px 18px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.avatar-panel {
+  display: grid;
+  gap: 18px;
+  align-content: start;
+}
+
+.avatar-preview {
+  display: grid;
+  place-items: center;
+  width: min(200px, 100%);
+  aspect-ratio: 1;
+  margin-inline: auto;
+  border-radius: 50%;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at top, rgba(248, 196, 107, 0.24), transparent 52%),
+    rgba(15, 30, 51, 0.94);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.avatar-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.avatar-preview span {
+  font-size: clamp(2.6rem, 6vw, 4.2rem);
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+
+.avatar-actions {
+  display: grid;
+  gap: 12px;
+}
+
+.account-form,
+.booking-form {
+  display: grid;
+  gap: 16px;
+}
+
+.account-fields,
+.booking-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.field-wide {
+  grid-column: 1 / -1;
+}
+
+.field span,
+.client-summary span,
+.guest-panel span,
+.slot-header span,
+.payment-header span {
+  color: rgba(247, 242, 234, 0.72);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+input,
+select,
+textarea {
+  width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 16px;
+  padding: 12px 14px;
+  background: rgba(255, 255, 255, 0.05);
+  color: #f7f2ea;
+  outline: none;
+  font: inherit;
+}
+
+textarea {
+  resize: vertical;
+  min-height: 110px;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: rgba(247, 242, 234, 0.4);
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: rgba(248, 196, 107, 0.56);
+  box-shadow: 0 0 0 3px rgba(248, 196, 107, 0.12);
+}
+
+.payment-methods {
+  display: grid;
+  gap: 14px;
+}
+
+.payment-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+}
+
+.payment-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+}
+
+.payment-option {
+  position: relative;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.04);
+  cursor: pointer;
+  transition:
+    transform 160ms ease,
+    border-color 160ms ease,
+    background 160ms ease;
+}
+
+.payment-option:hover {
+  transform: translateY(-1px);
+}
+
+.payment-option.selected {
+  border-color: rgba(248, 196, 107, 0.46);
+  background: rgba(248, 196, 107, 0.12);
+}
+
+.payment-option input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.payment-logo {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: var(--payment-accent);
+  color: var(--payment-foreground);
+  font-weight: 700;
+}
+
+.payment-copy {
+  display: grid;
+  gap: 2px;
+}
+
+.payment-copy strong {
+  font-size: 0.98rem;
+}
+
+.payment-copy small {
+  color: rgba(247, 242, 234, 0.62);
+  font-size: 0.78rem;
+}
+
+.payment-button {
+  width: 100%;
+  justify-content: flex-start;
+  box-shadow: none;
+  background: rgba(255, 255, 255, 0.04);
+  color: #f7f2ea;
+}
+
+.payment-button:hover:enabled {
+  background: rgba(248, 196, 107, 0.12);
+}
+
+.account-actions,
+.car-actions,
+.modal-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
 .layout {
   display: grid;
   grid-template-columns: 1.2fr 0.9fr;
@@ -169,22 +476,9 @@ code {
   margin-top: 24px;
 }
 
-.panel {
-  padding: 24px;
-}
-
 .fleet-panel,
 .reservations-panel {
   grid-column: span 2;
-}
-
-.panel-header {
-  margin-bottom: 20px;
-}
-
-.panel-header h3 {
-  margin: 4px 0 0;
-  font-size: 1.5rem;
 }
 
 .car-grid,
@@ -209,13 +503,6 @@ code {
   color: inherit;
   text-align: left;
   box-shadow: none;
-}
-
-.car-actions,
-.modal-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
 }
 
 .compact-button {
@@ -279,18 +566,6 @@ code {
   align-items: flex-start;
 }
 
-.car-type,
-.car-status,
-.status-pill,
-.slot-summary {
-  display: inline-flex;
-  align-items: center;
-  border-radius: 999px;
-  padding: 6px 10px;
-  font-size: 0.78rem;
-  font-weight: 700;
-}
-
 .car-type {
   background: rgba(248, 196, 107, 0.14);
   color: #f8c46b;
@@ -304,14 +579,6 @@ code {
 .car-card h4 {
   margin: 16px 0 10px;
   font-size: 1.25rem;
-}
-
-.selected-car,
-.client-summary,
-.guest-panel {
-  padding: 16px 18px;
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.04);
 }
 
 .selected-car,
@@ -340,11 +607,6 @@ code {
   border-radius: 12px;
 }
 
-.slot-summary {
-  background: rgba(248, 196, 107, 0.14);
-  color: #f8c46b;
-}
-
 .slot-summary.muted {
   background: rgba(255, 255, 255, 0.08);
   color: rgba(247, 242, 234, 0.72);
@@ -358,8 +620,6 @@ code {
 
 .cta-link,
 .secondary-link {
-  display: inline-flex;
-  align-items: center;
   justify-content: center;
   min-height: 48px;
   padding: 0 18px;
@@ -378,49 +638,6 @@ code {
   border: 1px solid rgba(255, 255, 255, 0.12);
   background: rgba(255, 255, 255, 0.05);
   color: #f7f2ea;
-}
-
-.booking-form {
-  display: grid;
-  gap: 16px;
-}
-
-.field {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.field span,
-.client-summary span,
-.guest-panel span,
-.slot-header span {
-  color: rgba(247, 242, 234, 0.72);
-  font-size: 0.8rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
-input,
-select {
-  width: 100%;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 16px;
-  padding: 12px 14px;
-  background: rgba(255, 255, 255, 0.05);
-  color: #f7f2ea;
-  outline: none;
-}
-
-input::placeholder {
-  color: rgba(247, 242, 234, 0.4);
-}
-
-input:focus,
-select:focus {
-  border-color: rgba(248, 196, 107, 0.56);
-  box-shadow: 0 0 0 3px rgba(248, 196, 107, 0.12);
 }
 
 .slot-picker {
@@ -535,7 +752,7 @@ select:focus {
 
 dl {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   gap: 12px;
   margin: 18px 0 0;
 }
@@ -551,6 +768,7 @@ dt {
 dd {
   margin: 0;
   font-weight: 700;
+  overflow-wrap: anywhere;
 }
 
 .empty-state {
@@ -567,7 +785,8 @@ dd {
 
 @media (max-width: 1100px) {
   .stats,
-  .layout {
+  .layout,
+  .account-grid {
     grid-template-columns: 1fr 1fr;
   }
 
@@ -580,24 +799,32 @@ dd {
 @media (max-width: 820px) {
   .hero,
   .banner,
+  .panel-header,
   .modal-header,
   .selected-car,
   .guest-panel,
   .reservation-topline,
-  .slot-header {
+  .slot-header,
+  .payment-header {
     flex-direction: column;
   }
 
   .stats,
   .layout,
-  .slot-grid,
-  dl {
+  .account-grid,
+  .account-fields,
+  .booking-fields,
+  .slot-grid {
     grid-template-columns: 1fr;
   }
 
   .fleet-panel,
   .reservations-panel {
     grid-column: span 1;
+  }
+
+  .field-wide {
+    grid-column: auto;
   }
 
   .modal-backdrop {

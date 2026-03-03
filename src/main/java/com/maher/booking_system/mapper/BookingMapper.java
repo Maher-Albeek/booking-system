@@ -18,6 +18,11 @@ public final class BookingMapper {
         response.setBookingTime(booking.getBookingTime());
         response.setCustomerName(booking.getCustomerName());
         response.setServiceName(booking.getServiceName());
+        response.setFirstName(booking.getFirstName());
+        response.setLastName(booking.getLastName());
+        response.setAddress(booking.getAddress());
+        response.setBirthDate(booking.getBirthDate());
+        response.setPaymentMethod(booking.getPaymentMethod());
         return response;
     }
 }

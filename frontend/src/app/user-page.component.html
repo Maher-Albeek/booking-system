@@ -4,15 +4,36 @@
       <p class="eyebrow">User interface</p>
       <h2>{{ title }}</h2>
       <p>
-        Pick a car, choose an open pickup slot, and confirm the reservation directly against the
-        Spring API.
+        Manage your profile, save your booking identity details, and reserve an open car slot
+        directly against the Spring API.
       </p>
     </div>
 
     <div class="hero-actions">
-      <button type="button" (click)="reload()" [disabled]="loading() || submitting()">
-        {{ loading() ? 'Refreshing...' : 'Refresh availability' }}
+      <button type="button" (click)="reload()" [disabled]="loading() || submitting() || accountSaving()">
+        <span class="button-content">
+          <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M17.65 6.35A7.95 7.95 0 0 0 12 4V1L7 6l5 5V7a5 5 0 1 1-5 5H5a7 7 0 1 0 12.65-5.65z" />
+          </svg>
+          <span>{{ loading() ? 'Refreshing...' : 'Refresh availability' }}</span>
+        </span>
       </button>
+      @if (auth.isAuthenticated()) {
+        <div class="hero-shortcuts">
+          <a routerLink="/user" fragment="account" class="shortcut-link">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 12a4 4 0 1 0-4-4 4 4 0 0 0 4 4zm0 2c-4.42 0-8 1.79-8 4v2h16v-2c0-2.21-3.58-4-8-4z" />
+            </svg>
+            <span>Manage account</span>
+          </a>
+          <a routerLink="/user" fragment="reservations" class="shortcut-link">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M7 3v2H5a2 2 0 0 0-2 2v11a3 3 0 0 0 3 3h12a3 3 0 0 0 3-3V7a2 2 0 0 0-2-2h-2V3h-2v2H9V3z" />
+            </svg>
+            <span>My bookings</span>
+          </a>
+        </div>
+      }
       <p class="hero-hint">Route: <code>/user</code> | API base: <code>/api</code></p>
     </div>
   </section>
@@ -26,11 +47,11 @@
 
   @if (!error() && loading()) {
     <section class="banner loading">
-      <strong>Loading cars</strong>
+      <strong>Loading data</strong>
       <span>
         {{
           auth.isAuthenticated()
-            ? 'Fetching cars, time slots, and booking data.'
+            ? 'Fetching profile, cars, time slots, and booking data.'
             : 'Fetching cars and open time slots.'
         }}
       </span>
@@ -49,6 +70,14 @@
       <strong>Guest access</strong>
       <span>You can browse all available cars and slots now. Login or register before booking.</span>
     </section>
+  } @else if (accountCompleteness().completed < accountCompleteness().total) {
+    <section class="banner info">
+      <strong>Profile incomplete</strong>
+      <span>
+        Save Vorname, Nachname, Adresse, Geburtsdatum, and at least one payment method to speed up
+        booking.
+      </span>
+    </section>
   }
 
   <section class="stats">
@@ -60,6 +89,155 @@
       </article>
     }
   </section>
+
+  @if (auth.isAuthenticated()) {
+    <section id="account" class="panel account-panel">
+      <div class="panel-header">
+        <div>
+          <p class="eyebrow">Account</p>
+          <h3>Manage your profile</h3>
+        </div>
+        <span class="profile-pill">
+          {{ accountCompleteness().completed }}/{{ accountCompleteness().total }} booking fields saved
+        </span>
+      </div>
+
+      <div class="account-grid">
+        <section class="avatar-panel">
+          <div class="avatar-preview">
+            @if (accountDraft.avatarUrl) {
+              <img [src]="accountDraft.avatarUrl" alt="User avatar" />
+            } @else {
+              <span>{{ avatarInitials() }}</span>
+            }
+          </div>
+
+          <div class="avatar-actions">
+            <label class="upload-button">
+              <input type="file" accept="image/*" (change)="onAvatarInputChange($event)" />
+              <span class="button-content">
+                <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M5 20h14a1 1 0 0 0 1-1v-4h-2v3H6v-3H4v4a1 1 0 0 0 1 1zm7-16-5 5h3v5h4V9h3z" />
+                </svg>
+                <span>{{ avatarUploading() ? 'Loading avatar...' : 'Upload avatar' }}</span>
+              </span>
+            </label>
+            <button
+              type="button"
+              class="ghost-button compact-button"
+              (click)="removeAvatar()"
+              [disabled]="!accountDraft.avatarUrl || avatarUploading()"
+            >
+              <span class="button-content">
+                <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M6 7h12l-1 13H7L6 7zm3-3h6l1 2H8l1-2z" />
+                </svg>
+                <span>Remove avatar</span>
+              </span>
+            </button>
+            <p>Image files are stored with your profile as an inline avatar.</p>
+          </div>
+        </section>
+
+        <form class="account-form" (ngSubmit)="saveAccount()">
+          <div class="account-fields">
+            <label class="field">
+              <span>Vorname</span>
+              <input
+                type="text"
+                name="accountFirstName"
+                [ngModel]="accountDraft.firstName"
+                (ngModelChange)="accountDraft.firstName = $event"
+                placeholder="Vorname"
+                autocomplete="given-name"
+              />
+            </label>
+
+            <label class="field">
+              <span>Nachname</span>
+              <input
+                type="text"
+                name="accountLastName"
+                [ngModel]="accountDraft.lastName"
+                (ngModelChange)="accountDraft.lastName = $event"
+                placeholder="Nachname"
+                autocomplete="family-name"
+              />
+            </label>
+
+            <label class="field">
+              <span>Geburtsdatum</span>
+              <input
+                type="date"
+                name="accountBirthDate"
+                [ngModel]="accountDraft.birthDate"
+                (ngModelChange)="accountDraft.birthDate = $event"
+                autocomplete="bday"
+              />
+            </label>
+
+            <section class="client-summary">
+              <span>Account</span>
+              <strong>{{ accountUser()?.name || 'Current user' }}</strong>
+              <p>{{ accountUser()?.email || 'No email stored for this profile.' }}</p>
+            </section>
+
+            <label class="field field-wide">
+              <span>Adresse</span>
+              <textarea
+                name="accountAddress"
+                [ngModel]="accountDraft.address"
+                (ngModelChange)="accountDraft.address = $event"
+                rows="4"
+                placeholder="Strasse, Hausnummer, PLZ, Ort"
+                autocomplete="street-address"
+              ></textarea>
+            </label>
+          </div>
+
+          <section class="payment-methods">
+            <div class="payment-header">
+              <span>Bezahl methoden</span>
+              <strong>Save one or more preferred methods</strong>
+            </div>
+
+            <div class="payment-grid">
+              @for (method of supportedPaymentMethods; track method) {
+                <label
+                  class="payment-option"
+                  [class.selected]="isAccountPaymentMethodSelected(method)"
+                  [style.--payment-accent]="paymentMethodMeta[method].accent"
+                  [style.--payment-foreground]="paymentMethodMeta[method].foreground"
+                >
+                  <input
+                    type="checkbox"
+                    [checked]="isAccountPaymentMethodSelected(method)"
+                    (change)="toggleAccountPaymentMethod(method, $any($event.target).checked)"
+                  />
+                  <span class="payment-logo" aria-hidden="true">{{ paymentMethodMeta[method].shortLabel }}</span>
+                  <span class="payment-copy">
+                    <strong>{{ method }}</strong>
+                    <small>{{ paymentMethodMeta[method].hint }}</small>
+                  </span>
+                </label>
+              }
+            </div>
+          </section>
+
+          <div class="account-actions">
+            <button type="submit" class="submit-button compact-button" [disabled]="accountSaving() || avatarUploading()">
+              <span class="button-content">
+                <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M17 3H5a2 2 0 0 0-2 2v14l4-4h10a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zm-1 8H8V9h8zm0-3H8V6h8z" />
+                </svg>
+                <span>{{ accountSaving() ? 'Saving account...' : 'Save account' }}</span>
+              </span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </section>
+  }
 
   <section class="layout">
     <article class="panel fleet-panel">
@@ -111,7 +289,12 @@
                 class="ghost-button compact-button"
                 (click)="selectCar(car.id)"
               >
-                {{ car.id === selectedCarId() ? 'Selected' : 'View slots' }}
+                <span class="button-content">
+                  <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M12 5c-7 0-10 7-10 7s3 7 10 7 10-7 10-7-3-7-10-7zm0 11a4 4 0 1 1 4-4 4 4 0 0 1-4 4z" />
+                  </svg>
+                  <span>{{ car.id === selectedCarId() ? 'Selected' : 'View slots' }}</span>
+                </span>
               </button>
               <button
                 type="button"
@@ -119,7 +302,12 @@
                 (click)="openReservationModal(car.id)"
                 [disabled]="!car.active"
               >
-                {{ car.active ? 'Reserve' : 'Unavailable' }}
+                <span class="button-content">
+                  <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M7 4h10l3 6v8h-2v-2H6v2H4v-8zm1.27 2L6.77 9h10.46L15.73 6zM7 14a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zm10 0a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z" />
+                  </svg>
+                  <span>{{ car.active ? 'Reserve' : 'Unavailable' }}</span>
+                </span>
               </button>
             </div>
           </article>
@@ -129,7 +317,7 @@
       </div>
     </article>
 
-    <article class="panel reservations-panel">
+    <article id="reservations" class="panel reservations-panel">
       <div class="panel-header">
         <div>
           <p class="eyebrow">Reservations</p>
@@ -145,7 +333,7 @@
             <section class="reservation-card">
               <div class="reservation-topline">
                 <div>
-                  <strong>{{ booking.customerName || 'Unnamed customer' }}</strong>
+                  <strong>{{ bookingContactName(booking) }}</strong>
                   <p>{{ resourceLabel(booking.resourceId) }}</p>
                 </div>
                 <span class="status-pill" [class.cancelled]="!isConfirmed(booking)">
@@ -163,6 +351,18 @@
                   <dd>{{ booking.serviceName || 'No label provided' }}</dd>
                 </div>
                 <div>
+                  <dt>Payment</dt>
+                  <dd>{{ booking.paymentMethod || 'Not recorded' }}</dd>
+                </div>
+                <div>
+                  <dt>Birth date</dt>
+                  <dd>{{ formatCalendarDate(booking.birthDate) }}</dd>
+                </div>
+                <div>
+                  <dt>Address</dt>
+                  <dd>{{ booking.address || 'Not recorded' }}</dd>
+                </div>
+                <div>
                   <dt>Booked at</dt>
                   <dd>{{ formatDate(booking.bookingTime) }}</dd>
                 </div>
@@ -175,7 +375,12 @@
                   (click)="cancelBooking(booking.id)"
                   [disabled]="cancellingId() === booking.id"
                 >
-                  {{ cancellingId() === booking.id ? 'Cancelling...' : 'Cancel booking' }}
+                  <span class="button-content">
+                    <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M6 7h12l-1 13H7L6 7zm3-3h6l1 2H8l1-2z" />
+                    </svg>
+                    <span>{{ cancellingId() === booking.id ? 'Cancelling...' : 'Cancel booking' }}</span>
+                  </span>
                 </button>
               }
             </section>
@@ -205,7 +410,12 @@
             class="modal-close compact-button"
             (click)="closeReservationModal()"
           >
-            Close
+            <span class="button-content">
+              <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M18.3 5.71 12 12l6.3 6.29-1.42 1.42L10.59 13.4 4.29 19.7 2.87 18.29 9.17 12l-6.3-6.29L4.29 4.3l6.3 6.3 6.29-6.3z" />
+              </svg>
+              <span>Close</span>
+            </span>
           </button>
         </div>
 
@@ -237,9 +447,17 @@
                 <p>Create a new user account if this is your first visit.</p>
               </div>
               <div class="guest-actions">
-                <a routerLink="/login" class="cta-link">Login</a>
+                <a routerLink="/login" class="cta-link">
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M10 17l1.41-1.41L8.83 13H20v-2H8.83l2.58-2.59L10 7l-5 5zm-5 2h7v2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7v2H5z" />
+                  </svg>
+                  <span>Login</span>
+                </a>
                 <a routerLink="/login" [queryParams]="{ mode: 'register' }" class="secondary-link">
-                  Register
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M19 11h-6V5h-2v6H5v2h6v6h2v-6h6z" />
+                  </svg>
+                  <span>Register</span>
                 </a>
               </div>
             </section>
@@ -265,27 +483,93 @@
               </section>
             }
 
-            <label class="field">
-              <span>Customer name</span>
-              <input
-                type="text"
-                name="customerName"
-                [ngModel]="customerName()"
-                (ngModelChange)="customerName.set($event)"
-                placeholder="Enter the driver or customer name"
-              />
-            </label>
+            <div class="booking-fields">
+              <label class="field">
+                <span>Vorname</span>
+                <input
+                  type="text"
+                  name="bookingFirstName"
+                  [ngModel]="bookingFirstName()"
+                  (ngModelChange)="bookingFirstName.set($event)"
+                  placeholder="Vorname"
+                  autocomplete="given-name"
+                />
+              </label>
 
-            <label class="field">
-              <span>Trip label</span>
-              <input
-                type="text"
-                name="serviceName"
-                [ngModel]="serviceName()"
-                (ngModelChange)="serviceName.set($event)"
-                placeholder="Airport transfer, city trip, weekend drive..."
-              />
-            </label>
+              <label class="field">
+                <span>Nachname</span>
+                <input
+                  type="text"
+                  name="bookingLastName"
+                  [ngModel]="bookingLastName()"
+                  (ngModelChange)="bookingLastName.set($event)"
+                  placeholder="Nachname"
+                  autocomplete="family-name"
+                />
+              </label>
+
+              <label class="field">
+                <span>Geburtsdatum</span>
+                <input
+                  type="date"
+                  name="bookingBirthDate"
+                  [ngModel]="bookingBirthDate()"
+                  (ngModelChange)="bookingBirthDate.set($event)"
+                  autocomplete="bday"
+                />
+              </label>
+
+              <input type="hidden" name="bookingPaymentMethod" [ngModel]="bookingPaymentMethod()" />
+
+              <section class="payment-methods booking-payment-methods field-wide">
+                <div class="payment-header">
+                  <span>Payment options</span>
+                  <strong>Select one preferred method</strong>
+                </div>
+
+                <div class="payment-grid">
+                  @for (method of supportedPaymentMethods; track method) {
+                    <button
+                      type="button"
+                      class="payment-option payment-button"
+                      [class.selected]="bookingPaymentMethod() === method"
+                      [style.--payment-accent]="paymentMethodMeta[method].accent"
+                      [style.--payment-foreground]="paymentMethodMeta[method].foreground"
+                      (click)="bookingPaymentMethod.set(method)"
+                    >
+                      <span class="payment-logo" aria-hidden="true">{{ paymentMethodMeta[method].shortLabel }}</span>
+                      <span class="payment-copy">
+                        <strong>{{ method }}</strong>
+                        <small>{{ paymentMethodMeta[method].hint }}</small>
+                      </span>
+                    </button>
+                  }
+                </div>
+              </section>
+
+              <label class="field field-wide">
+                <span>Adresse</span>
+                <textarea
+                  name="bookingAddress"
+                  [ngModel]="bookingAddress()"
+                  (ngModelChange)="bookingAddress.set($event)"
+                  rows="3"
+                  placeholder="Strasse, Hausnummer, PLZ, Ort"
+                  autocomplete="street-address"
+                ></textarea>
+              </label>
+
+              <label class="field field-wide">
+                <span>Trip label</span>
+                <input
+                  type="text"
+                  name="serviceName"
+                  [ngModel]="serviceName()"
+                  (ngModelChange)="serviceName.set($event)"
+                  placeholder="Airport transfer, city trip, weekend drive..."
+                />
+              </label>
+            </div>
           }
 
           <section class="slot-picker">
@@ -316,16 +600,31 @@
           </section>
 
           @if (auth.isAuthenticated()) {
+            <p class="form-note">
+              Your saved account data is used as a starting point, but you can adjust the booking
+              details before confirmation.
+            </p>
+
             <div class="modal-actions">
               <button
                 type="button"
                 class="ghost-button compact-button"
                 (click)="closeReservationModal()"
               >
-                Cancel
+                <span class="button-content">
+                  <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M18.3 5.71 12 12l6.3 6.29-1.42 1.42L10.59 13.4 4.29 19.7 2.87 18.29 9.17 12l-6.3-6.29L4.29 4.3l6.3 6.3 6.29-6.3z" />
+                  </svg>
+                  <span>Cancel</span>
+                </span>
               </button>
               <button type="submit" class="submit-button compact-button" [disabled]="bookingDisabled()">
-                {{ submitting() ? 'Saving booking...' : 'Confirm booking' }}
+                <span class="button-content">
+                  <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="m9 16.17-3.88-3.88L3.7 13.7 9 19l12-12-1.41-1.41z" />
+                  </svg>
+                  <span>{{ submitting() ? 'Saving booking...' : 'Confirm booking' }}</span>
+                </span>
               </button>
             </div>
 
