@@ -15,6 +15,11 @@ type Resource = {
   type: string;
   location: string;
   active: boolean;
+  photoUrls: string[];
+};
+
+type ResourceResponse = Omit<Resource, 'photoUrls'> & {
+  photoUrls?: string[] | null;
 };
 
 type User = {
@@ -74,6 +79,7 @@ export class UserPageComponent {
   protected readonly cancellingId = signal<number | null>(null);
   protected readonly error = signal<string | null>(null);
   protected readonly success = signal<string | null>(null);
+  protected readonly reservationModalOpen = signal(false);
 
   protected readonly cars = signal<Resource[]>([]);
   protected readonly users = signal<User[]>([]);
@@ -133,6 +139,8 @@ export class UserPageComponent {
   protected readonly selectedCar = computed(
     () => this.cars().find((car) => car.id === this.selectedCarId()) ?? null
   );
+
+  protected readonly selectedCarPhotos = computed(() => this.selectedCar()?.photoUrls ?? []);
 
   protected readonly selectedUser = computed(() => {
     if (!this.auth.isAdmin() && this.auth.user()) {
@@ -222,6 +230,24 @@ export class UserPageComponent {
     this.success.set(null);
   }
 
+  protected openReservationModal(carId: number): void {
+    this.selectedCarId.set(carId);
+    this.selectedTimeSlotId.set(this.firstAvailableSlotId(carId));
+    this.error.set(null);
+    this.success.set(null);
+    this.reservationModalOpen.set(true);
+  }
+
+  protected closeReservationModal(): void {
+    this.reservationModalOpen.set(false);
+  }
+
+  protected closeReservationModalOnBackdrop(event: MouseEvent): void {
+    if (event.target === event.currentTarget) {
+      this.closeReservationModal();
+    }
+  }
+
   protected selectUser(userId: number | null): void {
     if (!this.auth.isAdmin()) {
       return;
@@ -281,6 +307,7 @@ export class UserPageComponent {
         next: () => {
           this.selectedTimeSlotId.set(null);
           this.serviceName.set('');
+          this.reservationModalOpen.set(false);
           this.success.set(`Booking confirmed for ${selectedCar.name}.`);
           this.loadData();
         },
@@ -360,6 +387,14 @@ export class UserPageComponent {
     return booking.status === 'CONFIRMED';
   }
 
+  protected hasPhotos(car: Resource | null | undefined): boolean {
+    return (car?.photoUrls?.length ?? 0) > 0;
+  }
+
+  protected additionalPhotoCount(car: Resource | null | undefined): number {
+    return Math.max((car?.photoUrls?.length ?? 0) - 1, 0);
+  }
+
   private loadData(): void {
     this.loading.set(true);
     this.error.set(null);
@@ -372,7 +407,7 @@ export class UserPageComponent {
       : of([] as Booking[]);
 
     forkJoin({
-      cars: this.http.get<Resource[]>('/api/resources/cars'),
+      cars: this.http.get<ResourceResponse[]>('/api/resources/cars'),
       users: usersRequest,
       timeSlots: this.http.get<TimeSlot[]>('/api/time_slots'),
       bookings: bookingsRequest
@@ -383,11 +418,13 @@ export class UserPageComponent {
       )
       .subscribe({
         next: ({ cars, users, timeSlots, bookings }) => {
-          this.cars.set(cars);
+          const normalizedCars = cars.map((car) => this.normalizeResource(car));
+
+          this.cars.set(normalizedCars);
           this.users.set(users);
           this.timeSlots.set(timeSlots);
           this.bookings.set(bookings);
-          this.syncDefaults(cars, users, timeSlots);
+          this.syncDefaults(normalizedCars, users, timeSlots);
         },
         error: (error: HttpErrorResponse) => {
           this.error.set(
@@ -440,6 +477,19 @@ export class UserPageComponent {
     if (!isSelectedSlotStillValid) {
       this.selectedTimeSlotId.set(null);
     }
+
+    if (!this.selectedCarId()) {
+      this.reservationModalOpen.set(false);
+    }
+  }
+
+  private firstAvailableSlotId(carId: number): number | null {
+    return [...this.timeSlots()]
+      .filter((slot) => slot.resourceId === carId && slot.available)
+      .sort(
+        (left, right) =>
+          new Date(left.startTime).getTime() - new Date(right.startTime).getTime()
+      )[0]?.id ?? null;
   }
 
   private readApiError(error: HttpErrorResponse, fallback: string): string {
@@ -460,5 +510,12 @@ export class UserPageComponent {
     }
 
     return fallback;
+  }
+
+  private normalizeResource(resource: ResourceResponse): Resource {
+    return {
+      ...resource,
+      photoUrls: Array.isArray(resource.photoUrls) ? resource.photoUrls : []
+    };
   }
 }

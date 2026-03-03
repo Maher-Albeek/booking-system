@@ -14,6 +14,11 @@ type Resource = {
   type: string;
   location: string;
   active: boolean;
+  photoUrls: string[];
+};
+
+type ResourceResponse = Omit<Resource, 'photoUrls'> & {
+  photoUrls?: string[] | null;
 };
 
 type User = {
@@ -59,6 +64,9 @@ export class AdminPageComponent {
   protected readonly busyKey = signal<string | null>(null);
   protected readonly error = signal<string | null>(null);
   protected readonly success = signal<string | null>(null);
+  protected readonly isPhotoDragActive = signal(false);
+  protected readonly editingCarId = signal<number | null>(null);
+  protected readonly editingSlotId = signal<number | null>(null);
 
   protected readonly resources = signal<Resource[]>([]);
   protected readonly users = signal<User[]>([]);
@@ -69,7 +77,9 @@ export class AdminPageComponent {
     name: '',
     description: '',
     location: '',
-    active: true
+    active: true,
+    photoUrlsText: '',
+    uploadedPhotoUrls: [] as string[]
   };
 
   protected slotDraft = {
@@ -145,34 +155,95 @@ export class AdminPageComponent {
     return this.busyKey() === key;
   }
 
-  protected createCar(): void {
+  protected saveCar(): void {
     const name = this.carDraft.name.trim();
     const location = this.carDraft.location.trim();
+    const editingCarId = this.editingCarId();
 
     if (!name || !location) {
       this.error.set('Enter a car name and location before saving.');
       return;
     }
 
+    const request = editingCarId === null
+      ? this.http.post<ResourceResponse>('/api/resources', {
+          name,
+          description: this.carDraft.description.trim(),
+          type: 'Car',
+          location,
+          active: this.carDraft.active,
+          photoUrls: this.buildPhotoUrls()
+        })
+      : this.http.put<ResourceResponse>(`/api/resources/${editingCarId}`, {
+          id: editingCarId,
+          name,
+          description: this.carDraft.description.trim(),
+          type: 'Car',
+          location,
+          active: this.carDraft.active,
+          photoUrls: this.buildPhotoUrls()
+        });
+
     this.runRequest(
-      'create-car',
-      this.http.post<Resource>('/api/resources', {
-        name,
-        description: this.carDraft.description.trim(),
-        type: 'Car',
-        location,
-        active: this.carDraft.active
-      }),
-      'Car added to the fleet.',
-      () => {
-        this.carDraft = {
-          name: '',
-          description: '',
-          location: '',
-          active: true
-        };
-      }
+      'save-car',
+      request,
+      editingCarId === null ? 'Car added to the fleet.' : 'Car updated.',
+      () => this.cancelCarEdit()
     );
+  }
+
+  protected editCar(car: Resource): void {
+    this.editingCarId.set(car.id);
+    this.error.set(null);
+    this.success.set(null);
+    this.carDraft = {
+      name: car.name,
+      description: car.description,
+      location: car.location,
+      active: car.active,
+      photoUrlsText: '',
+      uploadedPhotoUrls: [...car.photoUrls]
+    };
+  }
+
+  protected cancelCarEdit(): void {
+    this.editingCarId.set(null);
+    this.resetCarDraft();
+  }
+
+  protected onPhotoDragOver(event: DragEvent): void {
+    event.preventDefault();
+    this.isPhotoDragActive.set(true);
+  }
+
+  protected onPhotoDragLeave(event: DragEvent): void {
+    event.preventDefault();
+    this.isPhotoDragActive.set(false);
+  }
+
+  protected async onPhotoDrop(event: DragEvent): Promise<void> {
+    event.preventDefault();
+    this.isPhotoDragActive.set(false);
+
+    const files = Array.from(event.dataTransfer?.files ?? []);
+    await this.addPhotoFiles(files);
+  }
+
+  protected async onPhotoInputChange(event: Event): Promise<void> {
+    const input = event.target as HTMLInputElement | null;
+    const files = Array.from(input?.files ?? []);
+    await this.addPhotoFiles(files);
+
+    if (input) {
+      input.value = '';
+    }
+  }
+
+  protected removeDraftPhoto(index: number): void {
+    this.carDraft = {
+      ...this.carDraft,
+      uploadedPhotoUrls: this.carDraft.uploadedPhotoUrls.filter((_, currentIndex) => currentIndex !== index)
+    };
   }
 
   protected deleteCar(carId: number): void {
@@ -183,34 +254,61 @@ export class AdminPageComponent {
     this.runRequest(
       `delete-car-${carId}`,
       this.http.delete<void>(`/api/resources/${carId}`),
-      'Car removed from the fleet.'
+      'Car removed from the fleet.',
+      () => {
+        if (this.editingCarId() === carId) {
+          this.cancelCarEdit();
+        }
+      }
     );
   }
 
-  protected createTimeSlot(): void {
+  protected saveTimeSlot(): void {
+    const editingSlotId = this.editingSlotId();
+
     if (!this.slotDraft.resourceId || !this.slotDraft.startTime || !this.slotDraft.endTime) {
       this.error.set('Choose a car plus start and end times for the new slot.');
       return;
     }
 
-    this.runRequest(
-      'create-slot',
-      this.http.post<TimeSlot>('/api/time_slots', {
-        resourceId: this.slotDraft.resourceId,
-        startTime: this.slotDraft.startTime,
-        endTime: this.slotDraft.endTime,
-        available: this.slotDraft.available
-      }),
-      'Time slot created.',
-      () => {
-        this.slotDraft = {
+    const request = editingSlotId === null
+      ? this.http.post<TimeSlot>('/api/time_slots', {
           resourceId: this.slotDraft.resourceId,
-          startTime: '',
-          endTime: '',
-          available: true
-        };
-      }
+          startTime: this.slotDraft.startTime,
+          endTime: this.slotDraft.endTime,
+          available: this.slotDraft.available
+        })
+      : this.http.put<TimeSlot>(`/api/time_slots/${editingSlotId}`, {
+          id: editingSlotId,
+          resourceId: this.slotDraft.resourceId,
+          startTime: this.slotDraft.startTime,
+          endTime: this.slotDraft.endTime,
+          available: this.slotDraft.available
+        });
+
+    this.runRequest(
+      'save-slot',
+      request,
+      editingSlotId === null ? 'Time slot created.' : 'Time slot updated.',
+      () => this.cancelTimeSlotEdit()
     );
+  }
+
+  protected editTimeSlot(slot: TimeSlot): void {
+    this.editingSlotId.set(slot.id);
+    this.error.set(null);
+    this.success.set(null);
+    this.slotDraft = {
+      resourceId: slot.resourceId,
+      startTime: this.toDateTimeLocalValue(slot.startTime),
+      endTime: this.toDateTimeLocalValue(slot.endTime),
+      available: slot.available
+    };
+  }
+
+  protected cancelTimeSlotEdit(): void {
+    this.editingSlotId.set(null);
+    this.resetSlotDraft();
   }
 
   protected deleteTimeSlot(slotId: number): void {
@@ -221,7 +319,12 @@ export class AdminPageComponent {
     this.runRequest(
       `delete-slot-${slotId}`,
       this.http.delete<void>(`/api/time_slots/${slotId}`),
-      'Time slot deleted.'
+      'Time slot deleted.',
+      () => {
+        if (this.editingSlotId() === slotId) {
+          this.cancelTimeSlotEdit();
+        }
+      }
     );
   }
 
@@ -287,12 +390,17 @@ export class AdminPageComponent {
     return this.cars().find((car) => car.id === resourceId)?.name ?? `Car #${resourceId}`;
   }
 
+  protected photoCountLabel(photoUrls: string[] | null | undefined): string {
+    const count = photoUrls?.length ?? 0;
+    return count === 1 ? '1 photo' : `${count} photos`;
+  }
+
   private loadData(): void {
     this.loading.set(true);
     this.error.set(null);
 
     forkJoin({
-      resources: this.http.get<Resource[]>('/api/resources'),
+      resources: this.http.get<ResourceResponse[]>('/api/resources'),
       users: this.http.get<User[]>('/api/users'),
       timeSlots: this.http.get<TimeSlot[]>('/api/time_slots'),
       bookings: this.http.get<Booking[]>('/api/bookings')
@@ -303,7 +411,7 @@ export class AdminPageComponent {
       )
       .subscribe({
         next: ({ resources, users, timeSlots, bookings }) => {
-          this.resources.set(resources);
+          this.resources.set(resources.map((resource) => this.normalizeResource(resource)));
           this.users.set(users);
           this.timeSlots.set(timeSlots);
           this.bookings.set(bookings);
@@ -327,6 +435,149 @@ export class AdminPageComponent {
     if (!selectedCarStillExists) {
       this.slotDraft.resourceId = firstCarId;
     }
+  }
+
+  private resetCarDraft(): void {
+    this.carDraft = {
+      name: '',
+      description: '',
+      location: '',
+      active: true,
+      photoUrlsText: '',
+      uploadedPhotoUrls: []
+    };
+  }
+
+  private resetSlotDraft(): void {
+    this.slotDraft = {
+      resourceId: this.cars()[0]?.id ?? null,
+      startTime: '',
+      endTime: '',
+      available: true
+    };
+  }
+
+  private normalizeResource(resource: ResourceResponse): Resource {
+    return {
+      ...resource,
+      photoUrls: Array.isArray(resource.photoUrls) ? resource.photoUrls : []
+    };
+  }
+
+  private parsePhotoUrls(value: string): string[] {
+    return value
+      .split(/\r?\n|,/)
+      .map((entry) => entry.trim())
+      .filter(Boolean);
+  }
+
+  private toDateTimeLocalValue(value: string): string {
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) {
+      return '';
+    }
+
+    const offset = date.getTimezoneOffset();
+    return new Date(date.getTime() - offset * 60_000).toISOString().slice(0, 16);
+  }
+
+  private buildPhotoUrls(): string[] {
+    return [...this.carDraft.uploadedPhotoUrls, ...this.parsePhotoUrls(this.carDraft.photoUrlsText)];
+  }
+
+  private async addPhotoFiles(files: File[]): Promise<void> {
+    const imageFiles = files.filter((file) => file.type.startsWith('image/'));
+
+    if (!imageFiles.length) {
+      if (files.length) {
+        this.error.set('Only image files can be dropped into the car photo area.');
+      }
+      return;
+    }
+
+    this.error.set(null);
+
+    try {
+      const encodedPhotos = await Promise.all(imageFiles.map((file) => this.convertImageToAvifDataUrl(file)));
+
+      this.carDraft = {
+        ...this.carDraft,
+        uploadedPhotoUrls: [...this.carDraft.uploadedPhotoUrls, ...encodedPhotos]
+      };
+    } catch (error) {
+      this.error.set(
+        error instanceof Error ? error.message : 'Images could not be converted to AVIF format.'
+      );
+    }
+  }
+
+  private async convertImageToAvifDataUrl(file: File): Promise<string> {
+    const image = await this.loadImage(file);
+    const canvas = document.createElement('canvas');
+    canvas.width = image.width;
+    canvas.height = image.height;
+
+    const context = canvas.getContext('2d');
+    if (!context) {
+      throw new Error('Image conversion failed because the canvas context is unavailable.');
+    }
+
+    context.drawImage(image, 0, 0);
+
+    const avifBlob = await new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob(
+        (blob) => {
+          if (blob) {
+            resolve(blob);
+            return;
+          }
+
+          reject(new Error('Your browser could not encode this image as AVIF.'));
+        },
+        'image/avif',
+        0.82
+      );
+    });
+
+    return this.readBlobAsDataUrl(avifBlob);
+  }
+
+  private loadImage(file: File): Promise<HTMLImageElement> {
+    return new Promise((resolve, reject) => {
+      const objectUrl = URL.createObjectURL(file);
+      const image = new Image();
+
+      image.onload = () => {
+        URL.revokeObjectURL(objectUrl);
+        resolve(image);
+      };
+
+      image.onerror = () => {
+        URL.revokeObjectURL(objectUrl);
+        reject(new Error(`"${file.name}" could not be loaded for AVIF conversion.`));
+      };
+
+      image.src = objectUrl;
+    });
+  }
+
+  private readBlobAsDataUrl(blob: Blob): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+
+      reader.onload = () => {
+        if (typeof reader.result === 'string') {
+          resolve(reader.result);
+          return;
+        }
+
+        reject(new Error('Converted AVIF image could not be read.'));
+      };
+
+      reader.onerror = () => reject(reader.error ?? new Error('Converted AVIF image could not be read.'));
+      reader.readAsDataURL(blob);
+    });
   }
 
   private runRequest<T>(

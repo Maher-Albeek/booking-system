@@ -34,4 +34,22 @@
   "bookingTime" : "2026-03-02T02:12:04.4802616",
   "customerName" : "maher",
   "serviceName" : "a"
+}, {
+  "id" : 5,
+  "userId" : 3,
+  "resourceId" : 3,
+  "timeSlotId" : 1,
+  "status" : "CONFIRMED",
+  "bookingTime" : "2026-03-03T01:36:41.9545583",
+  "customerName" : "anel",
+  "serviceName" : "transfer"
+}, {
+  "id" : 6,
+  "userId" : 2,
+  "resourceId" : 3,
+  "timeSlotId" : 2,
+  "status" : "CANCELLED",
+  "bookingTime" : "2026-03-03T01:38:05.5643375",
+  "customerName" : "ad",
+  "serviceName" : "bebe"
 } ]

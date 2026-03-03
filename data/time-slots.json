@@ -3,7 +3,7 @@
   "startTime" : "2026-03-03T09:00:00",
   "endTime" : "2026-03-03T11:00:00",
   "resourceId" : 3,
-  "available" : true
+  "available" : false
 }, {
   "id" : 2,
   "startTime" : "2026-03-04T14:00:00",
@@ -93,5 +93,11 @@
   "startTime" : "2026-03-10T09:00:00",
   "endTime" : "2026-03-10T11:00:00",
   "resourceId" : 10,
+  "available" : true
+}, {
+  "id" : 17,
+  "startTime" : "2026-03-03T01:41:00",
+  "endTime" : "2026-03-03T04:41:00",
+  "resourceId" : 8,
   "available" : true
 } ]

@@ -69,7 +69,26 @@
           </div>
         </div>
 
-        <form class="admin-form" (ngSubmit)="createCar()">
+        <form class="admin-form" (ngSubmit)="saveCar()">
+          <div class="form-header">
+            <div>
+              <p class="eyebrow">{{ editingCarId() === null ? 'Create car' : 'Editing car' }}</p>
+              <p class="panel-lead">
+                {{
+                  editingCarId() === null
+                    ? 'Add a new fleet car.'
+                    : 'Update the selected car and save the changes.'
+                }}
+              </p>
+            </div>
+
+            @if (editingCarId() !== null) {
+              <button type="button" class="secondary-button" (click)="cancelCarEdit()">
+                Cancel edit
+              </button>
+            }
+          </div>
+
           <label class="field">
             <span>Car name</span>
             <input
@@ -100,14 +119,64 @@
             />
           </label>
 
+          <div class="field">
+            <span>Photos</span>
+            <div
+              class="photo-dropzone"
+              [class.drag-active]="isPhotoDragActive()"
+              (dragover)="onPhotoDragOver($event)"
+              (dragleave)="onPhotoDragLeave($event)"
+              (drop)="onPhotoDrop($event)"
+            >
+              <input
+                #photoInput
+                type="file"
+                accept="image/*"
+                multiple
+                class="visually-hidden"
+                (change)="onPhotoInputChange($event)"
+              />
+              <strong>Drag and drop images here</strong>
+              <p>Images are converted to AVIF, saved in the server car folder, and shown on the user page.</p>
+              <button type="button" class="ghost-button inline-action" (click)="photoInput.click()">
+                Choose images
+              </button>
+            </div>
+          </div>
+
+          @if (carDraft.uploadedPhotoUrls.length) {
+            <div class="draft-photo-grid">
+              @for (photoUrl of carDraft.uploadedPhotoUrls; track photoUrl; let index = $index) {
+                <article class="draft-photo-card">
+                  <img [src]="photoUrl" alt="Uploaded car photo preview" />
+                  <button type="button" class="draft-photo-remove" (click)="removeDraftPhoto(index)">
+                    Remove
+                  </button>
+                </article>
+              }
+            </div>
+          }
+
+          <label class="field">
+            <span>Additional photo URLs</span>
+            <textarea
+              name="carPhotoUrls"
+              [(ngModel)]="carDraft.photoUrlsText"
+              rows="3"
+              placeholder="Optional: one URL per line"
+            ></textarea>
+          </label>
+
           <label class="checkbox-field">
             <input type="checkbox" name="carActive" [(ngModel)]="carDraft.active" />
             <span>Active and bookable</span>
           </label>
 
-          <button type="submit" [disabled]="isBusy('create-car')">
-            {{ isBusy('create-car') ? 'Saving car...' : 'Add car' }}
-          </button>
+          <div class="form-actions">
+            <button type="submit" [disabled]="isBusy('save-car')">
+              {{ isBusy('save-car') ? 'Saving car...' : editingCarId() === null ? 'Add car' : 'Update car' }}
+            </button>
+          </div>
         </form>
 
         <div class="admin-list">
@@ -124,15 +193,35 @@
               </div>
 
               <p>{{ car.description || 'No description provided.' }}</p>
+              <p>{{ photoCountLabel(car.photoUrls) }}</p>
 
-              <button
-                type="button"
-                class="ghost-button"
-                (click)="deleteCar(car.id)"
-                [disabled]="isBusy('delete-car-' + car.id)"
-              >
-                {{ isBusy('delete-car-' + car.id) ? 'Deleting...' : 'Delete car' }}
-              </button>
+              @if (car.photoUrls.length) {
+                <div class="car-photo-grid">
+                  @for (photoUrl of car.photoUrls; track photoUrl) {
+                    <img class="car-photo-thumb" [src]="photoUrl" [alt]="car.name" />
+                  }
+                </div>
+              }
+
+              <div class="list-actions">
+                <button
+                  type="button"
+                  class="secondary-button"
+                  (click)="editCar(car)"
+                  [disabled]="busyKey() !== null && busyKey() !== 'save-car'"
+                >
+                  {{ editingCarId() === car.id ? 'Editing' : 'Edit car' }}
+                </button>
+
+                <button
+                  type="button"
+                  class="ghost-button"
+                  (click)="deleteCar(car.id)"
+                  [disabled]="isBusy('delete-car-' + car.id)"
+                >
+                  {{ isBusy('delete-car-' + car.id) ? 'Deleting...' : 'Delete car' }}
+                </button>
+              </div>
             </section>
           } @empty {
             <p class="empty-state">No cars are currently available in <code>/api/resources</code>.</p>
@@ -148,7 +237,26 @@
           </div>
         </div>
 
-        <form class="admin-form" (ngSubmit)="createTimeSlot()">
+        <form class="admin-form" (ngSubmit)="saveTimeSlot()">
+          <div class="form-header">
+            <div>
+              <p class="eyebrow">{{ editingSlotId() === null ? 'Create slot' : 'Editing slot' }}</p>
+              <p class="panel-lead">
+                {{
+                  editingSlotId() === null
+                    ? 'Add a new availability window.'
+                    : 'Update the selected slot and save the changes.'
+                }}
+              </p>
+            </div>
+
+            @if (editingSlotId() !== null) {
+              <button type="button" class="secondary-button" (click)="cancelTimeSlotEdit()">
+                Cancel edit
+              </button>
+            }
+          </div>
+
           <label class="field">
             <span>Car</span>
             <select name="slotResource" [(ngModel)]="slotDraft.resourceId">
@@ -173,9 +281,17 @@
             <span>Slot starts as available</span>
           </label>
 
-          <button type="submit" [disabled]="!cars().length || isBusy('create-slot')">
-            {{ isBusy('create-slot') ? 'Saving slot...' : 'Add time slot' }}
-          </button>
+          <div class="form-actions">
+            <button type="submit" [disabled]="!cars().length || isBusy('save-slot')">
+              {{
+                isBusy('save-slot')
+                  ? 'Saving slot...'
+                  : editingSlotId() === null
+                    ? 'Add time slot'
+                    : 'Update time slot'
+              }}
+            </button>
+          </div>
         </form>
 
         <div class="admin-list">
@@ -191,14 +307,25 @@
                 </span>
               </div>
 
-              <button
-                type="button"
-                class="ghost-button"
-                (click)="deleteTimeSlot(slot.id)"
-                [disabled]="isBusy('delete-slot-' + slot.id)"
-              >
-                {{ isBusy('delete-slot-' + slot.id) ? 'Deleting...' : 'Delete slot' }}
-              </button>
+              <div class="list-actions">
+                <button
+                  type="button"
+                  class="secondary-button"
+                  (click)="editTimeSlot(slot)"
+                  [disabled]="busyKey() !== null && busyKey() !== 'save-slot'"
+                >
+                  {{ editingSlotId() === slot.id ? 'Editing' : 'Edit slot' }}
+                </button>
+
+                <button
+                  type="button"
+                  class="ghost-button"
+                  (click)="deleteTimeSlot(slot.id)"
+                  [disabled]="isBusy('delete-slot-' + slot.id)"
+                >
+                  {{ isBusy('delete-slot-' + slot.id) ? 'Deleting...' : 'Delete slot' }}
+                </button>
+              </div>
             </section>
           } @empty {
             <p class="empty-state">No time slots exist yet.</p>

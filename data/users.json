@@ -10,4 +10,10 @@
   "email" : "roomgan@gmail.com",
   "password" : "123123",
   "role" : "USER"
+}, {
+  "id" : 3,
+  "name" : "anel",
+  "email" : "maherfotografie@gmail.com",
+  "password" : "Maher.1992",
+  "role" : "USER"
 } ]

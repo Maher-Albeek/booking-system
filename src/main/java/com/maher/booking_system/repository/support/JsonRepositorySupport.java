@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
@@ -115,7 +116,11 @@ public abstract class JsonRepositorySupport<T> {
         Path tempPath = filePath.resolveSibling(filePath.getFileName() + ".tmp");
         try {
             objectMapper.writerWithDefaultPrettyPrinter().writeValue(tempPath.toFile(), entities);
-            Files.move(tempPath, filePath, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+            try {
+                Files.move(tempPath, filePath, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+            } catch (AtomicMoveNotSupportedException ex) {
+                Files.move(tempPath, filePath, StandardCopyOption.REPLACE_EXISTING);
+            }
         } catch (IOException ex) {
             throw new UncheckedIOException("Failed to write data to " + filePath, ex);
         }

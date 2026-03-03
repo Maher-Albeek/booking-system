@@ -31,6 +31,16 @@ public class Time_slotsController {
         return time_slotsService.createTimeSlot(safeTimeSlot);
     }
 
+    @PutMapping("/{id}")
+    public @NonNull TimeSlot updateTimeSlot(
+            @PathVariable @NonNull Long id,
+            @RequestBody @NonNull TimeSlot time_slot
+    ) {
+        Objects.requireNonNull(id, "id must not be null");
+        TimeSlot safeTimeSlot = Objects.requireNonNull(time_slot, "time_slot must not be null");
+        return time_slotsService.updateTimeSlot(id, safeTimeSlot);
+    }
+
     @DeleteMapping("/{id}")
     public void deleteTimeSlot(@PathVariable @NonNull Long id) {
         Objects.requireNonNull(id, "id must not be null");

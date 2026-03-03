@@ -180,6 +180,18 @@ code {
   gap: 16px;
 }
 
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 .field {
   display: grid;
   gap: 8px;
@@ -195,7 +207,8 @@ code {
 }
 
 input,
-select {
+select,
+textarea {
   width: 100%;
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 16px;
@@ -206,9 +219,49 @@ select {
 }
 
 input:focus,
-select:focus {
+select:focus,
+textarea:focus {
   border-color: rgba(125, 217, 255, 0.5);
   box-shadow: 0 0 0 3px rgba(125, 217, 255, 0.12);
+}
+
+textarea {
+  min-height: 112px;
+  resize: vertical;
+  font: inherit;
+}
+
+.photo-dropzone {
+  position: relative;
+  display: grid;
+  justify-items: start;
+  gap: 10px;
+  padding: 22px;
+  border: 1px dashed rgba(125, 217, 255, 0.36);
+  border-radius: 20px;
+  background:
+    linear-gradient(180deg, rgba(125, 217, 255, 0.08), transparent),
+    rgba(255, 255, 255, 0.03);
+  transition:
+    border-color 160ms ease,
+    background 160ms ease,
+    transform 160ms ease;
+}
+
+.photo-dropzone.drag-active {
+  border-color: rgba(141, 227, 255, 0.8);
+  background:
+    linear-gradient(180deg, rgba(125, 217, 255, 0.18), transparent),
+    rgba(255, 255, 255, 0.05);
+  transform: translateY(-1px);
+}
+
+.photo-dropzone strong {
+  color: #f7f2ea;
+}
+
+.inline-action {
+  padding: 10px 16px;
 }
 
 .checkbox-field {
@@ -225,6 +278,39 @@ select:focus {
   padding: 18px;
   border-radius: 20px;
   background: rgba(255, 255, 255, 0.04);
+}
+
+.draft-photo-grid,
+.car-photo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
+  gap: 10px;
+}
+
+.draft-photo-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.draft-photo-card img,
+.car-photo-thumb {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border-radius: 16px;
+}
+
+.draft-photo-remove {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  padding: 8px 12px;
+  background: rgba(8, 22, 37, 0.82);
+  color: #f7f2ea;
+  box-shadow: none;
 }
 
 .list-topline {

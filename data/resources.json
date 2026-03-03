@@ -1,66 +1,73 @@
-[
-  {
-    "id": 3,
-    "name": "BMW X5",
-    "description": "SUV 2022",
-    "type": "CAR",
-    "location": "Berlin",
-    "active": true
-  },
-  {
-    "id": 4,
-    "name": "Audi A4",
-    "description": "Sedan",
-    "type": "CAR",
-    "location": "Berlin",
-    "active": true
-  },
-  {
-    "id": 5,
-    "name": "Mercedes-Benz C-Class",
-    "description": "Luxury Sedan",
-    "type": "CAR",
-    "location": "Berlin",
-    "active": true
-  },
-  {
-    "id": 6,
-    "name": "Volkswagen Golf",
-    "description": "Compact Car",
-    "type": "suv",
-    "location": "Berlin",
-    "active": true
-  },
-  {
-    "id": 7,
-    "name": "Porsche 911",
-    "description": "Sports Car",
-    "type": "CAR",
-    "location": "Berlin",
-    "active": true
-  },
-  {
-    "id": 8,
-    "name": "Tesla Model 3",
-    "description": "Electric Sedan",
-    "type": "CAR",
-    "location": "Berlin",
-    "active": true
-  },
-  {
-    "id": 9,
-    "name": "Ford Mustang",
-    "description": "Muscle Car",
-    "type": "CAR",
-    "location": "Berlin",
-    "active": true
-  },
-  {
-    "id": 10,
-    "name": "Chevrolet Camaro",
-    "description": "Muscle Car",
-    "type": "CAR",
-    "location": "Berlin",
-    "active": true
-  }
-]
+[ {
+  "id" : 3,
+  "name" : "BMW X5",
+  "description" : "SUV 2022",
+  "type" : "CAR",
+  "location" : "Berlin",
+  "active" : true,
+  "photoUrls" : [ ]
+}, {
+  "id" : 5,
+  "name" : "Mercedes-Benz C-Class",
+  "description" : "Luxury Sedan",
+  "type" : "CAR",
+  "location" : "Berlin",
+  "active" : true,
+  "photoUrls" : [ ]
+}, {
+  "id" : 6,
+  "name" : "Volkswagen Golf",
+  "description" : "Compact Car",
+  "type" : "suv",
+  "location" : "Berlin",
+  "active" : true,
+  "photoUrls" : [ ]
+}, {
+  "id" : 7,
+  "name" : "Porsche 911",
+  "description" : "Sports Car",
+  "type" : "CAR",
+  "location" : "Berlin",
+  "active" : true,
+  "photoUrls" : [ ]
+}, {
+  "id" : 8,
+  "name" : "Tesla Model 3",
+  "description" : "Electric Sedan",
+  "type" : "CAR",
+  "location" : "Berlin",
+  "active" : true,
+  "photoUrls" : [ ]
+}, {
+  "id" : 9,
+  "name" : "Ford Mustang",
+  "description" : "Muscle Car",
+  "type" : "CAR",
+  "location" : "Berlin",
+  "active" : true,
+  "photoUrls" : [ ]
+}, {
+  "id" : 10,
+  "name" : "Chevrolet Camaro",
+  "description" : "Muscle Car",
+  "type" : "Car",
+  "location" : "Berlin",
+  "active" : true,
+  "photoUrls" : [ "/api/resources/10/photos/photo-2d727fe2-38ba-4163-8fa1-720e904840bf.png" ]
+}, {
+  "id" : 11,
+  "name" : "bmw x5",
+  "description" : "suv 2021",
+  "type" : "Car",
+  "location" : "Gelsenkirchen",
+  "active" : true,
+  "photoUrls" : [ "/api/resources/11/photos/photo-4f15caf5-5dc5-4119-bc4c-2ab3d96e5f6b.png" ]
+}, {
+  "id" : 12,
+  "name" : "bmw x5",
+  "description" : "2022",
+  "type" : "Car",
+  "location" : "Essen",
+  "active" : true,
+  "photoUrls" : [ ]
+} ]
