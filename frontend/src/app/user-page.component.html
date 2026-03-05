@@ -1,8 +1,58 @@
 <main class="client-shell">
-  <nav class="home-menu-bar" aria-label="User page shortcuts">
-    <a routerLink="/user">Home</a>
-    <a routerLink="/account">Account</a>
-    <a routerLink="/user" fragment="reservations">Reservations</a>
+  <nav class="home-menu-bar navbar bg-base-100 shadow-sm" aria-label="User page shortcuts">
+    <div class="flex-1">
+      <a routerLink="/user" class="btn btn-ghost text-xl">Booking System</a>
+    </div>
+
+    <div class="flex-none">
+      <div class="dropdown dropdown-end">
+        <button type="button" class="btn btn-ghost btn-circle">
+          <div class="indicator">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"
+              />
+            </svg>
+            <span class="badge badge-sm indicator-item">{{ visibleBookings().length }}</span>
+          </div>
+        </button>
+
+        <div class="card card-compact dropdown-content bg-base-100 z-1 mt-3 w-52 shadow">
+          <div class="card-body">
+            <span class="text-lg font-bold">{{ visibleBookings().length }} Bookings</span>
+            <span class="text-info">Jump to reservation list</span>
+            <div class="card-actions">
+              <a routerLink="/user" fragment="reservations" class="btn btn-primary btn-block">View bookings</a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      @if (auth.isAuthenticated()) {
+        <div class="dropdown dropdown-end">
+          <button type="button" class="btn btn-ghost btn-circle avatar">
+            <div class="w-10 rounded-full">
+              @if (auth.user()?.avatarUrl) {
+                <img [src]="auth.user()?.avatarUrl" alt="User avatar" />
+              } @else {
+                <span>{{ avatarInitials() }}</span>
+              }
+            </div>
+          </button>
+
+          <ul class="menu menu-sm dropdown-content bg-base-100 rounded-box z-1 mt-3 w-52 p-2 shadow">
+            <li><a routerLink="/account">Profile</a></li>
+            <li><a routerLink="/user" fragment="reservations">Reservations</a></li>
+            <li><a routerLink="/login" (click)="auth.logout()">Logout</a></li>
+          </ul>
+        </div>
+      } @else {
+        <a routerLink="/login" class="btn btn-primary">Login</a>
+      }
+    </div>
   </nav>
 
   <header class="home-search-header">

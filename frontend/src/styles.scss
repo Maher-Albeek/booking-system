@@ -23,3 +23,181 @@ textarea,
 select {
   font: inherit;
 }
+
+app-user-page .home-menu-bar .flex-1 {
+  flex: 1;
+}
+
+app-user-page .home-menu-bar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  overflow: visible;
+  min-height: var(--home-menu-height);
+  padding: 10px 18px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0 0 18px 18px;
+  background:
+    linear-gradient(180deg, rgba(9, 18, 31, 0.98), rgba(9, 18, 31, 0.9)),
+    radial-gradient(circle at top right, rgba(248, 196, 107, 0.15), transparent 45%);
+  backdrop-filter: blur(14px);
+}
+
+app-user-page .home-menu-bar .flex-none {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+app-user-page .home-menu-bar .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 42px;
+  padding: 0 14px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #f7f2ea;
+  text-decoration: none;
+  font-weight: 700;
+  box-shadow: none;
+}
+
+app-user-page .home-menu-bar .btn:hover {
+  border-color: rgba(248, 196, 107, 0.38);
+  background: rgba(248, 196, 107, 0.14);
+}
+
+app-user-page .home-menu-bar .flex-1 .btn {
+  font-size: 1.1rem;
+}
+
+app-user-page .home-menu-bar .btn-circle {
+  width: 42px;
+  height: 42px;
+  padding: 0;
+}
+
+app-user-page .home-menu-bar .btn-primary {
+  border-color: transparent;
+  background: linear-gradient(135deg, #f8c46b, #d26a3b);
+  color: #111c2d;
+}
+
+app-user-page .home-menu-bar .btn-block {
+  width: 100%;
+}
+
+app-user-page .home-menu-bar .dropdown {
+  position: relative;
+}
+
+app-user-page .home-menu-bar .dropdown-content {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  display: none;
+  width: 13rem;
+  padding: 10px;
+  z-index: 30;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(9, 18, 31, 0.98);
+  box-shadow: 0 16px 36px rgba(3, 10, 24, 0.34);
+}
+
+app-user-page .home-menu-bar .dropdown:focus-within .dropdown-content,
+app-user-page .home-menu-bar .dropdown:hover .dropdown-content {
+  display: block;
+}
+
+app-user-page .home-menu-bar .card-body {
+  display: grid;
+  gap: 8px;
+}
+
+app-user-page .home-menu-bar .text-info {
+  color: #9ec5ff;
+  font-size: 0.86rem;
+}
+
+app-user-page .home-menu-bar .menu {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+app-user-page .home-menu-bar .menu a {
+  display: block;
+  padding: 10px 12px;
+  border-radius: 10px;
+  color: #f7f2ea;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+app-user-page .home-menu-bar .menu a:hover {
+  background: rgba(248, 196, 107, 0.14);
+}
+
+app-user-page .home-menu-bar .avatar .w-10 {
+  width: 2.5rem;
+  height: 2.5rem;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+app-user-page .home-menu-bar .avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+app-user-page .home-menu-bar .avatar span {
+  font-size: 0.82rem;
+  letter-spacing: 0.06em;
+}
+
+app-user-page .home-menu-bar .indicator {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+app-user-page .home-menu-bar .indicator .h-5,
+app-user-page .home-menu-bar .indicator .w-5 {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+app-user-page .home-menu-bar .badge {
+  position: absolute;
+  top: -7px;
+  right: -8px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 999px;
+  background: #f8c46b;
+  color: #101826;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+@media (max-width: 820px) {
+  app-user-page .home-menu-bar {
+    padding: 8px 12px;
+    border-radius: 0 0 14px 14px;
+  }
+}
