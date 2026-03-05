@@ -12,7 +12,6 @@
 
       <nav class="route-switcher" aria-label="Interface switcher">
         <a routerLink="/user" routerLinkActive="active" class="route-link">User Page</a>
-        <a routerLink="/account" routerLinkActive="active" class="route-link">Account</a>
         @if (auth.isAdmin()) {
           <a routerLink="/admin" routerLinkActive="active" class="route-link">Admin Page</a>
         }

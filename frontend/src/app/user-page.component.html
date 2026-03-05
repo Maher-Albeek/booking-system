@@ -76,17 +76,12 @@
       </button>
       @if (auth.isAuthenticated()) {
         <div class="hero-shortcuts">
-          <a routerLink="/account" class="shortcut-link">
-            <i class="button-icon fa-solid fa-user-gear" aria-hidden="true"></i>
-            <span>Manage account</span>
-          </a>
           <a routerLink="/user" fragment="reservations" class="shortcut-link">
             <i class="button-icon fa-solid fa-calendar-check" aria-hidden="true"></i>
             <span>My bookings</span>
           </a>
         </div>
       }
-      <p class="hero-hint">Route: <code>/user</code> | API base: <code>/api</code></p>
     </div>
   </section>
 
@@ -141,22 +136,6 @@
       </article>
     }
   </section>
-
-  @if (auth.isAuthenticated()) {
-    <section class="panel">
-      <div class="panel-header">
-        <div>
-          <p class="eyebrow">Account</p>
-          <h3>Profile settings moved</h3>
-        </div>
-      </div>
-      <p class="empty-state">Manage your account details on the dedicated account page.</p>
-      <a routerLink="/account" class="shortcut-link">
-        <i class="button-icon fa-solid fa-user-gear" aria-hidden="true"></i>
-        <span>Open account page</span>
-      </a>
-    </section>
-  }
 
   <section class="layout">
     <article class="panel fleet-panel">
