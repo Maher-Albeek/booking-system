@@ -2,9 +2,12 @@
   @if (auth.isAuthenticated()) {
     <header class="app-chrome">
       <div class="brand-block">
-        <p class="eyebrow">Booking System</p>
-        <strong>{{ pageTitle() }}</strong>
-        <span>{{ pageSummary() }}</span>
+        <img class="brand-logo" src="/favicon.ico" alt="Booking System logo" />
+        <div class="brand-copy">
+          <p class="eyebrow">Booking System</p>
+          <strong>{{ pageTitle() }}</strong>
+          <span>{{ pageSummary() }}</span>
+        </div>
       </div>
 
       <nav class="route-switcher" aria-label="Interface switcher">

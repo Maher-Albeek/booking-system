@@ -26,6 +26,20 @@
 
 .brand-block {
   display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 12px;
+}
+
+.brand-logo {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  object-fit: cover;
+}
+
+.brand-copy {
+  display: grid;
   gap: 8px;
 }
 
@@ -192,6 +206,11 @@
 @media (max-width: 980px) {
   .app-chrome {
     grid-template-columns: 1fr;
+  }
+
+  .brand-logo {
+    width: 42px;
+    height: 42px;
   }
 
   .user-menu-shell {
