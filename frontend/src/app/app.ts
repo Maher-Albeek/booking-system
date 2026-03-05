@@ -17,12 +17,14 @@ export class App {
   private readonly destroyRef = inject(DestroyRef);
 
   protected readonly auth = inject(AuthStateService);
-  protected readonly activeView = signal<'login' | 'user' | 'admin'>('login');
+  protected readonly activeView = signal<'login' | 'user' | 'account' | 'admin'>('login');
   protected readonly userMenuOpen = signal(false);
 
   protected readonly pageTitle = computed(() =>
     this.activeView() === 'admin'
       ? 'Admin workspace'
+      : this.activeView() === 'account'
+        ? 'Account workspace'
       : this.activeView() === 'user'
         ? 'Customer workspace'
         : 'Sign in'
@@ -30,7 +32,9 @@ export class App {
 
   protected readonly pageSummary = computed(() =>
     this.activeView() === 'admin'
-      ? 'Manage cars, time slots, users, and reservations.'
+      ? 'Manage cars, users, and reservations.'
+      : this.activeView() === 'account'
+        ? 'Manage profile and payment preferences.'
       : this.activeView() === 'user'
         ? 'Browse available cars, choose your own booking time window, and manage live bookings.'
         : 'Authenticate with your booking account to open the correct page for your role.'
@@ -79,7 +83,13 @@ export class App {
   private syncActiveView(url: string): void {
     const path = url.split('?')[0];
     this.activeView.set(
-      path.startsWith('/admin') ? 'admin' : path.startsWith('/user') ? 'user' : 'login'
+      path.startsWith('/admin')
+        ? 'admin'
+        : path.startsWith('/account')
+          ? 'account'
+          : path.startsWith('/user')
+            ? 'user'
+            : 'login'
     );
   }
 }

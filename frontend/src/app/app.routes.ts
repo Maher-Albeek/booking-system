@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 
 import { AdminPageComponent } from './admin-page.component';
+import { AccountPageComponent } from './account-page.component';
 import { adminGuard, loginRedirectGuard } from './auth.guards';
 import { LoginPageComponent } from './login-page.component';
 import { UserPageComponent } from './user-page.component';
@@ -21,6 +22,11 @@ export const routes: Routes = [
     path: 'user',
     component: UserPageComponent,
     title: 'User Interface'
+  },
+  {
+    path: 'account',
+    component: AccountPageComponent,
+    title: 'Account'
   },
   {
     path: 'admin',

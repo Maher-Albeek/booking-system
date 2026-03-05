@@ -11,7 +11,11 @@ export type AuthUser = {
   role: AuthRole;
   firstName: string | null;
   lastName: string | null;
-  address: string | null;
+  addressStreet: string | null;
+  addressHouseNumber: string | null;
+  addressPostalCode: string | null;
+  addressCity: string | null;
+  addressCountry: string | null;
   birthDate: string | null;
   avatarUrl: string | null;
   paymentMethods: string[];
@@ -111,6 +115,8 @@ export class AuthStateService {
       return null;
     }
 
+    const legacyAddress = (user as { address?: string | null }).address ?? null;
+
     return {
       id: user.id,
       name: user.name,
@@ -118,7 +124,11 @@ export class AuthStateService {
       role: user.role === 'ADMIN' ? 'ADMIN' : 'USER',
       firstName: user.firstName ?? null,
       lastName: user.lastName ?? null,
-      address: user.address ?? null,
+      addressStreet: user.addressStreet ?? legacyAddress,
+      addressHouseNumber: user.addressHouseNumber ?? null,
+      addressPostalCode: user.addressPostalCode ?? null,
+      addressCity: user.addressCity ?? null,
+      addressCountry: user.addressCountry ?? null,
       birthDate: user.birthDate ?? null,
       avatarUrl: user.avatarUrl ?? null,
       paymentMethods: Array.isArray(user.paymentMethods)

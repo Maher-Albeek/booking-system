@@ -1,0 +1,257 @@
+.account-shell {
+  display: grid;
+  gap: 1.5rem;
+  padding: 1.25rem;
+}
+
+.home-menu-bar {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.home-menu-bar a {
+  padding: 0.45rem 0.8rem;
+  border-radius: 999px;
+  border: 1px solid #d6d6d6;
+  text-decoration: none;
+  color: #1f2937;
+  background: #fff;
+}
+
+.hero {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  border-radius: 1rem;
+  border: 1px solid #e5e7eb;
+  background: linear-gradient(140deg, #f8fafc, #eef2ff);
+}
+
+.eyebrow {
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+.hero h2 {
+  margin: 0.35rem 0;
+}
+
+.hero p {
+  margin: 0;
+  color: #475569;
+}
+
+.banner {
+  padding: 0.9rem 1rem;
+  border-radius: 0.8rem;
+  border: 1px solid;
+  display: grid;
+  gap: 0.2rem;
+}
+
+.banner.info {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+}
+
+.banner.success {
+  background: #ecfdf5;
+  border-color: #86efac;
+}
+
+.banner.error {
+  background: #fef2f2;
+  border-color: #fca5a5;
+}
+
+.panel {
+  border: 1px solid #e5e7eb;
+  border-radius: 1rem;
+  background: #fff;
+  padding: 1rem;
+}
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.panel-header h3 {
+  margin: 0.3rem 0 0;
+}
+
+.profile-pill {
+  padding: 0.35rem 0.7rem;
+  border-radius: 999px;
+  border: 1px solid #cbd5e1;
+  background: #f8fafc;
+  font-size: 0.8rem;
+}
+
+.account-grid {
+  display: grid;
+  grid-template-columns: minmax(220px, 260px) minmax(0, 1fr);
+  gap: 1rem;
+}
+
+.avatar-panel {
+  border: 1px solid #e2e8f0;
+  border-radius: 0.8rem;
+  padding: 1rem;
+  display: grid;
+  gap: 0.8rem;
+  align-content: start;
+}
+
+.avatar-preview {
+  width: 120px;
+  height: 120px;
+  border-radius: 999px;
+  border: 1px solid #cbd5e1;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: #1e293b;
+  background: #f8fafc;
+}
+
+.avatar-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.avatar-actions {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.upload-button input {
+  display: none;
+}
+
+.account-form {
+  display: grid;
+  gap: 1rem;
+}
+
+.account-fields {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.field {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.field span {
+  font-size: 0.82rem;
+  color: #475569;
+}
+
+.field input {
+  border: 1px solid #cbd5e1;
+  border-radius: 0.6rem;
+  padding: 0.52rem 0.62rem;
+}
+
+.payment-methods {
+  border: 1px solid #e2e8f0;
+  border-radius: 0.8rem;
+  padding: 0.85rem;
+  display: grid;
+  gap: 0.8rem;
+}
+
+.payment-header {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.payment-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 0.6rem;
+}
+
+.payment-option {
+  border: 1px solid #dbe3ee;
+  border-radius: 0.75rem;
+  padding: 0.6rem;
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  background: #fff;
+}
+
+.payment-option.selected {
+  border-color: var(--payment-accent);
+  background: var(--payment-foreground);
+}
+
+.payment-option input {
+  margin: 0;
+}
+
+.payment-logo {
+  width: 1.8rem;
+  display: grid;
+  place-items: center;
+}
+
+.payment-copy {
+  display: grid;
+}
+
+.payment-copy small {
+  color: #64748b;
+}
+
+.account-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.submit-button,
+.ghost-button,
+.upload-button,
+.cta-link {
+  border-radius: 0.65rem;
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  padding: 0.5rem 0.8rem;
+  color: #1f2937;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.submit-button {
+  background: #0f766e;
+  color: #fff;
+  border-color: #0f766e;
+}
+
+.button-content {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+@media (max-width: 900px) {
+  .account-grid {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,0 +1,221 @@
+<main class="account-shell">
+  <nav class="home-menu-bar" aria-label="Account page shortcuts">
+    <a routerLink="/user">Home</a>
+    <a routerLink="/account">Account</a>
+    <a routerLink="/user" fragment="reservations">Reservations</a>
+  </nav>
+
+  <section class="hero">
+    <div>
+      <p class="eyebrow">Account</p>
+      <h2>Manage your profile</h2>
+      <p>Account management is now separated from the booking page.</p>
+    </div>
+
+    <button type="button" class="submit-button compact-button" (click)="reload()" [disabled]="loading() || saving()">
+      <span class="button-content">
+        <i class="button-icon fa-solid fa-rotate-right" aria-hidden="true"></i>
+        <span>{{ loading() ? 'Refreshing...' : 'Refresh profile' }}</span>
+      </span>
+    </button>
+  </section>
+
+  @if (!auth.isAuthenticated()) {
+    <section class="banner info">
+      <strong>Login required</strong>
+      <span>Please sign in before editing your account profile.</span>
+      <a routerLink="/login" class="cta-link">Login</a>
+    </section>
+  } @else {
+    @if (error()) {
+      <section class="banner error">
+        <strong>Account API issue</strong>
+        <span>{{ error() }}</span>
+      </section>
+    }
+
+    @if (success()) {
+      <section class="banner success">
+        <strong>Updated</strong>
+        <span>{{ success() }}</span>
+      </section>
+    }
+
+    <section class="panel account-panel">
+      <div class="panel-header">
+        <div>
+          <p class="eyebrow">Profile</p>
+          <h3>Personal data and payment methods</h3>
+        </div>
+        <span class="profile-pill">
+          {{ accountCompleteness().completed }}/{{ accountCompleteness().total }} fields saved
+        </span>
+      </div>
+
+      <div class="account-grid">
+        <section class="avatar-panel">
+          <div class="avatar-preview">
+            @if (accountDraft.avatarUrl) {
+              <img [src]="accountDraft.avatarUrl" alt="User avatar" />
+            } @else {
+              <span>{{ avatarInitials() }}</span>
+            }
+          </div>
+
+          <div class="avatar-actions">
+            <label class="upload-button">
+              <input type="file" accept="image/*" (change)="onAvatarInputChange($event)" />
+              <span class="button-content">
+                <i class="button-icon fa-solid fa-cloud-arrow-up" aria-hidden="true"></i>
+                <span>{{ avatarUploading() ? 'Loading avatar...' : 'Upload avatar' }}</span>
+              </span>
+            </label>
+            <button
+              type="button"
+              class="ghost-button compact-button"
+              (click)="removeAvatar()"
+              [disabled]="!accountDraft.avatarUrl || avatarUploading()"
+            >
+              <span class="button-content">
+                <i class="button-icon fa-solid fa-trash-can" aria-hidden="true"></i>
+                <span>Remove avatar</span>
+              </span>
+            </button>
+          </div>
+        </section>
+
+        <form class="account-form" (ngSubmit)="saveAccount()">
+          <div class="account-fields">
+            <label class="field">
+              <span>First name</span>
+              <input
+                type="text"
+                name="accountFirstName"
+                [ngModel]="accountDraft.firstName"
+                (ngModelChange)="accountDraft.firstName = $event"
+                autocomplete="given-name"
+              />
+            </label>
+
+            <label class="field">
+              <span>Last name</span>
+              <input
+                type="text"
+                name="accountLastName"
+                [ngModel]="accountDraft.lastName"
+                (ngModelChange)="accountDraft.lastName = $event"
+                autocomplete="family-name"
+              />
+            </label>
+
+            <label class="field">
+              <span>Birth date</span>
+              <input
+                type="date"
+                name="accountBirthDate"
+                [ngModel]="accountDraft.birthDate"
+                (ngModelChange)="accountDraft.birthDate = $event"
+                autocomplete="bday"
+              />
+            </label>
+
+            <label class="field">
+              <span>Street</span>
+              <input
+                type="text"
+                name="accountAddressStreet"
+                [ngModel]="accountDraft.addressStreet"
+                (ngModelChange)="accountDraft.addressStreet = $event"
+                autocomplete="address-line1"
+              />
+            </label>
+
+            <label class="field">
+              <span>House number</span>
+              <input
+                type="text"
+                name="accountAddressHouseNumber"
+                [ngModel]="accountDraft.addressHouseNumber"
+                (ngModelChange)="accountDraft.addressHouseNumber = $event"
+                autocomplete="address-line2"
+              />
+            </label>
+
+            <label class="field">
+              <span>Postal code</span>
+              <input
+                type="text"
+                name="accountAddressPostalCode"
+                [ngModel]="accountDraft.addressPostalCode"
+                (ngModelChange)="accountDraft.addressPostalCode = $event"
+                autocomplete="postal-code"
+              />
+            </label>
+
+            <label class="field">
+              <span>City</span>
+              <input
+                type="text"
+                name="accountAddressCity"
+                [ngModel]="accountDraft.addressCity"
+                (ngModelChange)="accountDraft.addressCity = $event"
+                autocomplete="address-level2"
+              />
+            </label>
+
+            <label class="field">
+              <span>Country</span>
+              <input
+                type="text"
+                name="accountAddressCountry"
+                [ngModel]="accountDraft.addressCountry"
+                (ngModelChange)="accountDraft.addressCountry = $event"
+                autocomplete="country-name"
+              />
+            </label>
+          </div>
+
+          <section class="payment-methods">
+            <div class="payment-header">
+              <span>Payment methods</span>
+              <strong>Save one or more preferred methods</strong>
+            </div>
+
+            <div class="payment-grid">
+              @for (method of supportedPaymentMethods; track method) {
+                <label
+                  class="payment-option"
+                  [class.selected]="isPaymentMethodSelected(method)"
+                  [style.--payment-accent]="paymentMethodMeta[method].accent"
+                  [style.--payment-foreground]="paymentMethodMeta[method].foreground"
+                >
+                  <input
+                    type="checkbox"
+                    [checked]="isPaymentMethodSelected(method)"
+                    (change)="togglePaymentMethod(method, $any($event.target).checked)"
+                  />
+                  <span class="payment-logo" aria-hidden="true">
+                    <i [class]="paymentMethodMeta[method].iconClass"></i>
+                  </span>
+                  <span class="payment-copy">
+                    <strong>{{ method }}</strong>
+                    <small>{{ paymentMethodMeta[method].hint }}</small>
+                  </span>
+                </label>
+              }
+            </div>
+          </section>
+
+          <div class="account-actions">
+            <button type="submit" class="submit-button compact-button" [disabled]="saving() || avatarUploading()">
+              <span class="button-content">
+                <i class="button-icon fa-solid fa-floppy-disk" aria-hidden="true"></i>
+                <span>{{ saving() ? 'Saving account...' : 'Save account' }}</span>
+              </span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </section>
+  }
+</main>

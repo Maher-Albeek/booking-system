@@ -14,9 +14,9 @@
     <section class="hero">
       <div class="hero-copy">
         <p class="eyebrow">Admin interface</p>
-        <h2>Manage cars, slots, and users</h2>
+        <h2>Manage cars, bookings, and users</h2>
         <p>
-          Use the live Spring endpoints to maintain the fleet, open or remove time slots, and
+          Use the live Spring endpoints to maintain the fleet, monitor reservations, and
           create or delete user accounts.
         </p>
       </div>
@@ -39,7 +39,7 @@
     @if (!error() && loading()) {
       <section class="banner loading">
         <strong>Loading admin data</strong>
-        <span>Fetching cars, users, time slots, and bookings.</span>
+        <span>Fetching cars, users, and bookings.</span>
       </section>
     }
 
@@ -61,7 +61,7 @@
     </section>
 
     <section class="admin-layout">
-      <article class="panel">
+      <article class="panel fleet-panel">
         <div class="panel-header">
           <div>
             <p class="eyebrow">Cars</p>
@@ -429,110 +429,6 @@
         }
       </article>
 
-      <article class="panel">
-        <div class="panel-header">
-          <div>
-            <p class="eyebrow">Time slots</p>
-            <h3>Manage availability windows</h3>
-          </div>
-        </div>
-
-        <form class="admin-form" (ngSubmit)="saveTimeSlot()">
-          <div class="form-header">
-            <div>
-              <p class="eyebrow">{{ editingSlotId() === null ? 'Create slot' : 'Editing slot' }}</p>
-              <p class="panel-lead">
-                {{
-                  editingSlotId() === null
-                    ? 'Add a new availability window.'
-                    : 'Update the selected slot and save the changes.'
-                }}
-              </p>
-            </div>
-
-            @if (editingSlotId() !== null) {
-              <button type="button" class="secondary-button" (click)="cancelTimeSlotEdit()">
-                Cancel edit
-              </button>
-            }
-          </div>
-
-          <label class="field">
-            <span>Car</span>
-            <select name="slotResource" [(ngModel)]="slotDraft.resourceId">
-              @for (car of cars(); track car.id) {
-                <option [ngValue]="car.id">{{ car.name }}</option>
-              }
-            </select>
-          </label>
-
-          <label class="field">
-            <span>Start time</span>
-            <input type="datetime-local" name="slotStart" [(ngModel)]="slotDraft.startTime" />
-          </label>
-
-          <label class="field">
-            <span>End time</span>
-            <input type="datetime-local" name="slotEnd" [(ngModel)]="slotDraft.endTime" />
-          </label>
-
-          <label class="checkbox-field">
-            <input type="checkbox" name="slotAvailable" [(ngModel)]="slotDraft.available" />
-            <span>Slot starts as available</span>
-          </label>
-
-          <div class="form-actions">
-            <button type="submit" [disabled]="!cars().length || isBusy('save-slot')">
-              {{
-                isBusy('save-slot')
-                  ? 'Saving slot...'
-                  : editingSlotId() === null
-                    ? 'Add time slot'
-                    : 'Update time slot'
-              }}
-            </button>
-          </div>
-        </form>
-
-        <div class="admin-list">
-          @for (slot of orderedSlots(); track slot.id) {
-            <section class="list-card">
-              <div class="list-topline">
-                <div>
-                  <strong>{{ resourceLabel(slot.resourceId) }}</strong>
-                  <p>{{ formatDate(slot.startTime) }} to {{ formatDate(slot.endTime) }}</p>
-                </div>
-                <span class="pill" [class.muted]="!slot.available">
-                  {{ slot.available ? 'Available' : 'Closed' }}
-                </span>
-              </div>
-
-              <div class="list-actions">
-                <button
-                  type="button"
-                  class="secondary-button"
-                  (click)="editTimeSlot(slot)"
-                  [disabled]="busyKey() !== null && busyKey() !== 'save-slot'"
-                >
-                  {{ editingSlotId() === slot.id ? 'Editing' : 'Edit slot' }}
-                </button>
-
-                <button
-                  type="button"
-                  class="ghost-button"
-                  (click)="deleteTimeSlot(slot.id)"
-                  [disabled]="isBusy('delete-slot-' + slot.id)"
-                >
-                  {{ isBusy('delete-slot-' + slot.id) ? 'Deleting...' : 'Delete slot' }}
-                </button>
-              </div>
-            </section>
-          } @empty {
-            <p class="empty-state">No time slots exist yet.</p>
-          }
-        </div>
-      </article>
-
       <article class="panel users-panel">
         <div class="panel-header">
           <div>
@@ -608,3 +504,4 @@
     </section>
   </main>
 }
+

@@ -1,4 +1,10 @@
 <main class="client-shell">
+  <nav class="home-menu-bar" aria-label="User page shortcuts">
+    <a routerLink="/user">Home</a>
+    <a routerLink="/account">Account</a>
+    <a routerLink="/user" fragment="reservations">Reservations</a>
+  </nav>
+
   <header class="home-search-header">
     <div class="search-header-copy">
       <p class="eyebrow">Find your car</p>
@@ -62,8 +68,8 @@
       <p class="eyebrow">User interface</p>
       <h2>{{ title }}</h2>
       <p>
-        Manage your profile, save your booking identity details, and reserve a car by selecting
-        your own start and end date-time directly against the Spring API.
+        Browse and reserve cars by selecting your own start and end date-time directly against the
+        Spring API.
       </p>
     </div>
 
@@ -76,7 +82,7 @@
       </button>
       @if (auth.isAuthenticated()) {
         <div class="hero-shortcuts">
-          <a routerLink="/user" fragment="account" class="shortcut-link">
+          <a routerLink="/account" class="shortcut-link">
             <i class="button-icon fa-solid fa-user-gear" aria-hidden="true"></i>
             <span>Manage account</span>
           </a>
@@ -126,8 +132,8 @@
     <section class="banner info">
       <strong>Profile incomplete</strong>
       <span>
-        Save Vorname, Nachname, Adresse, Geburtsdatum, and at least one payment method to speed up
-        booking.
+        Save first name, last name, full address fields, birth date, and at least one payment
+        method on the account page to speed up booking.
       </span>
     </section>
   }
@@ -143,147 +149,18 @@
   </section>
 
   @if (auth.isAuthenticated()) {
-    <section id="account" class="panel account-panel">
+    <section class="panel">
       <div class="panel-header">
         <div>
           <p class="eyebrow">Account</p>
-          <h3>Manage your profile</h3>
+          <h3>Profile settings moved</h3>
         </div>
-        <span class="profile-pill">
-          {{ accountCompleteness().completed }}/{{ accountCompleteness().total }} booking fields saved
-        </span>
       </div>
-
-      <div class="account-grid">
-        <section class="avatar-panel">
-          <div class="avatar-preview">
-            @if (accountDraft.avatarUrl) {
-              <img [src]="accountDraft.avatarUrl" alt="User avatar" />
-            } @else {
-              <span>{{ avatarInitials() }}</span>
-            }
-          </div>
-
-          <div class="avatar-actions">
-            <label class="upload-button">
-              <input type="file" accept="image/*" (change)="onAvatarInputChange($event)" />
-              <span class="button-content">
-                <i class="button-icon fa-solid fa-cloud-arrow-up" aria-hidden="true"></i>
-                <span>{{ avatarUploading() ? 'Loading avatar...' : 'Upload avatar' }}</span>
-              </span>
-            </label>
-            <button
-              type="button"
-              class="ghost-button compact-button"
-              (click)="removeAvatar()"
-              [disabled]="!accountDraft.avatarUrl || avatarUploading()"
-            >
-              <span class="button-content">
-                <i class="button-icon fa-solid fa-trash-can" aria-hidden="true"></i>
-                <span>Remove avatar</span>
-              </span>
-            </button>
-            <p>Image files are stored with your profile as an inline avatar.</p>
-          </div>
-        </section>
-
-        <form class="account-form" (ngSubmit)="saveAccount()">
-          <div class="account-fields">
-            <label class="field">
-              <span>Vorname</span>
-              <input
-                type="text"
-                name="accountFirstName"
-                [ngModel]="accountDraft.firstName"
-                (ngModelChange)="accountDraft.firstName = $event"
-                placeholder="Vorname"
-                autocomplete="given-name"
-              />
-            </label>
-
-            <label class="field">
-              <span>Nachname</span>
-              <input
-                type="text"
-                name="accountLastName"
-                [ngModel]="accountDraft.lastName"
-                (ngModelChange)="accountDraft.lastName = $event"
-                placeholder="Nachname"
-                autocomplete="family-name"
-              />
-            </label>
-
-            <label class="field">
-              <span>Geburtsdatum</span>
-              <input
-                type="date"
-                name="accountBirthDate"
-                [ngModel]="accountDraft.birthDate"
-                (ngModelChange)="accountDraft.birthDate = $event"
-                autocomplete="bday"
-              />
-            </label>
-
-            <section class="client-summary">
-              <span>Account</span>
-              <strong>{{ accountUser()?.name || 'Current user' }}</strong>
-              <p>{{ accountUser()?.email || 'No email stored for this profile.' }}</p>
-            </section>
-
-            <label class="field field-wide">
-              <span>Adresse</span>
-              <textarea
-                name="accountAddress"
-                [ngModel]="accountDraft.address"
-                (ngModelChange)="accountDraft.address = $event"
-                rows="4"
-                placeholder="Strasse, Hausnummer, PLZ, Ort"
-                autocomplete="street-address"
-              ></textarea>
-            </label>
-          </div>
-
-          <section class="payment-methods">
-            <div class="payment-header">
-              <span>Bezahl methoden</span>
-              <strong>Save one or more preferred methods</strong>
-            </div>
-
-            <div class="payment-grid">
-              @for (method of supportedPaymentMethods; track method) {
-                <label
-                  class="payment-option"
-                  [class.selected]="isAccountPaymentMethodSelected(method)"
-                  [style.--payment-accent]="paymentMethodMeta[method].accent"
-                  [style.--payment-foreground]="paymentMethodMeta[method].foreground"
-                >
-                  <input
-                    type="checkbox"
-                    [checked]="isAccountPaymentMethodSelected(method)"
-                    (change)="toggleAccountPaymentMethod(method, $any($event.target).checked)"
-                  />
-                  <span class="payment-logo" aria-hidden="true">
-                    <i [class]="paymentMethodMeta[method].iconClass"></i>
-                  </span>
-                  <span class="payment-copy">
-                    <strong>{{ method }}</strong>
-                    <small>{{ paymentMethodMeta[method].hint }}</small>
-                  </span>
-                </label>
-              }
-            </div>
-          </section>
-
-          <div class="account-actions">
-            <button type="submit" class="submit-button compact-button" [disabled]="accountSaving() || avatarUploading()">
-              <span class="button-content">
-                <i class="button-icon fa-solid fa-floppy-disk" aria-hidden="true"></i>
-                <span>{{ accountSaving() ? 'Saving account...' : 'Save account' }}</span>
-              </span>
-            </button>
-          </div>
-        </form>
-      </div>
+      <p class="empty-state">Manage your account details on the dedicated account page.</p>
+      <a routerLink="/account" class="shortcut-link">
+        <i class="button-icon fa-solid fa-user-gear" aria-hidden="true"></i>
+        <span>Open account page</span>
+      </a>
     </section>
   }
 
@@ -364,8 +241,8 @@
                 <dd>{{ selectedCarDetails.location }}</dd>
               </div>
               <div>
-                <dt>Managed slots</dt>
-                <dd>{{ selectedCarDetails.availableSlots }} / {{ selectedCarDetails.totalSlots }}</dd>
+                <dt>Confirmed bookings</dt>
+                <dd>{{ selectedCarDetails.confirmedBookings }}</dd>
               </div>
               <div>
                 <dt>Price/day</dt>
@@ -690,6 +567,7 @@
                   name="bookingStartDateTime"
                   [ngModel]="bookingStartDateTime()"
                   (ngModelChange)="bookingStartDateTime.set($event)"
+                  required
                 />
               </label>
 
@@ -700,6 +578,7 @@
                   name="bookingEndDateTime"
                   [ngModel]="bookingEndDateTime()"
                   (ngModelChange)="bookingEndDateTime.set($event)"
+                  required
                 />
               </label>
 

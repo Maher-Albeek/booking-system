@@ -38,19 +38,10 @@ type User = {
   role: string | null;
 };
 
-type TimeSlot = {
-  id: number;
-  startTime: string;
-  endTime: string;
-  resourceId: number;
-  available: boolean;
-};
-
 type Booking = {
   id: number;
   userId: number | null;
   resourceId: number;
-  timeSlotId: number | null;
   status: string;
   bookingTime: string | null;
   customerName: string;
@@ -76,12 +67,10 @@ export class AdminPageComponent {
   protected readonly success = signal<string | null>(null);
   protected readonly isPhotoDragActive = signal(false);
   protected readonly editingCarId = signal<number | null>(null);
-  protected readonly editingSlotId = signal<number | null>(null);
   protected readonly selectedCarId = signal<number | null>(null);
 
   protected readonly resources = signal<Resource[]>([]);
   protected readonly users = signal<User[]>([]);
-  protected readonly timeSlots = signal<TimeSlot[]>([]);
   protected readonly bookings = signal<Booking[]>([]);
 
   protected carDraft = {
@@ -103,13 +92,6 @@ export class AdminPageComponent {
     uploadedPhotoUrls: [] as string[]
   };
 
-  protected slotDraft = {
-    resourceId: null as number | null,
-    startTime: '',
-    endTime: '',
-    available: true
-  };
-
   protected userDraft = {
     name: '',
     email: '',
@@ -125,12 +107,6 @@ export class AdminPageComponent {
 
   protected readonly orderedUsers = computed(() =>
     [...this.users()].sort((left, right) => left.name.localeCompare(right.name))
-  );
-
-  protected readonly orderedSlots = computed(() =>
-    [...this.timeSlots()].sort(
-      (left, right) => new Date(left.startTime).getTime() - new Date(right.startTime).getTime()
-    )
   );
 
   protected readonly selectedCar = computed(() => {
@@ -149,9 +125,9 @@ export class AdminPageComponent {
       note: `${this.cars().filter((car) => car.active).length} active`
     },
     {
-      label: 'Time Slots',
-      value: this.timeSlots().length,
-      note: `${this.timeSlots().filter((slot) => slot.available).length} open`
+      label: 'Active Cars',
+      value: this.cars().filter((car) => car.active).length,
+      note: `${this.cars().length} total cars`
     },
     {
       label: 'Users',
@@ -311,71 +287,6 @@ export class AdminPageComponent {
     );
   }
 
-  protected saveTimeSlot(): void {
-    const editingSlotId = this.editingSlotId();
-
-    if (!this.slotDraft.resourceId || !this.slotDraft.startTime || !this.slotDraft.endTime) {
-      this.error.set('Choose a car plus start and end times for the new slot.');
-      return;
-    }
-
-    const request = editingSlotId === null
-      ? this.http.post<TimeSlot>('/api/time_slots', {
-          resourceId: this.slotDraft.resourceId,
-          startTime: this.slotDraft.startTime,
-          endTime: this.slotDraft.endTime,
-          available: this.slotDraft.available
-        })
-      : this.http.put<TimeSlot>(`/api/time_slots/${editingSlotId}`, {
-          id: editingSlotId,
-          resourceId: this.slotDraft.resourceId,
-          startTime: this.slotDraft.startTime,
-          endTime: this.slotDraft.endTime,
-          available: this.slotDraft.available
-        });
-
-    this.runRequest(
-      'save-slot',
-      request,
-      editingSlotId === null ? 'Time slot created.' : 'Time slot updated.',
-      () => this.cancelTimeSlotEdit()
-    );
-  }
-
-  protected editTimeSlot(slot: TimeSlot): void {
-    this.editingSlotId.set(slot.id);
-    this.error.set(null);
-    this.success.set(null);
-    this.slotDraft = {
-      resourceId: slot.resourceId,
-      startTime: this.toDateTimeLocalValue(slot.startTime),
-      endTime: this.toDateTimeLocalValue(slot.endTime),
-      available: slot.available
-    };
-  }
-
-  protected cancelTimeSlotEdit(): void {
-    this.editingSlotId.set(null);
-    this.resetSlotDraft();
-  }
-
-  protected deleteTimeSlot(slotId: number): void {
-    if (typeof window !== 'undefined' && !window.confirm('Delete this time slot?')) {
-      return;
-    }
-
-    this.runRequest(
-      `delete-slot-${slotId}`,
-      this.http.delete<void>(`/api/time_slots/${slotId}`),
-      'Time slot deleted.',
-      () => {
-        if (this.editingSlotId() === slotId) {
-          this.cancelTimeSlotEdit();
-        }
-      }
-    );
-  }
-
   protected createUser(): void {
     const name = this.userDraft.name.trim();
     const email = this.userDraft.email.trim();
@@ -423,19 +334,8 @@ export class AdminPageComponent {
     );
   }
 
-  protected formatDate(value: string): string {
-    return new Intl.DateTimeFormat('en-GB', {
-      dateStyle: 'medium',
-      timeStyle: 'short'
-    }).format(new Date(value));
-  }
-
   protected roleLabel(role: string | null): string {
     return role ? role.toUpperCase() : 'USER';
-  }
-
-  protected resourceLabel(resourceId: number): string {
-    return this.cars().find((car) => car.id === resourceId)?.name ?? `Car #${resourceId}`;
   }
 
   protected photoCountLabel(photoUrls: string[] | null | undefined): string {
@@ -472,7 +372,6 @@ export class AdminPageComponent {
     forkJoin({
       resources: this.http.get<ResourceResponse[]>('/api/resources'),
       users: this.http.get<User[]>('/api/users'),
-      timeSlots: this.http.get<TimeSlot[]>('/api/time_slots'),
       bookings: this.http.get<Booking[]>('/api/bookings')
     })
       .pipe(
@@ -480,10 +379,9 @@ export class AdminPageComponent {
         finalize(() => this.loading.set(false))
       )
       .subscribe({
-        next: ({ resources, users, timeSlots, bookings }) => {
+        next: ({ resources, users, bookings }) => {
           this.resources.set(resources.map((resource) => this.normalizeResource(resource)));
           this.users.set(users);
-          this.timeSlots.set(timeSlots);
           this.bookings.set(bookings);
           this.syncDraftDefaults();
         },
@@ -499,11 +397,11 @@ export class AdminPageComponent {
   }
 
   private syncDraftDefaults(): void {
-    const firstCarId = this.cars()[0]?.id ?? null;
-    const selectedCarStillExists = this.cars().some((car) => car.id === this.slotDraft.resourceId);
+    const selectedCarId = this.selectedCarId();
+    const selectedCarStillExists = this.cars().some((car) => car.id === selectedCarId);
 
-    if (!selectedCarStillExists) {
-      this.slotDraft.resourceId = firstCarId;
+    if (selectedCarId !== null && !selectedCarStillExists) {
+      this.selectedCarId.set(null);
     }
   }
 
@@ -525,15 +423,6 @@ export class AdminPageComponent {
       active: true,
       photoUrlsText: '',
       uploadedPhotoUrls: []
-    };
-  }
-
-  private resetSlotDraft(): void {
-    this.slotDraft = {
-      resourceId: this.cars()[0]?.id ?? null,
-      startTime: '',
-      endTime: '',
-      available: true
     };
   }
 
@@ -597,17 +486,6 @@ export class AdminPageComponent {
       .split(/\r?\n|,/)
       .map((entry) => entry.trim())
       .filter(Boolean);
-  }
-
-  private toDateTimeLocalValue(value: string): string {
-    const date = new Date(value);
-
-    if (Number.isNaN(date.getTime())) {
-      return '';
-    }
-
-    const offset = date.getTimezoneOffset();
-    return new Date(date.getTime() - offset * 60_000).toISOString().slice(0, 16);
   }
 
   private buildPhotoUrls(): string[] {

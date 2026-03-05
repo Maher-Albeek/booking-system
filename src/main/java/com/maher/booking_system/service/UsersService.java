@@ -84,9 +84,25 @@ public class UsersService {
         UpdateUserRequest safeRequest = Objects.requireNonNull(request, "request must not be null");
 
         Users existingUser = getRequiredUser(id);
+        String addressStreet = normalizeAddressPart(safeRequest.addressStreet());
+        String addressHouseNumber = normalizeAddressPart(safeRequest.addressHouseNumber());
+        String addressPostalCode = normalizeAddressPart(safeRequest.addressPostalCode());
+        String addressCity = normalizeAddressPart(safeRequest.addressCity());
+        String addressCountry = normalizeAddressPart(safeRequest.addressCountry());
+        String legacyAddress = normalizeOptional(safeRequest.address());
+
+        if (legacyAddress != null && addressStreet == null) {
+            addressStreet = legacyAddress;
+        }
+
         existingUser.setFirstName(normalizeOptional(safeRequest.firstName()));
         existingUser.setLastName(normalizeOptional(safeRequest.lastName()));
-        existingUser.setAddress(normalizeOptional(safeRequest.address()));
+        existingUser.setAddressStreet(addressStreet);
+        existingUser.setAddressHouseNumber(addressHouseNumber);
+        existingUser.setAddressPostalCode(addressPostalCode);
+        existingUser.setAddressCity(addressCity);
+        existingUser.setAddressCountry(addressCountry);
+        existingUser.setAddress(buildLegacyAddress(addressStreet, addressHouseNumber, addressPostalCode, addressCity, addressCountry));
         existingUser.setBirthDate(normalizeBirthDate(safeRequest.birthDate()));
         existingUser.setAvatarUrl(normalizeAvatarUrl(safeRequest.avatarUrl()));
         existingUser.setPaymentMethods(PaymentMethodCatalog.normalizeList(safeRequest.paymentMethods()));
@@ -123,7 +139,23 @@ public class UsersService {
         safeUser.setRole(forceUserRole ? "USER" : normalizeRole(safeUser.getRole()));
         safeUser.setFirstName(normalizeOptional(safeUser.getFirstName()));
         safeUser.setLastName(normalizeOptional(safeUser.getLastName()));
-        safeUser.setAddress(normalizeOptional(safeUser.getAddress()));
+        String addressStreet = normalizeAddressPart(safeUser.getAddressStreet());
+        String addressHouseNumber = normalizeAddressPart(safeUser.getAddressHouseNumber());
+        String addressPostalCode = normalizeAddressPart(safeUser.getAddressPostalCode());
+        String addressCity = normalizeAddressPart(safeUser.getAddressCity());
+        String addressCountry = normalizeAddressPart(safeUser.getAddressCountry());
+        String legacyAddress = normalizeOptional(safeUser.getAddress());
+
+        if (legacyAddress != null && addressStreet == null) {
+            addressStreet = legacyAddress;
+        }
+
+        safeUser.setAddressStreet(addressStreet);
+        safeUser.setAddressHouseNumber(addressHouseNumber);
+        safeUser.setAddressPostalCode(addressPostalCode);
+        safeUser.setAddressCity(addressCity);
+        safeUser.setAddressCountry(addressCountry);
+        safeUser.setAddress(buildLegacyAddress(addressStreet, addressHouseNumber, addressPostalCode, addressCity, addressCountry));
         safeUser.setBirthDate(normalizeBirthDate(safeUser.getBirthDate()));
         safeUser.setAvatarUrl(normalizeAvatarUrl(safeUser.getAvatarUrl()));
         safeUser.setPaymentMethods(PaymentMethodCatalog.normalizeList(safeUser.getPaymentMethods()));
@@ -165,6 +197,32 @@ public class UsersService {
         return normalizeOptional(avatarUrl);
     }
 
+    private String normalizeAddressPart(String value) {
+        return normalizeOptional(value);
+    }
+
+    private String buildLegacyAddress(
+            String street,
+            String houseNumber,
+            String postalCode,
+            String city,
+            String country
+    ) {
+        String firstLine = Arrays.stream(new String[]{street, houseNumber})
+                .filter(Objects::nonNull)
+                .reduce((left, right) -> left + " " + right)
+                .orElse(null);
+        String secondLine = Arrays.stream(new String[]{postalCode, city})
+                .filter(Objects::nonNull)
+                .reduce((left, right) -> left + " " + right)
+                .orElse(null);
+
+        return Arrays.stream(new String[]{firstLine, secondLine, country})
+                .filter(Objects::nonNull)
+                .reduce((left, right) -> left + ", " + right)
+                .orElse(null);
+    }
+
     private String normalizeBirthDate(String birthDate) {
         String normalized = normalizeOptional(birthDate);
         if (normalized == null) {
@@ -186,6 +244,17 @@ public class UsersService {
     }
 
     private UserResponse toUserResponse(Users user) {
+        String legacyAddress = normalizeOptional(user.getAddress());
+        String addressStreet = normalizeAddressPart(user.getAddressStreet());
+        String addressHouseNumber = normalizeAddressPart(user.getAddressHouseNumber());
+        String addressPostalCode = normalizeAddressPart(user.getAddressPostalCode());
+        String addressCity = normalizeAddressPart(user.getAddressCity());
+        String addressCountry = normalizeAddressPart(user.getAddressCountry());
+
+        if (legacyAddress != null && addressStreet == null) {
+            addressStreet = legacyAddress;
+        }
+
         return new UserResponse(
                 user.getId(),
                 user.getName(),
@@ -193,7 +262,12 @@ public class UsersService {
                 normalizeRole(user.getRole()),
                 user.getFirstName(),
                 user.getLastName(),
-                user.getAddress(),
+                legacyAddress,
+                addressStreet,
+                addressHouseNumber,
+                addressPostalCode,
+                addressCity,
+                addressCountry,
                 user.getBirthDate(),
                 user.getAvatarUrl(),
                 List.copyOf(user.getPaymentMethods())

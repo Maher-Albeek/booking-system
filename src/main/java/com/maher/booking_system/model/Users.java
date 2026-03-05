@@ -12,6 +12,11 @@ public class Users {
     private String firstName;
     private String lastName;
     private String address;
+    private String addressStreet;
+    private String addressHouseNumber;
+    private String addressPostalCode;
+    private String addressCity;
+    private String addressCountry;
     private String birthDate;
     private String avatarUrl;
     private List<String> paymentMethods = new ArrayList<>();
@@ -39,6 +44,21 @@ public class Users {
 
     public String getAddress() { return address; }
     public void setAddress(String address) { this.address = address; }
+
+    public String getAddressStreet() { return addressStreet; }
+    public void setAddressStreet(String addressStreet) { this.addressStreet = addressStreet; }
+
+    public String getAddressHouseNumber() { return addressHouseNumber; }
+    public void setAddressHouseNumber(String addressHouseNumber) { this.addressHouseNumber = addressHouseNumber; }
+
+    public String getAddressPostalCode() { return addressPostalCode; }
+    public void setAddressPostalCode(String addressPostalCode) { this.addressPostalCode = addressPostalCode; }
+
+    public String getAddressCity() { return addressCity; }
+    public void setAddressCity(String addressCity) { this.addressCity = addressCity; }
+
+    public String getAddressCountry() { return addressCountry; }
+    public void setAddressCountry(String addressCountry) { this.addressCountry = addressCountry; }
 
     public String getBirthDate() { return birthDate; }
     public void setBirthDate(String birthDate) { this.birthDate = birthDate; }

@@ -85,7 +85,11 @@ type User = {
   role: string | null;
   firstName: string | null;
   lastName: string | null;
-  address: string | null;
+  addressStreet: string | null;
+  addressHouseNumber: string | null;
+  addressPostalCode: string | null;
+  addressCity: string | null;
+  addressCountry: string | null;
   birthDate: string | null;
   avatarUrl: string | null;
   paymentMethods: PaymentMethod[];
@@ -95,19 +99,10 @@ type UserResponse = Omit<User, 'paymentMethods'> & {
   paymentMethods?: string[] | null;
 };
 
-type TimeSlot = {
-  id: number;
-  startTime: string;
-  endTime: string;
-  resourceId: number;
-  available: boolean;
-};
-
 type Booking = {
   id: number;
   userId: number | null;
   resourceId: number;
-  timeSlotId: number | null;
   startDateTime: string | null;
   endDateTime: string | null;
   status: string;
@@ -135,15 +130,17 @@ type BookingRequest = {
 };
 
 type CarSummary = Resource & {
-  totalSlots: number;
-  availableSlots: number;
   confirmedBookings: number;
 };
 
 type AccountDraft = {
   firstName: string;
   lastName: string;
-  address: string;
+  addressStreet: string;
+  addressHouseNumber: string;
+  addressPostalCode: string;
+  addressCity: string;
+  addressCountry: string;
   birthDate: string;
   avatarUrl: string;
   paymentMethods: PaymentMethod[];
@@ -175,7 +172,6 @@ export class UserPageComponent {
 
   protected readonly cars = signal<Resource[]>([]);
   protected readonly users = signal<User[]>([]);
-  protected readonly timeSlots = signal<TimeSlot[]>([]);
   protected readonly bookings = signal<Booking[]>([]);
   protected readonly profileUser = signal<User | null>(null);
 
@@ -205,16 +201,16 @@ export class UserPageComponent {
       note: `${this.cars().length} cars loaded`
     },
     {
-      label: 'Managed Slots',
-      value: this.timeSlots().filter((slot) => slot.available).length,
-      note: 'Admin-defined schedule'
+      label: 'Confirmed Trips',
+      value: this.bookings().filter((booking) => booking.status === 'CONFIRMED').length,
+      note: 'Live reservations'
     },
     {
-      label: this.auth.isAuthenticated() ? 'Confirmed Trips' : 'Booking Access',
+      label: 'Booking Access',
       value: this.auth.isAuthenticated()
-        ? this.bookings().filter((booking) => booking.status === 'CONFIRMED').length
+        ? 'Enabled'
         : 'Login',
-      note: this.auth.isAuthenticated() ? 'Live reservations' : 'Required to reserve'
+      note: this.auth.isAuthenticated() ? 'Ready to reserve' : 'Required to reserve'
     },
     {
       label: this.auth.isAuthenticated() ? 'Profile Ready' : 'Guest Mode',
@@ -229,16 +225,12 @@ export class UserPageComponent {
 
   protected readonly carSummaries = computed<CarSummary[]>(() => {
     const bookings = this.bookings();
-    const timeSlots = this.timeSlots();
 
     return [...this.cars()]
       .sort((left, right) => left.name.localeCompare(right.name))
       .map((car) => {
-        const slots = timeSlots.filter((slot) => slot.resourceId === car.id);
         return {
           ...car,
-          totalSlots: slots.length,
-          availableSlots: slots.filter((slot) => slot.available).length,
           confirmedBookings: bookings.filter(
             (booking) => booking.resourceId === car.id && booking.status === 'CONFIRMED'
           ).length
@@ -339,10 +331,11 @@ export class UserPageComponent {
 
   protected readonly accountCompleteness = computed(() => {
     const user = this.accountUser();
+    const hasAddress = this.hasCompleteAddress(user);
     const completed = [
       user?.firstName,
       user?.lastName,
-      user?.address,
+      hasAddress ? 'yes' : null,
       user?.birthDate,
       user?.paymentMethods.length ? 'yes' : null
     ].filter((value) => !!value).length;
@@ -546,7 +539,11 @@ export class UserPageComponent {
       .put<UserResponse>(`/api/users/${authenticatedUser.id}`, {
         firstName: this.accountDraft.firstName.trim(),
         lastName: this.accountDraft.lastName.trim(),
-        address: this.accountDraft.address.trim(),
+        addressStreet: this.accountDraft.addressStreet.trim(),
+        addressHouseNumber: this.accountDraft.addressHouseNumber.trim(),
+        addressPostalCode: this.accountDraft.addressPostalCode.trim(),
+        addressCity: this.accountDraft.addressCity.trim(),
+        addressCountry: this.accountDraft.addressCountry.trim(),
         birthDate: this.accountDraft.birthDate.trim(),
         avatarUrl: this.accountDraft.avatarUrl.trim(),
         paymentMethods: this.accountDraft.paymentMethods
@@ -685,18 +682,9 @@ export class UserPageComponent {
     return this.cars().find((car) => car.id === resourceId)?.name ?? `Car #${resourceId}`;
   }
 
-  protected slotLabel(timeSlotId: number): string {
-    const slot = this.timeSlots().find((item) => item.id === timeSlotId);
-    return slot ? this.formatSlotRange(slot) : `Slot #${timeSlotId}`;
-  }
-
   protected bookingPeriodLabel(booking: Booking): string {
     if (booking.startDateTime && booking.endDateTime) {
       return this.formatPeriod(booking.startDateTime, booking.endDateTime);
-    }
-
-    if (booking.timeSlotId !== null) {
-      return this.slotLabel(booking.timeSlotId);
     }
 
     return 'Not recorded';
@@ -736,10 +724,6 @@ export class UserPageComponent {
       hour: '2-digit',
       minute: '2-digit'
     }).format(new Date(value));
-  }
-
-  protected formatSlotRange(slot: TimeSlot): string {
-    return this.formatPeriod(slot.startTime, slot.endTime);
   }
 
   protected isConfirmed(booking: Booking): boolean {
@@ -817,7 +801,6 @@ export class UserPageComponent {
     forkJoin({
       cars: this.http.get<ResourceResponse[]>('/api/resources/cars'),
       users: usersRequest,
-      timeSlots: this.http.get<TimeSlot[]>('/api/time_slots'),
       bookings: bookingsRequest,
       profile: profileRequest
     })
@@ -826,14 +809,13 @@ export class UserPageComponent {
         finalize(() => this.loading.set(false))
       )
       .subscribe({
-        next: ({ cars, users, timeSlots, bookings, profile }) => {
+        next: ({ cars, users, bookings, profile }) => {
           const normalizedCars = cars.map((car) => this.normalizeResource(car));
           const normalizedUsers = users.map((user) => this.normalizeUser(user));
           const normalizedProfile = profile ? this.normalizeUser(profile) : null;
 
           this.cars.set(normalizedCars);
           this.users.set(normalizedUsers);
-          this.timeSlots.set(timeSlots);
           this.bookings.set(bookings);
 
           if (normalizedProfile) {
@@ -843,7 +825,7 @@ export class UserPageComponent {
             this.accountDraft = this.emptyAccountDraft();
           }
 
-          this.syncDefaults(normalizedCars, normalizedUsers, timeSlots, normalizedProfile);
+          this.syncDefaults(normalizedCars, normalizedUsers, normalizedProfile);
         },
         error: (error: HttpErrorResponse) => {
           this.error.set(
@@ -859,7 +841,6 @@ export class UserPageComponent {
   private syncDefaults(
     cars: Resource[],
     users: User[],
-    timeSlots: TimeSlot[],
     profile: User | null
   ): void {
     const selectedCarId = this.selectedCarId();
@@ -909,7 +890,7 @@ export class UserPageComponent {
 
     const previousFirstName = previousUser?.firstName ?? '';
     const previousLastName = previousUser?.lastName ?? '';
-    const previousAddress = previousUser?.address ?? '';
+    const previousAddress = this.formattedAddress(previousUser);
     const previousBirthDate = previousUser?.birthDate ?? '';
     const previousPaymentMethod = this.preferredPaymentMethod(previousUser) ?? '';
     const nextPaymentMethod = this.preferredPaymentMethod(nextUser) ?? '';
@@ -923,7 +904,7 @@ export class UserPageComponent {
     }
 
     if (force || !this.bookingAddress().trim() || this.bookingAddress() === previousAddress) {
-      this.bookingAddress.set(nextUser.address ?? '');
+      this.bookingAddress.set(this.formattedAddress(nextUser));
     }
 
     if (force || !this.bookingBirthDate().trim() || this.bookingBirthDate() === previousBirthDate) {
@@ -943,7 +924,11 @@ export class UserPageComponent {
     return {
       firstName: '',
       lastName: '',
-      address: '',
+      addressStreet: '',
+      addressHouseNumber: '',
+      addressPostalCode: '',
+      addressCity: '',
+      addressCountry: '',
       birthDate: '',
       avatarUrl: '',
       paymentMethods: []
@@ -958,7 +943,11 @@ export class UserPageComponent {
     return {
       firstName: user.firstName ?? '',
       lastName: user.lastName ?? '',
-      address: user.address ?? '',
+      addressStreet: user.addressStreet ?? '',
+      addressHouseNumber: user.addressHouseNumber ?? '',
+      addressPostalCode: user.addressPostalCode ?? '',
+      addressCity: user.addressCity ?? '',
+      addressCountry: user.addressCountry ?? '',
       birthDate: user.birthDate ?? '',
       avatarUrl: user.avatarUrl ?? '',
       paymentMethods: [...user.paymentMethods]
@@ -1002,7 +991,11 @@ export class UserPageComponent {
       role: user.role ?? 'USER',
       firstName: user.firstName ?? null,
       lastName: user.lastName ?? null,
-      address: user.address ?? null,
+      addressStreet: user.addressStreet ?? null,
+      addressHouseNumber: user.addressHouseNumber ?? null,
+      addressPostalCode: user.addressPostalCode ?? null,
+      addressCity: user.addressCity ?? null,
+      addressCountry: user.addressCountry ?? null,
       birthDate: user.birthDate ?? null,
       avatarUrl: user.avatarUrl ?? null,
       paymentMethods: this.normalizePaymentMethods(user.paymentMethods)
@@ -1021,7 +1014,11 @@ export class UserPageComponent {
       role: user.role,
       firstName: user.firstName,
       lastName: user.lastName,
-      address: user.address,
+      addressStreet: user.addressStreet,
+      addressHouseNumber: user.addressHouseNumber,
+      addressPostalCode: user.addressPostalCode,
+      addressCity: user.addressCity,
+      addressCountry: user.addressCountry,
       birthDate: user.birthDate,
       avatarUrl: user.avatarUrl,
       paymentMethods: this.normalizePaymentMethods(user.paymentMethods)
@@ -1036,7 +1033,11 @@ export class UserPageComponent {
       role: user.role === 'ADMIN' ? 'ADMIN' : 'USER',
       firstName: user.firstName,
       lastName: user.lastName,
-      address: user.address,
+      addressStreet: user.addressStreet,
+      addressHouseNumber: user.addressHouseNumber,
+      addressPostalCode: user.addressPostalCode,
+      addressCity: user.addressCity,
+      addressCountry: user.addressCountry,
       birthDate: user.birthDate,
       avatarUrl: user.avatarUrl,
       paymentMethods: [...user.paymentMethods]
@@ -1045,6 +1046,32 @@ export class UserPageComponent {
 
   private normalizePaymentMethods(values: string[] | null | undefined): PaymentMethod[] {
     return this.supportedPaymentMethods.filter((method) => values?.includes(method));
+  }
+
+  private hasCompleteAddress(user: User | null): boolean {
+    if (!user) {
+      return false;
+    }
+
+    return Boolean(
+      user.addressStreet &&
+      user.addressHouseNumber &&
+      user.addressPostalCode &&
+      user.addressCity &&
+      user.addressCountry
+    );
+  }
+
+  private formattedAddress(user: User | null): string {
+    if (!user) {
+      return '';
+    }
+
+    const firstLine = [user.addressStreet, user.addressHouseNumber].filter(Boolean).join(' ').trim();
+    const secondLine = [user.addressPostalCode, user.addressCity].filter(Boolean).join(' ').trim();
+    const country = user.addressCountry?.trim() ?? '';
+
+    return [firstLine, secondLine, country].filter(Boolean).join(', ');
   }
 
   private buildInitials(user: User | null): string {
