@@ -11,10 +11,14 @@ public class CreateBookingRequest {
     @NotNull(message = "resourceId is required")
     private Long resourceId;
 
-    @NotNull(message = "timeSlotId is required")
+    @NotBlank(message = "startDateTime is required")
+    private String startDateTime;
+
+    @NotBlank(message = "endDateTime is required")
+    private String endDateTime;
+
     private Long timeSlotId;
 
-    @NotBlank(message = "customerName is required")
     private String customerName;
 
     @NotBlank(message = "serviceName is required")
@@ -40,6 +44,12 @@ public class CreateBookingRequest {
 
     public Long getResourceId() { return resourceId; }
     public void setResourceId(Long resourceId) { this.resourceId = resourceId; }
+
+    public String getStartDateTime() { return startDateTime; }
+    public void setStartDateTime(String startDateTime) { this.startDateTime = startDateTime; }
+
+    public String getEndDateTime() { return endDateTime; }
+    public void setEndDateTime(String endDateTime) { this.endDateTime = endDateTime; }
 
     public Long getTimeSlotId() { return timeSlotId; }
     public void setTimeSlotId(Long timeSlotId) { this.timeSlotId = timeSlotId; }

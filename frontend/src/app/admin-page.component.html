@@ -119,6 +119,106 @@
             />
           </label>
 
+          <label class="field">
+            <span>Model</span>
+            <input
+              type="text"
+              name="carModel"
+              [(ngModel)]="carDraft.model"
+              placeholder="X5"
+            />
+          </label>
+
+          <label class="field">
+            <span>Type</span>
+            <input
+              type="text"
+              name="carType"
+              [(ngModel)]="carDraft.carType"
+              placeholder="SUV, Sedan, Van..."
+            />
+          </label>
+
+          <label class="field">
+            <span>Year</span>
+            <input
+              type="number"
+              name="carYear"
+              [(ngModel)]="carDraft.year"
+              min="1980"
+              max="2100"
+              placeholder="2024"
+            />
+          </label>
+
+          <label class="field">
+            <span>Seats</span>
+            <input
+              type="number"
+              name="carSeats"
+              [(ngModel)]="carDraft.seats"
+              min="1"
+              max="20"
+              placeholder="5"
+            />
+          </label>
+
+          <label class="field">
+            <span>Transmission</span>
+            <select name="carTransmission" [(ngModel)]="carDraft.transmission">
+              <option value="Automatic">Automatic</option>
+              <option value="Manual">Manual</option>
+              <option value="Hybrid">Hybrid</option>
+            </select>
+          </label>
+
+          <label class="field">
+            <span>Fuel</span>
+            <select name="carFuelType" [(ngModel)]="carDraft.fuelType">
+              <option value="Benzin">Benzin</option>
+              <option value="Diesel">Diesel</option>
+              <option value="Electro">Electro</option>
+              <option value="Gas">Gas</option>
+              <option value="Hybrid">Hybrid</option>
+            </select>
+          </label>
+
+          <label class="field">
+            <span>Price per day (EUR)</span>
+            <input
+              type="number"
+              name="carDailyPrice"
+              [(ngModel)]="carDraft.dailyPrice"
+              min="0"
+              step="0.01"
+              placeholder="79.90"
+            />
+          </label>
+
+          <label class="field">
+            <span>Baggage (bags)</span>
+            <input
+              type="number"
+              name="carBaggageBags"
+              [(ngModel)]="carDraft.baggageBags"
+              min="0"
+              max="20"
+              placeholder="3"
+            />
+          </label>
+
+          <label class="field">
+            <span>Horsepower (PS)</span>
+            <input
+              type="number"
+              name="carHorsepower"
+              [(ngModel)]="carDraft.horsepower"
+              min="1"
+              max="2000"
+              placeholder="190"
+            />
+          </label>
+
           <div class="field">
             <span>Photos</span>
             <div
@@ -168,6 +268,11 @@
           </label>
 
           <label class="checkbox-field">
+            <input type="checkbox" name="carAirConditioning" [(ngModel)]="carDraft.hasAirConditioning" />
+            <span>Air conditioning (Klima)</span>
+          </label>
+
+          <label class="checkbox-field">
             <input type="checkbox" name="carActive" [(ngModel)]="carDraft.active" />
             <span>Active and bookable</span>
           </label>
@@ -179,26 +284,123 @@
           </div>
         </form>
 
-        <div class="admin-list">
+        <div class="car-showcase-grid">
           @for (car of cars(); track car.id) {
-            <section class="list-card">
-              <div class="list-topline">
-                <div>
-                  <strong>{{ car.name }}</strong>
-                  <p>{{ car.location }}</p>
-                </div>
-                <span class="pill" [class.muted]="!car.active">
-                  {{ car.active ? 'Active' : 'Inactive' }}
-                </span>
+            <article
+              class="car-showcase-card"
+              role="button"
+              tabindex="0"
+              (click)="openCarDetails(car)"
+              (keydown)="onCarCardKeydown($event, car)"
+            >
+              <div class="car-showcase-head">
+                <strong>{{ car.name | uppercase }}</strong>
+                <p>{{ car.description || car.carType || 'Fleet vehicle' }}</p>
               </div>
 
-              <p>{{ car.description || 'No description provided.' }}</p>
-              <p>{{ photoCountLabel(car.photoUrls) }}</p>
+              <div class="car-chip-row">
+                <span class="chip">{{ car.carType || 'Oder ahnliches Modell' }}</span>
+                <span class="chip"><i class="fa-solid fa-user-group" aria-hidden="true"></i> {{ car.seats ?? '-' }}</span>
+                <span class="chip"><i class="fa-solid fa-suitcase-rolling" aria-hidden="true"></i> {{ car.baggageBags ?? '-' }}</span>
+                <span class="chip"><i class="fa-solid fa-gears" aria-hidden="true"></i> {{ car.transmission || 'Not set' }}</span>
+              </div>
 
-              @if (car.photoUrls.length) {
+              <div class="car-image-wrap">
+                @if (primaryPhotoUrl(car); as photoUrl) {
+                  <img class="showcase-image" [src]="photoUrl" [alt]="car.name" />
+                } @else {
+                  <div class="showcase-image placeholder">No image uploaded</div>
+                }
+              </div>
+
+              <p class="car-availability">
+                <i class="fa-solid fa-check" aria-hidden="true"></i> Unbegrenzte Kilometer verfugbar
+              </p>
+
+              <div class="car-price-line">
+                <strong>{{ formatCurrency(car.dailyPrice) }} / Tag</strong>
+                <span>{{ formatCurrency(car.dailyPrice) }} Gesamtpreis</span>
+              </div>
+            </article>
+          } @empty {
+            <p class="empty-state">No cars are currently available in <code>/api/resources</code>.</p>
+          }
+        </div>
+
+        @if (selectedCar(); as selectedCar) {
+          <div class="car-details-overlay" (click)="closeCarDetails()">
+            <aside class="car-details-drawer" (click)="$event.stopPropagation()">
+              <div class="car-details-header">
+                <div>
+                  <p class="eyebrow">Car details</p>
+                  <h3>{{ selectedCar.name }}</h3>
+                </div>
+                <button type="button" class="ghost-button drawer-close" (click)="closeCarDetails()">
+                  Close
+                </button>
+              </div>
+
+              <p class="drawer-description">{{ selectedCar.description || 'No description provided.' }}</p>
+
+              <dl>
+                <div>
+                  <dt>Location</dt>
+                  <dd>{{ selectedCar.location }}</dd>
+                </div>
+                <div>
+                  <dt>Model</dt>
+                  <dd>{{ selectedCar.model || 'Not set' }}</dd>
+                </div>
+                <div>
+                  <dt>Type</dt>
+                  <dd>{{ selectedCar.carType || 'Not set' }}</dd>
+                </div>
+                <div>
+                  <dt>Year</dt>
+                  <dd>{{ selectedCar.year ?? 'Not set' }}</dd>
+                </div>
+                <div>
+                  <dt>Seats</dt>
+                  <dd>{{ selectedCar.seats ?? 'Not set' }}</dd>
+                </div>
+                <div>
+                  <dt>Transmission</dt>
+                  <dd>{{ selectedCar.transmission || 'Not set' }}</dd>
+                </div>
+                <div>
+                  <dt>Fuel</dt>
+                  <dd>{{ selectedCar.fuelType || 'Not set' }}</dd>
+                </div>
+                <div>
+                  <dt>Price/day</dt>
+                  <dd>{{ formatCurrency(selectedCar.dailyPrice) }}</dd>
+                </div>
+                <div>
+                  <dt>Baggage</dt>
+                  <dd>{{ selectedCar.baggageBags ?? 'Not set' }}</dd>
+                </div>
+                <div>
+                  <dt>Klima</dt>
+                  <dd>{{ climateLabel(selectedCar.hasAirConditioning) }}</dd>
+                </div>
+                <div>
+                  <dt>Horsepower</dt>
+                  <dd>{{ selectedCar.horsepower ? selectedCar.horsepower + ' PS' : 'Not set' }}</dd>
+                </div>
+                <div>
+                  <dt>Status</dt>
+                  <dd>{{ selectedCar.active ? 'Active' : 'Inactive' }}</dd>
+                </div>
+                <div>
+                  <dt>Photos</dt>
+                  <dd>{{ photoCountLabel(selectedCar.photoUrls) }}</dd>
+                </div>
+              </dl>
+
+              @if (selectedCar.photoUrls.length) {
                 <div class="car-photo-grid">
-                  @for (photoUrl of car.photoUrls; track photoUrl) {
-                    <img class="car-photo-thumb" [src]="photoUrl" [alt]="car.name" />
+                  @for (photoUrl of selectedCar.photoUrls; track photoUrl) {
+                    <img class="car-photo-thumb" [src]="photoUrl" [alt]="selectedCar.name" />
                   }
                 </div>
               }
@@ -207,26 +409,24 @@
                 <button
                   type="button"
                   class="secondary-button"
-                  (click)="editCar(car)"
+                  (click)="editCar(selectedCar)"
                   [disabled]="busyKey() !== null && busyKey() !== 'save-car'"
                 >
-                  {{ editingCarId() === car.id ? 'Editing' : 'Edit car' }}
+                  {{ editingCarId() === selectedCar.id ? 'Editing' : 'Edit car' }}
                 </button>
 
                 <button
                   type="button"
                   class="ghost-button"
-                  (click)="deleteCar(car.id)"
-                  [disabled]="isBusy('delete-car-' + car.id)"
+                  (click)="deleteCar(selectedCar.id)"
+                  [disabled]="isBusy('delete-car-' + selectedCar.id)"
                 >
-                  {{ isBusy('delete-car-' + car.id) ? 'Deleting...' : 'Delete car' }}
+                  {{ isBusy('delete-car-' + selectedCar.id) ? 'Deleting...' : 'Delete car' }}
                 </button>
               </div>
-            </section>
-          } @empty {
-            <p class="empty-state">No cars are currently available in <code>/api/resources</code>.</p>
-          }
-        </div>
+            </aside>
+          </div>
+        }
       </article>
 
       <article class="panel">

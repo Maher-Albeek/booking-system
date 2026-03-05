@@ -20,34 +20,34 @@ type PaymentMethod = (typeof PAYMENT_METHOD_OPTIONS)[number];
 
 const PAYMENT_METHOD_META: Record<
   PaymentMethod,
-  { shortLabel: string; hint: string; accent: string; foreground: string }
+  { iconClass: string; hint: string; accent: string; foreground: string }
 > = {
   PayPal: {
-    shortLabel: 'PP',
+    iconClass: 'fa-brands fa-paypal',
     hint: 'Wallet checkout',
     accent: '#1d4ed8',
     foreground: '#eff6ff'
   },
   'Master Card': {
-    shortLabel: 'MC',
+    iconClass: 'fa-brands fa-cc-mastercard',
     hint: 'Credit card',
     accent: '#ea580c',
     foreground: '#fff7ed'
   },
   Visa: {
-    shortLabel: 'VI',
+    iconClass: 'fa-brands fa-cc-visa',
     hint: 'Card payment',
     accent: '#2563eb',
     foreground: '#eff6ff'
   },
   Klarna: {
-    shortLabel: 'K',
+    iconClass: 'fa-solid fa-money-bill-wave',
     hint: 'Pay later',
     accent: '#f472b6',
     foreground: '#500724'
   },
   'Giro Card': {
-    shortLabel: 'GC',
+    iconClass: 'fa-solid fa-credit-card',
     hint: 'Debit card',
     accent: '#16a34a',
     foreground: '#f0fdf4'
@@ -60,6 +60,16 @@ type Resource = {
   description: string;
   type: string;
   location: string;
+  model: string | null;
+  carType: string | null;
+  year: number | null;
+  seats: number | null;
+  transmission: string | null;
+  fuelType: string | null;
+  dailyPrice: number | null;
+  baggageBags: number | null;
+  hasAirConditioning: boolean | null;
+  horsepower: number | null;
   active: boolean;
   photoUrls: string[];
 };
@@ -97,7 +107,9 @@ type Booking = {
   id: number;
   userId: number | null;
   resourceId: number;
-  timeSlotId: number;
+  timeSlotId: number | null;
+  startDateTime: string | null;
+  endDateTime: string | null;
   status: string;
   bookingTime: string | null;
   customerName: string;
@@ -112,8 +124,8 @@ type Booking = {
 type BookingRequest = {
   userId: number;
   resourceId: number;
-  timeSlotId: number;
-  customerName: string;
+  startDateTime: string;
+  endDateTime: string;
   serviceName: string;
   firstName: string;
   lastName: string;
@@ -168,13 +180,20 @@ export class UserPageComponent {
 
   protected readonly selectedCarId = signal<number | null>(null);
   protected readonly selectedUserId = signal<number | null>(null);
-  protected readonly selectedTimeSlotId = signal<number | null>(null);
+  protected readonly bookingStartDateTime = signal('');
+  protected readonly bookingEndDateTime = signal('');
   protected readonly bookingFirstName = signal('');
   protected readonly bookingLastName = signal('');
   protected readonly bookingAddress = signal('');
   protected readonly bookingBirthDate = signal('');
   protected readonly bookingPaymentMethod = signal<PaymentMethod | ''>('');
   protected readonly serviceName = signal('');
+  protected readonly searchLocationInput = signal('');
+  protected readonly searchStartDateInput = signal('');
+  protected readonly searchEndDateInput = signal('');
+  protected readonly searchLocation = signal('');
+  protected readonly searchStartDate = signal('');
+  protected readonly searchEndDate = signal('');
 
   protected accountDraft: AccountDraft = this.emptyAccountDraft();
 
@@ -185,9 +204,9 @@ export class UserPageComponent {
       note: `${this.cars().length} cars loaded`
     },
     {
-      label: 'Open Slots',
+      label: 'Managed Slots',
       value: this.timeSlots().filter((slot) => slot.available).length,
-      note: 'Ready to reserve'
+      note: 'Admin-defined schedule'
     },
     {
       label: this.auth.isAuthenticated() ? 'Confirmed Trips' : 'Booking Access',
@@ -226,11 +245,86 @@ export class UserPageComponent {
       });
   });
 
+  protected readonly searchDateRangeInvalid = computed(() => {
+    const start = this.searchStartDateInput().trim();
+    const end = this.searchEndDateInput().trim();
+
+    if (!start || !end) {
+      return false;
+    }
+
+    const startDate = new Date(`${start}T00:00:00`);
+    const endDate = new Date(`${end}T00:00:00`);
+
+    if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) {
+      return false;
+    }
+
+    return startDate > endDate;
+  });
+
+  protected readonly filteredCarSummaries = computed<CarSummary[]>(() => {
+    const locationQuery = this.searchLocation().trim().toLowerCase();
+    const start = this.searchStartDate().trim();
+    const end = this.searchEndDate().trim();
+    const hasValidDateRange = Boolean(start && end && !this.searchDateRangeInvalid());
+    const requestedStart = hasValidDateRange ? new Date(`${start}T00:00:00`) : null;
+    const requestedEnd = hasValidDateRange ? new Date(`${end}T23:59:59`) : null;
+
+    return this.carSummaries().filter((car) => {
+      const matchesLocation = !locationQuery || car.location.toLowerCase().includes(locationQuery);
+      const matchesDateRange =
+        !hasValidDateRange ||
+        (requestedStart !== null &&
+          requestedEnd !== null &&
+          this.isCarAvailableInDateRange(car.id, requestedStart, requestedEnd));
+
+      return matchesLocation && matchesDateRange;
+    });
+  });
+
   protected readonly selectedCar = computed(
     () => this.cars().find((car) => car.id === this.selectedCarId()) ?? null
   );
 
   protected readonly selectedCarPhotos = computed(() => this.selectedCar()?.photoUrls ?? []);
+
+  protected readonly bookingWindowPreview = computed(() => {
+    const start = this.bookingStartDateTime().trim();
+    const end = this.bookingEndDateTime().trim();
+
+    if (!start || !end) {
+      return null;
+    }
+
+    const startDate = new Date(start);
+    const endDate = new Date(end);
+
+    if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime()) || startDate >= endDate) {
+      return null;
+    }
+
+    return this.formatPeriod(start, end);
+  });
+
+  protected readonly rentalDays = computed(() =>
+    this.calculateRentalDays(this.bookingStartDateTime().trim(), this.bookingEndDateTime().trim())
+  );
+
+  protected readonly bookingPricePreview = computed(() => {
+    const car = this.selectedCar();
+    const days = this.rentalDays();
+
+    if (!car || days === null || typeof car.dailyPrice !== 'number') {
+      return null;
+    }
+
+    return {
+      days,
+      dailyPrice: car.dailyPrice,
+      totalPrice: Number((car.dailyPrice * days).toFixed(2))
+    };
+  });
 
   protected readonly accountUser = computed(
     () => this.profileUser() ?? this.toLocalUser(this.auth.user())
@@ -264,19 +358,6 @@ export class UserPageComponent {
 
   protected readonly canChooseUser = computed(
     () => this.auth.isAdmin() && this.users().length > 1
-  );
-
-  protected readonly availableSlots = computed(() =>
-    [...this.timeSlots()]
-      .filter((slot) => slot.resourceId === this.selectedCarId() && slot.available)
-      .sort(
-        (left, right) =>
-          new Date(left.startTime).getTime() - new Date(right.startTime).getTime()
-      )
-  );
-
-  protected readonly selectedSlot = computed(
-    () => this.availableSlots().find((slot) => slot.id === this.selectedTimeSlotId()) ?? null
   );
 
   protected readonly visibleBookings = computed(() => {
@@ -317,7 +398,8 @@ export class UserPageComponent {
       !this.auth.isAuthenticated() ||
       this.selectedCar() === null ||
       this.selectedUser() === null ||
-      this.selectedSlot() === null ||
+      !this.bookingStartDateTime().trim() ||
+      !this.bookingEndDateTime().trim() ||
       !this.bookingFirstName().trim() ||
       !this.bookingLastName().trim() ||
       !this.bookingAddress().trim() ||
@@ -336,13 +418,13 @@ export class UserPageComponent {
 
   protected selectCar(carId: number): void {
     this.selectedCarId.set(carId);
-    this.selectedTimeSlotId.set(null);
     this.success.set(null);
   }
 
   protected openReservationModal(carId: number): void {
     this.selectedCarId.set(carId);
-    this.selectedTimeSlotId.set(this.firstAvailableSlotId(carId));
+    this.bookingStartDateTime.set('');
+    this.bookingEndDateTime.set('');
     this.syncBookingFieldsFromUser(this.selectedUser(), this.selectedUser(), true);
     this.error.set(null);
     this.success.set(null);
@@ -369,11 +451,6 @@ export class UserPageComponent {
 
     this.selectedUserId.set(nextUser?.id ?? null);
     this.syncBookingFieldsFromUser(nextUser, previousUser);
-  }
-
-  protected chooseTimeSlot(slotId: number): void {
-    this.selectedTimeSlotId.set(slotId);
-    this.success.set(null);
   }
 
   protected async onAvatarInputChange(event: Event): Promise<void> {
@@ -476,7 +553,8 @@ export class UserPageComponent {
 
     const selectedCar = this.selectedCar();
     const selectedUser = this.selectedUser();
-    const selectedSlot = this.selectedSlot();
+    const startDateTime = this.bookingStartDateTime().trim();
+    const endDateTime = this.bookingEndDateTime().trim();
     const firstName = this.bookingFirstName().trim();
     const lastName = this.bookingLastName().trim();
     const address = this.bookingAddress().trim();
@@ -487,7 +565,8 @@ export class UserPageComponent {
     if (
       !selectedCar ||
       !selectedUser ||
-      !selectedSlot ||
+      !startDateTime ||
+      !endDateTime ||
       !firstName ||
       !lastName ||
       !address ||
@@ -495,15 +574,22 @@ export class UserPageComponent {
       !paymentMethod ||
       !serviceName
     ) {
-      this.error.set('Choose a car, select a slot, and complete all required booking details.');
+      this.error.set('Choose a car, set start and end date-time, and complete all required booking details.');
+      return;
+    }
+
+    const startDate = new Date(startDateTime);
+    const endDate = new Date(endDateTime);
+    if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime()) || startDate >= endDate) {
+      this.error.set('Start date-time must be before end date-time.');
       return;
     }
 
     const payload: BookingRequest = {
       userId: selectedUser.id,
       resourceId: selectedCar.id,
-      timeSlotId: selectedSlot.id,
-      customerName: `${firstName} ${lastName}`,
+      startDateTime,
+      endDateTime,
       serviceName,
       firstName,
       lastName,
@@ -511,6 +597,11 @@ export class UserPageComponent {
       birthDate,
       paymentMethod
     };
+    const estimatedDays = this.calculateRentalDays(startDateTime, endDateTime);
+    const estimatedTotalPrice =
+      estimatedDays !== null && typeof selectedCar.dailyPrice === 'number'
+        ? Number((selectedCar.dailyPrice * estimatedDays).toFixed(2))
+        : null;
 
     this.submitting.set(true);
     this.error.set(null);
@@ -524,10 +615,15 @@ export class UserPageComponent {
       )
       .subscribe({
         next: () => {
-          this.selectedTimeSlotId.set(null);
+          this.bookingStartDateTime.set('');
+          this.bookingEndDateTime.set('');
           this.serviceName.set('');
           this.reservationModalOpen.set(false);
-          this.success.set(`Booking confirmed for ${selectedCar.name}.`);
+          const pricingNote =
+            estimatedTotalPrice === null
+              ? ''
+              : ` Total ${this.formatCurrency(estimatedTotalPrice)}${estimatedDays ? ` for ${estimatedDays} day${estimatedDays === 1 ? '' : 's'}` : ''}.`;
+          this.success.set(`Booking confirmed for ${selectedCar.name}.${pricingNote}`);
           this.loadData();
         },
         error: (error: HttpErrorResponse) => {
@@ -554,7 +650,7 @@ export class UserPageComponent {
       )
       .subscribe({
         next: () => {
-          this.success.set('Booking cancelled and slot reopened.');
+          this.success.set('Booking cancelled.');
           this.loadData();
         },
         error: (error: HttpErrorResponse) => {
@@ -570,6 +666,18 @@ export class UserPageComponent {
   protected slotLabel(timeSlotId: number): string {
     const slot = this.timeSlots().find((item) => item.id === timeSlotId);
     return slot ? this.formatSlotRange(slot) : `Slot #${timeSlotId}`;
+  }
+
+  protected bookingPeriodLabel(booking: Booking): string {
+    if (booking.startDateTime && booking.endDateTime) {
+      return this.formatPeriod(booking.startDateTime, booking.endDateTime);
+    }
+
+    if (booking.timeSlotId !== null) {
+      return this.slotLabel(booking.timeSlotId);
+    }
+
+    return 'Not recorded';
   }
 
   protected formatDate(value: string | null | undefined): string {
@@ -609,7 +717,7 @@ export class UserPageComponent {
   }
 
   protected formatSlotRange(slot: TimeSlot): string {
-    return `${this.formatDay(slot.startTime)} | ${this.formatTime(slot.startTime)} - ${this.formatTime(slot.endTime)}`;
+    return this.formatPeriod(slot.startTime, slot.endTime);
   }
 
   protected isConfirmed(booking: Booking): boolean {
@@ -624,9 +732,44 @@ export class UserPageComponent {
     return Math.max((car?.photoUrls?.length ?? 0) - 1, 0);
   }
 
+  protected applySearchFilters(): void {
+    if (this.searchDateRangeInvalid()) {
+      return;
+    }
+
+    this.searchLocation.set(this.searchLocationInput().trim());
+    this.searchStartDate.set(this.searchStartDateInput().trim());
+    this.searchEndDate.set(this.searchEndDateInput().trim());
+  }
+
+  protected clearSearchFilters(): void {
+    this.searchLocationInput.set('');
+    this.searchStartDateInput.set('');
+    this.searchEndDateInput.set('');
+    this.searchLocation.set('');
+    this.searchStartDate.set('');
+    this.searchEndDate.set('');
+  }
+
   protected bookingContactName(booking: Booking): string {
     const name = [booking.firstName, booking.lastName].filter(Boolean).join(' ').trim();
     return name || booking.customerName || 'Unnamed customer';
+  }
+
+  protected bookingTotalPriceLabel(booking: Booking): string {
+    const car = this.cars().find((entry) => entry.id === booking.resourceId);
+
+    if (!car || typeof car.dailyPrice !== 'number' || !booking.startDateTime || !booking.endDateTime) {
+      return 'Not available';
+    }
+
+    const days = this.calculateRentalDays(booking.startDateTime, booking.endDateTime);
+    if (days === null) {
+      return 'Not available';
+    }
+
+    const total = Number((car.dailyPrice * days).toFixed(2));
+    return `${this.formatCurrency(total)} (${days} day${days === 1 ? '' : 's'})`;
   }
 
   private loadData(): void {
@@ -707,17 +850,6 @@ export class UserPageComponent {
     this.selectedUserId.set(nextUser?.id ?? null);
     this.syncBookingFieldsFromUser(nextUser, previousUser);
 
-    const isSelectedSlotStillValid = timeSlots.some(
-      (slot) =>
-        slot.id === this.selectedTimeSlotId() &&
-        slot.resourceId === this.selectedCarId() &&
-        slot.available
-    );
-
-    if (!isSelectedSlotStillValid) {
-      this.selectedTimeSlotId.set(null);
-    }
-
     if (!this.selectedCarId()) {
       this.reservationModalOpen.set(false);
     }
@@ -777,15 +909,6 @@ export class UserPageComponent {
     }
   }
 
-  private firstAvailableSlotId(carId: number): number | null {
-    return [...this.timeSlots()]
-      .filter((slot) => slot.resourceId === carId && slot.available)
-      .sort(
-        (left, right) =>
-          new Date(left.startTime).getTime() - new Date(right.startTime).getTime()
-      )[0]?.id ?? null;
-  }
-
   private emptyAccountDraft(): AccountDraft {
     return {
       firstName: '',
@@ -826,6 +949,17 @@ export class UserPageComponent {
   private normalizeResource(resource: ResourceResponse): Resource {
     return {
       ...resource,
+      model: resource.model ?? null,
+      carType: resource.carType ?? null,
+      year: this.normalizeWholeNumber(resource.year),
+      seats: this.normalizeWholeNumber(resource.seats),
+      transmission: resource.transmission ?? null,
+      fuelType: resource.fuelType ?? null,
+      dailyPrice: this.normalizeDecimal(resource.dailyPrice),
+      baggageBags: this.normalizeWholeNumber(resource.baggageBags),
+      hasAirConditioning:
+        typeof resource.hasAirConditioning === 'boolean' ? resource.hasAirConditioning : null,
+      horsepower: this.normalizeWholeNumber(resource.horsepower),
       photoUrls: Array.isArray(resource.photoUrls) ? resource.photoUrls : []
     };
   }
@@ -892,6 +1026,71 @@ export class UserPageComponent {
       .slice(0, 2)
       .map((part) => part[0]?.toUpperCase() ?? '')
       .join('');
+  }
+
+  private formatPeriod(start: string, end: string): string {
+    return `${this.formatDay(start)} | ${this.formatTime(start)} - ${this.formatTime(end)}`;
+  }
+
+  protected formatCurrency(value: number): string {
+    return new Intl.NumberFormat('de-DE', {
+      style: 'currency',
+      currency: 'EUR'
+    }).format(value);
+  }
+
+  private calculateRentalDays(startValue: string, endValue: string): number | null {
+    if (!startValue || !endValue) {
+      return null;
+    }
+
+    const start = new Date(startValue);
+    const end = new Date(endValue);
+
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || start >= end) {
+      return null;
+    }
+
+    const dayInMs = 24 * 60 * 60 * 1000;
+    return Math.max(1, Math.ceil((end.getTime() - start.getTime()) / dayInMs));
+  }
+
+  private normalizeWholeNumber(value: unknown): number | null {
+    if (typeof value !== 'number' || Number.isNaN(value)) {
+      return null;
+    }
+
+    return Math.round(value);
+  }
+
+  private normalizeDecimal(value: unknown): number | null {
+    if (typeof value !== 'number' || Number.isNaN(value)) {
+      return null;
+    }
+
+    return Number(value.toFixed(2));
+  }
+
+  private isCarAvailableInDateRange(resourceId: number, start: Date, end: Date): boolean {
+    return !this.bookings().some((booking) => {
+      if (
+        booking.resourceId !== resourceId ||
+        booking.status !== 'CONFIRMED' ||
+        !booking.startDateTime ||
+        !booking.endDateTime
+      ) {
+        return false;
+      }
+
+      const bookingStart = new Date(booking.startDateTime);
+      const bookingEnd = new Date(booking.endDateTime);
+
+      if (Number.isNaN(bookingStart.getTime()) || Number.isNaN(bookingEnd.getTime())) {
+        return false;
+      }
+
+      return bookingStart < end && bookingEnd > start;
+    });
   }
 
   private readApiError(error: HttpErrorResponse, fallback: string): string {

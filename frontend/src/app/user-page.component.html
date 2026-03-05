@@ -1,35 +1,87 @@
 <main class="client-shell">
+  <header class="home-search-header">
+    <div class="search-header-copy">
+      <p class="eyebrow">Find your car</p>
+      <h3>Search by location and dates</h3>
+    </div>
+
+    <div class="search-header-form">
+      <label class="field">
+        <span>Location</span>
+        <input
+          type="text"
+          name="homeSearchLocation"
+          [ngModel]="searchLocationInput()"
+          (ngModelChange)="searchLocationInput.set($event)"
+          placeholder="Berlin, Hamburg, Munich..."
+        />
+      </label>
+
+      <label class="field">
+        <span>Start date</span>
+        <input
+          type="date"
+          name="homeSearchStartDate"
+          [ngModel]="searchStartDateInput()"
+          (ngModelChange)="searchStartDateInput.set($event)"
+        />
+      </label>
+
+      <label class="field">
+        <span>End date</span>
+        <input
+          type="date"
+          name="homeSearchEndDate"
+          [ngModel]="searchEndDateInput()"
+          (ngModelChange)="searchEndDateInput.set($event)"
+        />
+      </label>
+
+      <div class="search-actions">
+        <button
+          type="button"
+          class="submit-button compact-button"
+          (click)="applySearchFilters()"
+          [disabled]="searchDateRangeInvalid()"
+        >
+          <span class="button-content">
+            <i class="button-icon fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+            <span>Search</span>
+          </span>
+        </button>
+      </div>
+    </div>
+
+    @if (searchDateRangeInvalid()) {
+      <p class="search-warning">End date must be the same day or after the start date.</p>
+    }
+  </header>
+
   <section class="hero">
     <div class="hero-copy">
       <p class="eyebrow">User interface</p>
       <h2>{{ title }}</h2>
       <p>
-        Manage your profile, save your booking identity details, and reserve an open car slot
-        directly against the Spring API.
+        Manage your profile, save your booking identity details, and reserve a car by selecting
+        your own start and end date-time directly against the Spring API.
       </p>
     </div>
 
     <div class="hero-actions">
       <button type="button" (click)="reload()" [disabled]="loading() || submitting() || accountSaving()">
         <span class="button-content">
-          <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M17.65 6.35A7.95 7.95 0 0 0 12 4V1L7 6l5 5V7a5 5 0 1 1-5 5H5a7 7 0 1 0 12.65-5.65z" />
-          </svg>
+          <i class="button-icon fa-solid fa-rotate-right" aria-hidden="true"></i>
           <span>{{ loading() ? 'Refreshing...' : 'Refresh availability' }}</span>
         </span>
       </button>
       @if (auth.isAuthenticated()) {
         <div class="hero-shortcuts">
           <a routerLink="/user" fragment="account" class="shortcut-link">
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M12 12a4 4 0 1 0-4-4 4 4 0 0 0 4 4zm0 2c-4.42 0-8 1.79-8 4v2h16v-2c0-2.21-3.58-4-8-4z" />
-            </svg>
+            <i class="button-icon fa-solid fa-user-gear" aria-hidden="true"></i>
             <span>Manage account</span>
           </a>
           <a routerLink="/user" fragment="reservations" class="shortcut-link">
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M7 3v2H5a2 2 0 0 0-2 2v11a3 3 0 0 0 3 3h12a3 3 0 0 0 3-3V7a2 2 0 0 0-2-2h-2V3h-2v2H9V3z" />
-            </svg>
+            <i class="button-icon fa-solid fa-calendar-check" aria-hidden="true"></i>
             <span>My bookings</span>
           </a>
         </div>
@@ -51,8 +103,8 @@
       <span>
         {{
           auth.isAuthenticated()
-            ? 'Fetching profile, cars, time slots, and booking data.'
-            : 'Fetching cars and open time slots.'
+            ? 'Fetching profile, cars, and booking data.'
+            : 'Fetching cars and booking data.'
         }}
       </span>
     </section>
@@ -68,7 +120,7 @@
   @if (!auth.isAuthenticated()) {
     <section class="banner info">
       <strong>Guest access</strong>
-      <span>You can browse all available cars and slots now. Login or register before booking.</span>
+      <span>You can browse available cars now. Login or register before booking.</span>
     </section>
   } @else if (accountCompleteness().completed < accountCompleteness().total) {
     <section class="banner info">
@@ -116,9 +168,7 @@
             <label class="upload-button">
               <input type="file" accept="image/*" (change)="onAvatarInputChange($event)" />
               <span class="button-content">
-                <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="M5 20h14a1 1 0 0 0 1-1v-4h-2v3H6v-3H4v4a1 1 0 0 0 1 1zm7-16-5 5h3v5h4V9h3z" />
-                </svg>
+                <i class="button-icon fa-solid fa-cloud-arrow-up" aria-hidden="true"></i>
                 <span>{{ avatarUploading() ? 'Loading avatar...' : 'Upload avatar' }}</span>
               </span>
             </label>
@@ -129,9 +179,7 @@
               [disabled]="!accountDraft.avatarUrl || avatarUploading()"
             >
               <span class="button-content">
-                <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="M6 7h12l-1 13H7L6 7zm3-3h6l1 2H8l1-2z" />
-                </svg>
+                <i class="button-icon fa-solid fa-trash-can" aria-hidden="true"></i>
                 <span>Remove avatar</span>
               </span>
             </button>
@@ -214,7 +262,9 @@
                     [checked]="isAccountPaymentMethodSelected(method)"
                     (change)="toggleAccountPaymentMethod(method, $any($event.target).checked)"
                   />
-                  <span class="payment-logo" aria-hidden="true">{{ paymentMethodMeta[method].shortLabel }}</span>
+                  <span class="payment-logo" aria-hidden="true">
+                    <i [class]="paymentMethodMeta[method].iconClass"></i>
+                  </span>
                   <span class="payment-copy">
                     <strong>{{ method }}</strong>
                     <small>{{ paymentMethodMeta[method].hint }}</small>
@@ -227,9 +277,7 @@
           <div class="account-actions">
             <button type="submit" class="submit-button compact-button" [disabled]="accountSaving() || avatarUploading()">
               <span class="button-content">
-                <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="M17 3H5a2 2 0 0 0-2 2v14l4-4h10a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zm-1 8H8V9h8zm0-3H8V6h8z" />
-                </svg>
+                <i class="button-icon fa-solid fa-floppy-disk" aria-hidden="true"></i>
                 <span>{{ accountSaving() ? 'Saving account...' : 'Save account' }}</span>
               </span>
             </button>
@@ -249,7 +297,7 @@
       </div>
 
       <div class="car-grid">
-        @for (car of carSummaries(); track car.id) {
+        @for (car of filteredCarSummaries(); track car.id) {
           <article
             class="car-card"
             [class.selected]="car.id === selectedCarId()"
@@ -264,7 +312,7 @@
               </div>
             }
             <div class="car-topline">
-              <span class="car-type">{{ car.type }}</span>
+              <span class="car-type">{{ car.carType || car.type }}</span>
               <span class="car-status">{{ car.active ? 'Available' : 'Inactive' }}</span>
             </div>
             <h4>{{ car.name }}</h4>
@@ -275,8 +323,36 @@
                 <dd>{{ car.location }}</dd>
               </div>
               <div>
-                <dt>Open slots</dt>
+                <dt>Managed slots</dt>
                 <dd>{{ car.availableSlots }} / {{ car.totalSlots }}</dd>
+              </div>
+              <div>
+                <dt>Price/day</dt>
+                <dd>{{ car.dailyPrice !== null ? formatCurrency(car.dailyPrice) : 'Not set' }}</dd>
+              </div>
+              <div>
+                <dt>Seats</dt>
+                <dd>{{ car.seats ?? 'Not set' }}</dd>
+              </div>
+              <div>
+                <dt>Transmission</dt>
+                <dd>{{ car.transmission || 'Not set' }}</dd>
+              </div>
+              <div>
+                <dt>Fuel</dt>
+                <dd>{{ car.fuelType || 'Not set' }}</dd>
+              </div>
+              <div>
+                <dt>Baggage</dt>
+                <dd>{{ car.baggageBags !== null ? car.baggageBags + ' bags' : 'Not set' }}</dd>
+              </div>
+              <div>
+                <dt>AC</dt>
+                <dd>{{ car.hasAirConditioning === null ? 'Not set' : car.hasAirConditioning ? 'Yes' : 'No' }}</dd>
+              </div>
+              <div>
+                <dt>Power</dt>
+                <dd>{{ car.horsepower !== null ? car.horsepower + ' PS' : 'Not set' }}</dd>
               </div>
               <div>
                 <dt>{{ auth.isAuthenticated() ? 'Trips' : 'Access' }}</dt>
@@ -290,10 +366,8 @@
                 (click)="selectCar(car.id)"
               >
                 <span class="button-content">
-                  <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M12 5c-7 0-10 7-10 7s3 7 10 7 10-7 10-7-3-7-10-7zm0 11a4 4 0 1 1 4-4 4 4 0 0 1-4 4z" />
-                  </svg>
-                  <span>{{ car.id === selectedCarId() ? 'Selected' : 'View slots' }}</span>
+                  <i class="button-icon fa-solid fa-eye" aria-hidden="true"></i>
+                  <span>{{ car.id === selectedCarId() ? 'Selected' : 'View details' }}</span>
                 </span>
               </button>
               <button
@@ -303,16 +377,14 @@
                 [disabled]="!car.active"
               >
                 <span class="button-content">
-                  <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M7 4h10l3 6v8h-2v-2H6v2H4v-8zm1.27 2L6.77 9h10.46L15.73 6zM7 14a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zm10 0a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z" />
-                  </svg>
+                  <i class="button-icon fa-solid fa-car-side" aria-hidden="true"></i>
                   <span>{{ car.active ? 'Reserve' : 'Unavailable' }}</span>
                 </span>
               </button>
             </div>
           </article>
         } @empty {
-          <p class="empty-state">No cars were returned by <code>/api/resources/cars</code>.</p>
+          <p class="empty-state">No cars match your current search filters.</p>
         }
       </div>
     </article>
@@ -343,12 +415,16 @@
 
               <dl>
                 <div>
-                  <dt>Slot</dt>
-                  <dd>{{ slotLabel(booking.timeSlotId) }}</dd>
+                  <dt>Period</dt>
+                  <dd>{{ bookingPeriodLabel(booking) }}</dd>
                 </div>
                 <div>
                   <dt>Service</dt>
                   <dd>{{ booking.serviceName || 'No label provided' }}</dd>
+                </div>
+                <div>
+                  <dt>Total price</dt>
+                  <dd>{{ bookingTotalPriceLabel(booking) }}</dd>
                 </div>
                 <div>
                   <dt>Payment</dt>
@@ -376,9 +452,7 @@
                   [disabled]="cancellingId() === booking.id"
                 >
                   <span class="button-content">
-                    <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true">
-                      <path d="M6 7h12l-1 13H7L6 7zm3-3h6l1 2H8l1-2z" />
-                    </svg>
+                    <i class="button-icon fa-solid fa-trash-can" aria-hidden="true"></i>
                     <span>{{ cancellingId() === booking.id ? 'Cancelling...' : 'Cancel booking' }}</span>
                   </span>
                 </button>
@@ -411,9 +485,7 @@
             (click)="closeReservationModal()"
           >
             <span class="button-content">
-              <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M18.3 5.71 12 12l6.3 6.29-1.42 1.42L10.59 13.4 4.29 19.7 2.87 18.29 9.17 12l-6.3-6.29L4.29 4.3l6.3 6.3 6.29-6.3z" />
-              </svg>
+              <i class="button-icon fa-solid fa-xmark" aria-hidden="true"></i>
               <span>Close</span>
             </span>
           </button>
@@ -423,6 +495,16 @@
           <div class="selected-car-copy">
             <strong>{{ selectedCar()!.name }}</strong>
             <p>{{ selectedCar()!.description }} | {{ selectedCar()!.location }}</p>
+            <p>
+              {{ selectedCar()!.model || 'Model not set' }} | {{ selectedCar()!.carType || selectedCar()!.type }}
+              | {{ selectedCar()!.seats ?? '-' }} seats | {{ selectedCar()!.transmission || '-' }}
+              | {{ selectedCar()!.fuelType || '-' }}
+            </p>
+            <p>
+              {{ selectedCar()!.baggageBags !== null ? selectedCar()!.baggageBags + ' bags' : 'Baggage: -' }}
+              | Klima: {{ selectedCar()!.hasAirConditioning === null ? '-' : selectedCar()!.hasAirConditioning ? 'Yes' : 'No' }}
+              | {{ selectedCar()!.horsepower !== null ? selectedCar()!.horsepower + ' PS' : 'PS: -' }}
+            </p>
             @if (selectedCarPhotos().length) {
               <div class="selected-photo-row">
                 @for (photoUrl of selectedCarPhotos(); track photoUrl) {
@@ -431,12 +513,26 @@
               </div>
             }
           </div>
-          @if (selectedSlot()) {
-            <span class="slot-summary">{{ formatSlotRange(selectedSlot()!) }}</span>
+          @if (bookingWindowPreview()) {
+            <span class="slot-summary">{{ bookingWindowPreview() }}</span>
           } @else {
-            <span class="slot-summary muted">No pickup slot selected</span>
+            <span class="slot-summary muted">Select start and end date-time below</span>
           }
         </section>
+
+        @if (bookingPricePreview()) {
+          <section class="client-summary">
+            <span>Price summary</span>
+            <strong>
+              {{ formatCurrency(bookingPricePreview()!.totalPrice) }}
+            </strong>
+            <p>
+              {{ bookingPricePreview()!.days }} day{{ bookingPricePreview()!.days === 1 ? '' : 's' }}
+              x
+              {{ formatCurrency(bookingPricePreview()!.dailyPrice) }}
+            </p>
+          </section>
+        }
 
         <form class="booking-form" (ngSubmit)="createBooking()">
           @if (!auth.isAuthenticated()) {
@@ -448,15 +544,11 @@
               </div>
               <div class="guest-actions">
                 <a routerLink="/login" class="cta-link">
-                  <svg viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M10 17l1.41-1.41L8.83 13H20v-2H8.83l2.58-2.59L10 7l-5 5zm-5 2h7v2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7v2H5z" />
-                  </svg>
+                  <i class="button-icon fa-solid fa-right-to-bracket" aria-hidden="true"></i>
                   <span>Login</span>
                 </a>
                 <a routerLink="/login" [queryParams]="{ mode: 'register' }" class="secondary-link">
-                  <svg viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M19 11h-6V5h-2v6H5v2h6v6h2v-6h6z" />
-                  </svg>
+                  <i class="button-icon fa-solid fa-user-plus" aria-hidden="true"></i>
                   <span>Register</span>
                 </a>
               </div>
@@ -519,6 +611,26 @@
                 />
               </label>
 
+              <label class="field">
+                <span>Start date and time</span>
+                <input
+                  type="datetime-local"
+                  name="bookingStartDateTime"
+                  [ngModel]="bookingStartDateTime()"
+                  (ngModelChange)="bookingStartDateTime.set($event)"
+                />
+              </label>
+
+              <label class="field">
+                <span>End date and time</span>
+                <input
+                  type="datetime-local"
+                  name="bookingEndDateTime"
+                  [ngModel]="bookingEndDateTime()"
+                  (ngModelChange)="bookingEndDateTime.set($event)"
+                />
+              </label>
+
               <input type="hidden" name="bookingPaymentMethod" [ngModel]="bookingPaymentMethod()" />
 
               <section class="payment-methods booking-payment-methods field-wide">
@@ -537,7 +649,9 @@
                       [style.--payment-foreground]="paymentMethodMeta[method].foreground"
                       (click)="bookingPaymentMethod.set(method)"
                     >
-                      <span class="payment-logo" aria-hidden="true">{{ paymentMethodMeta[method].shortLabel }}</span>
+                      <span class="payment-logo" aria-hidden="true">
+                        <i [class]="paymentMethodMeta[method].iconClass"></i>
+                      </span>
                       <span class="payment-copy">
                         <strong>{{ method }}</strong>
                         <small>{{ paymentMethodMeta[method].hint }}</small>
@@ -574,29 +688,13 @@
 
           <section class="slot-picker">
             <div class="slot-header">
-              <span>Pickup slots</span>
-              <strong>{{ availableSlots().length }} available</strong>
+              <span>Availability rule</span>
+              <strong>No overlapping bookings per car</strong>
             </div>
 
-            @if (availableSlots().length) {
-              <div class="slot-grid">
-                @for (slot of availableSlots(); track slot.id) {
-                  <button
-                    type="button"
-                    class="slot-card"
-                    [class.selected]="slot.id === selectedTimeSlotId()"
-                    (click)="chooseTimeSlot(slot.id)"
-                  >
-                    <span>{{ formatDay(slot.startTime) }}</span>
-                    <strong>{{ formatTime(slot.startTime) }} - {{ formatTime(slot.endTime) }}</strong>
-                  </button>
-                }
-              </div>
-            } @else {
-              <p class="empty-state small">
-                This car currently has no open slots. Choose another car or add more time slots.
-              </p>
-            }
+            <p class="empty-state small">
+              If another confirmed booking already overlaps this period, booking will be rejected.
+            </p>
           </section>
 
           @if (auth.isAuthenticated()) {
@@ -612,17 +710,13 @@
                 (click)="closeReservationModal()"
               >
                 <span class="button-content">
-                  <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M18.3 5.71 12 12l6.3 6.29-1.42 1.42L10.59 13.4 4.29 19.7 2.87 18.29 9.17 12l-6.3-6.29L4.29 4.3l6.3 6.3 6.29-6.3z" />
-                  </svg>
+                  <i class="button-icon fa-solid fa-xmark" aria-hidden="true"></i>
                   <span>Cancel</span>
                 </span>
               </button>
               <button type="submit" class="submit-button compact-button" [disabled]="bookingDisabled()">
                 <span class="button-content">
-                  <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="m9 16.17-3.88-3.88L3.7 13.7 9 19l12-12-1.41-1.41z" />
-                  </svg>
+                  <i class="button-icon fa-solid fa-circle-check" aria-hidden="true"></i>
                   <span>{{ submitting() ? 'Saving booking...' : 'Confirm booking' }}</span>
                 </span>
               </button>
@@ -631,7 +725,7 @@
             <p class="form-note">Submitting this form sends a live <code>POST /api/bookings</code>.</p>
           } @else {
             <p class="form-note">
-              Slot browsing stays open for guests. Login or register to send
+              Car browsing stays open for guests. Login or register to send
               <code>POST /api/bookings</code>.
             </p>
           }

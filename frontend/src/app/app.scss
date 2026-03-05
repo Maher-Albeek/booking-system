@@ -133,10 +133,9 @@
 
 .menu-chevron {
   width: 18px;
-  height: 18px;
-  stroke: currentColor;
-  stroke-width: 2;
-  fill: none;
+  text-align: center;
+  font-size: 0.9rem;
+  line-height: 1;
 }
 
 .user-menu {
@@ -178,10 +177,11 @@
   background: rgba(248, 196, 107, 0.14);
 }
 
-.menu-link svg {
+.menu-icon {
   width: 18px;
-  height: 18px;
-  fill: currentColor;
+  text-align: center;
+  font-size: 1rem;
+  line-height: 1;
 }
 
 .logout-link {

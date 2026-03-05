@@ -32,7 +32,7 @@ export class App {
     this.activeView() === 'admin'
       ? 'Manage cars, time slots, users, and reservations.'
       : this.activeView() === 'user'
-        ? 'Browse available cars, reserve an open slot, and manage live bookings.'
+        ? 'Browse available cars, choose your own booking time window, and manage live bookings.'
         : 'Authenticate with your booking account to open the correct page for your role.'
   );
 

@@ -13,6 +13,16 @@ type Resource = {
   description: string;
   type: string;
   location: string;
+  model: string | null;
+  carType: string | null;
+  year: number | null;
+  seats: number | null;
+  transmission: string | null;
+  fuelType: string | null;
+  dailyPrice: number | null;
+  baggageBags: number | null;
+  hasAirConditioning: boolean | null;
+  horsepower: number | null;
   active: boolean;
   photoUrls: string[];
 };
@@ -40,7 +50,7 @@ type Booking = {
   id: number;
   userId: number | null;
   resourceId: number;
-  timeSlotId: number;
+  timeSlotId: number | null;
   status: string;
   bookingTime: string | null;
   customerName: string;
@@ -67,6 +77,7 @@ export class AdminPageComponent {
   protected readonly isPhotoDragActive = signal(false);
   protected readonly editingCarId = signal<number | null>(null);
   protected readonly editingSlotId = signal<number | null>(null);
+  protected readonly selectedCarId = signal<number | null>(null);
 
   protected readonly resources = signal<Resource[]>([]);
   protected readonly users = signal<User[]>([]);
@@ -77,6 +88,16 @@ export class AdminPageComponent {
     name: '',
     description: '',
     location: '',
+    model: '',
+    carType: '',
+    year: null as number | null,
+    seats: null as number | null,
+    transmission: 'Automatic',
+    fuelType: 'Benzin',
+    dailyPrice: null as number | null,
+    baggageBags: null as number | null,
+    hasAirConditioning: true,
+    horsepower: null as number | null,
     active: true,
     photoUrlsText: '',
     uploadedPhotoUrls: [] as string[]
@@ -111,6 +132,15 @@ export class AdminPageComponent {
       (left, right) => new Date(left.startTime).getTime() - new Date(right.startTime).getTime()
     )
   );
+
+  protected readonly selectedCar = computed(() => {
+    const selectedCarId = this.selectedCarId();
+    if (selectedCarId === null) {
+      return null;
+    }
+
+    return this.cars().find((car) => car.id === selectedCarId) ?? null;
+  });
 
   protected readonly stats = computed(() => [
     {
@@ -165,23 +195,12 @@ export class AdminPageComponent {
       return;
     }
 
+    const payload = this.buildCarPayload(name, location);
     const request = editingCarId === null
-      ? this.http.post<ResourceResponse>('/api/resources', {
-          name,
-          description: this.carDraft.description.trim(),
-          type: 'Car',
-          location,
-          active: this.carDraft.active,
-          photoUrls: this.buildPhotoUrls()
-        })
+      ? this.http.post<ResourceResponse>('/api/resources', payload)
       : this.http.put<ResourceResponse>(`/api/resources/${editingCarId}`, {
           id: editingCarId,
-          name,
-          description: this.carDraft.description.trim(),
-          type: 'Car',
-          location,
-          active: this.carDraft.active,
-          photoUrls: this.buildPhotoUrls()
+          ...payload
         });
 
     this.runRequest(
@@ -200,10 +219,35 @@ export class AdminPageComponent {
       name: car.name,
       description: car.description,
       location: car.location,
+      model: car.model ?? '',
+      carType: car.carType ?? '',
+      year: car.year,
+      seats: car.seats,
+      transmission: car.transmission ?? 'Automatic',
+      fuelType: car.fuelType ?? 'Benzin',
+      dailyPrice: car.dailyPrice,
+      baggageBags: car.baggageBags,
+      hasAirConditioning: car.hasAirConditioning ?? true,
+      horsepower: car.horsepower,
       active: car.active,
       photoUrlsText: '',
       uploadedPhotoUrls: [...car.photoUrls]
     };
+  }
+
+  protected openCarDetails(car: Resource): void {
+    this.selectedCarId.set(car.id);
+  }
+
+  protected closeCarDetails(): void {
+    this.selectedCarId.set(null);
+  }
+
+  protected onCarCardKeydown(event: KeyboardEvent, car: Resource): void {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      this.openCarDetails(car);
+    }
   }
 
   protected cancelCarEdit(): void {
@@ -256,6 +300,10 @@ export class AdminPageComponent {
       this.http.delete<void>(`/api/resources/${carId}`),
       'Car removed from the fleet.',
       () => {
+        if (this.selectedCarId() === carId) {
+          this.closeCarDetails();
+        }
+
         if (this.editingCarId() === carId) {
           this.cancelCarEdit();
         }
@@ -395,6 +443,28 @@ export class AdminPageComponent {
     return count === 1 ? '1 photo' : `${count} photos`;
   }
 
+  protected climateLabel(hasAirConditioning: boolean | null | undefined): string {
+    if (hasAirConditioning === null || hasAirConditioning === undefined) {
+      return 'Not set';
+    }
+    return hasAirConditioning ? 'Yes' : 'No';
+  }
+
+  protected formatCurrency(amount: number | null | undefined): string {
+    if (typeof amount !== 'number' || Number.isNaN(amount)) {
+      return 'Not set';
+    }
+
+    return new Intl.NumberFormat('de-DE', {
+      style: 'currency',
+      currency: 'EUR'
+    }).format(amount);
+  }
+
+  protected primaryPhotoUrl(resource: Resource): string | null {
+    return resource.photoUrls[0] ?? null;
+  }
+
   private loadData(): void {
     this.loading.set(true);
     this.error.set(null);
@@ -442,6 +512,16 @@ export class AdminPageComponent {
       name: '',
       description: '',
       location: '',
+      model: '',
+      carType: '',
+      year: null,
+      seats: null,
+      transmission: 'Automatic',
+      fuelType: 'Benzin',
+      dailyPrice: null,
+      baggageBags: null,
+      hasAirConditioning: true,
+      horsepower: null,
       active: true,
       photoUrlsText: '',
       uploadedPhotoUrls: []
@@ -460,8 +540,56 @@ export class AdminPageComponent {
   private normalizeResource(resource: ResourceResponse): Resource {
     return {
       ...resource,
+      model: resource.model ?? null,
+      carType: resource.carType ?? null,
+      year: this.normalizeWholeNumber(resource.year),
+      seats: this.normalizeWholeNumber(resource.seats),
+      transmission: resource.transmission ?? null,
+      fuelType: resource.fuelType ?? null,
+      dailyPrice: this.normalizeDecimal(resource.dailyPrice),
+      baggageBags: this.normalizeWholeNumber(resource.baggageBags),
+      hasAirConditioning:
+        typeof resource.hasAirConditioning === 'boolean' ? resource.hasAirConditioning : null,
+      horsepower: this.normalizeWholeNumber(resource.horsepower),
       photoUrls: Array.isArray(resource.photoUrls) ? resource.photoUrls : []
     };
+  }
+
+  private buildCarPayload(name: string, location: string): Omit<Resource, 'id'> {
+    return {
+      name,
+      description: this.carDraft.description.trim(),
+      type: 'Car',
+      location,
+      model: this.carDraft.model.trim() || null,
+      carType: this.carDraft.carType.trim() || null,
+      year: this.normalizeWholeNumber(this.carDraft.year),
+      seats: this.normalizeWholeNumber(this.carDraft.seats),
+      transmission: this.carDraft.transmission.trim() || null,
+      fuelType: this.carDraft.fuelType.trim() || null,
+      dailyPrice: this.normalizeDecimal(this.carDraft.dailyPrice),
+      baggageBags: this.normalizeWholeNumber(this.carDraft.baggageBags),
+      hasAirConditioning: this.carDraft.hasAirConditioning,
+      horsepower: this.normalizeWholeNumber(this.carDraft.horsepower),
+      active: this.carDraft.active,
+      photoUrls: this.buildPhotoUrls()
+    };
+  }
+
+  private normalizeWholeNumber(value: unknown): number | null {
+    if (typeof value !== 'number' || Number.isNaN(value)) {
+      return null;
+    }
+
+    return Math.round(value);
+  }
+
+  private normalizeDecimal(value: unknown): number | null {
+    if (typeof value !== 'number' || Number.isNaN(value)) {
+      return null;
+    }
+
+    return Number(value.toFixed(2));
   }
 
   private parsePhotoUrls(value: string): string[] {

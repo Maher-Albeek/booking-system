@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Repository;
 
 import java.nio.file.Path;
+import java.util.List;
 
 @Repository
 public class BookingRepository extends JsonRepositorySupport<Booking> {
@@ -22,5 +23,11 @@ public class BookingRepository extends JsonRepositorySupport<Booking> {
     public boolean existsByTimeSlotIdAndStatus(Long timeSlotId, BookingStatus status) {
         return findAll().stream()
                 .anyMatch(booking -> timeSlotId.equals(booking.getTimeSlotId()) && status == booking.getStatus());
+    }
+
+    public List<Booking> findByResourceIdAndStatus(Long resourceId, BookingStatus status) {
+        return findAll().stream()
+                .filter(booking -> resourceId.equals(booking.getResourceId()) && status == booking.getStatus())
+                .toList();
     }
 }

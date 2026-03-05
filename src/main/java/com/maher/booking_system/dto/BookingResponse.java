@@ -8,6 +8,8 @@ public class BookingResponse {
     private Long userId;
     private Long resourceId;
     private Long timeSlotId;
+    private LocalDateTime startDateTime;
+    private LocalDateTime endDateTime;
     private String status;
     private LocalDateTime bookingTime;
     private String customerName;
@@ -29,6 +31,12 @@ public class BookingResponse {
 
     public Long getTimeSlotId() { return timeSlotId; }
     public void setTimeSlotId(Long timeSlotId) { this.timeSlotId = timeSlotId; }
+
+    public LocalDateTime getStartDateTime() { return startDateTime; }
+    public void setStartDateTime(LocalDateTime startDateTime) { this.startDateTime = startDateTime; }
+
+    public LocalDateTime getEndDateTime() { return endDateTime; }
+    public void setEndDateTime(LocalDateTime endDateTime) { this.endDateTime = endDateTime; }
 
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
