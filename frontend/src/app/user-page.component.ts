@@ -171,6 +171,7 @@ export class UserPageComponent {
   protected readonly error = signal<string | null>(null);
   protected readonly success = signal<string | null>(null);
   protected readonly reservationModalOpen = signal(false);
+  protected readonly carDetailsId = signal<number | null>(null);
 
   protected readonly cars = signal<Resource[]>([]);
   protected readonly users = signal<User[]>([]);
@@ -288,6 +289,10 @@ export class UserPageComponent {
   );
 
   protected readonly selectedCarPhotos = computed(() => this.selectedCar()?.photoUrls ?? []);
+
+  protected readonly selectedCarDetails = computed(
+    () => this.carSummaries().find((car) => car.id === this.carDetailsId()) ?? null
+  );
 
   protected readonly bookingWindowPreview = computed(() => {
     const start = this.bookingStartDateTime().trim();
@@ -423,6 +428,7 @@ export class UserPageComponent {
 
   protected openReservationModal(carId: number): void {
     this.selectedCarId.set(carId);
+    this.carDetailsId.set(null);
     this.bookingStartDateTime.set('');
     this.bookingEndDateTime.set('');
     this.syncBookingFieldsFromUser(this.selectedUser(), this.selectedUser(), true);
@@ -438,6 +444,22 @@ export class UserPageComponent {
   protected closeReservationModalOnBackdrop(event: MouseEvent): void {
     if (event.target === event.currentTarget) {
       this.closeReservationModal();
+    }
+  }
+
+  protected openCarDetails(carId: number): void {
+    this.carDetailsId.set(carId);
+    this.success.set(null);
+  }
+
+  protected closeCarDetails(): void {
+    this.carDetailsId.set(null);
+  }
+
+  protected onCarCardKeydown(event: KeyboardEvent, carId: number): void {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      this.openCarDetails(carId);
     }
   }
 
@@ -732,6 +754,10 @@ export class UserPageComponent {
     return Math.max((car?.photoUrls?.length ?? 0) - 1, 0);
   }
 
+  protected primaryPhotoUrl(car: Resource | null | undefined): string | null {
+    return car?.photoUrls?.[0] ?? null;
+  }
+
   protected applySearchFilters(): void {
     if (this.searchDateRangeInvalid()) {
       return;
@@ -841,6 +867,10 @@ export class UserPageComponent {
 
     if (!cars.some((car) => car.id === selectedCarId)) {
       this.selectedCarId.set(cars[0]?.id ?? null);
+    }
+
+    if (!cars.some((car) => car.id === this.carDetailsId())) {
+      this.carDetailsId.set(null);
     }
 
     const nextUser = this.auth.isAdmin()

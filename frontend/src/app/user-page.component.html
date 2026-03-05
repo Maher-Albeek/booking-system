@@ -296,97 +296,169 @@
         </div>
       </div>
 
-      <div class="car-grid">
+      <div class="car-showcase-grid">
         @for (car of filteredCarSummaries(); track car.id) {
           <article
-            class="car-card"
-            [class.selected]="car.id === selectedCarId()"
+            class="car-showcase-card"
             [class.inactive]="!car.active"
+            role="button"
+            tabindex="0"
+            (click)="openCarDetails(car.id)"
+            (keydown)="onCarCardKeydown($event, car.id)"
           >
-            @if (hasPhotos(car)) {
-              <div class="car-photo-frame">
-                <img class="car-photo" [src]="car.photoUrls[0]" [alt]="car.name" />
-                @if (additionalPhotoCount(car) > 0) {
-                  <span class="photo-count">+{{ additionalPhotoCount(car) }}</span>
-                }
-              </div>
-            }
-            <div class="car-topline">
-              <span class="car-type">{{ car.carType || car.type }}</span>
-              <span class="car-status">{{ car.active ? 'Available' : 'Inactive' }}</span>
+            <div class="car-showcase-head">
+              <strong>{{ car.name | uppercase }}</strong>
+              <p>{{ car.description || car.carType || 'Fleet vehicle' }}</p>
             </div>
-            <h4>{{ car.name }}</h4>
-            <p>{{ car.description || 'No description provided.' }}</p>
-            <dl>
-              <div>
-                <dt>Location</dt>
-                <dd>{{ car.location }}</dd>
-              </div>
-              <div>
-                <dt>Managed slots</dt>
-                <dd>{{ car.availableSlots }} / {{ car.totalSlots }}</dd>
-              </div>
-              <div>
-                <dt>Price/day</dt>
-                <dd>{{ car.dailyPrice !== null ? formatCurrency(car.dailyPrice) : 'Not set' }}</dd>
-              </div>
-              <div>
-                <dt>Seats</dt>
-                <dd>{{ car.seats ?? 'Not set' }}</dd>
-              </div>
-              <div>
-                <dt>Transmission</dt>
-                <dd>{{ car.transmission || 'Not set' }}</dd>
-              </div>
-              <div>
-                <dt>Fuel</dt>
-                <dd>{{ car.fuelType || 'Not set' }}</dd>
-              </div>
-              <div>
-                <dt>Baggage</dt>
-                <dd>{{ car.baggageBags !== null ? car.baggageBags + ' bags' : 'Not set' }}</dd>
-              </div>
-              <div>
-                <dt>AC</dt>
-                <dd>{{ car.hasAirConditioning === null ? 'Not set' : car.hasAirConditioning ? 'Yes' : 'No' }}</dd>
-              </div>
-              <div>
-                <dt>Power</dt>
-                <dd>{{ car.horsepower !== null ? car.horsepower + ' PS' : 'Not set' }}</dd>
-              </div>
-              <div>
-                <dt>{{ auth.isAuthenticated() ? 'Trips' : 'Access' }}</dt>
-                <dd>{{ auth.isAuthenticated() ? car.confirmedBookings : 'Browse only' }}</dd>
-              </div>
-            </dl>
-            <div class="car-actions">
-              <button
-                type="button"
-                class="ghost-button compact-button"
-                (click)="selectCar(car.id)"
-              >
-                <span class="button-content">
-                  <i class="button-icon fa-solid fa-eye" aria-hidden="true"></i>
-                  <span>{{ car.id === selectedCarId() ? 'Selected' : 'View details' }}</span>
-                </span>
-              </button>
-              <button
-                type="button"
-                class="reserve-button compact-button"
-                (click)="openReservationModal(car.id)"
-                [disabled]="!car.active"
-              >
-                <span class="button-content">
-                  <i class="button-icon fa-solid fa-car-side" aria-hidden="true"></i>
-                  <span>{{ car.active ? 'Reserve' : 'Unavailable' }}</span>
-                </span>
-              </button>
+
+            <div class="car-chip-row">
+              <span class="chip">{{ car.carType || 'Oder ahnliches Modell' }}</span>
+              <span class="chip"><i class="fa-solid fa-user-group" aria-hidden="true"></i> {{ car.seats ?? '-' }}</span>
+              <span class="chip"><i class="fa-solid fa-suitcase-rolling" aria-hidden="true"></i> {{ car.baggageBags ?? '-' }}</span>
+              <span class="chip"><i class="fa-solid fa-gears" aria-hidden="true"></i> {{ car.transmission || 'Not set' }}</span>
+            </div>
+
+            <div class="car-image-wrap">
+              @if (primaryPhotoUrl(car); as photoUrl) {
+                <img class="showcase-image" [src]="photoUrl" [alt]="car.name" />
+              } @else {
+                <div class="showcase-image placeholder">No image uploaded</div>
+              }
+            </div>
+
+            <p class="car-availability">
+              <i class="fa-solid fa-check" aria-hidden="true"></i> Unbegrenzte Kilometer verfugbar
+            </p>
+
+            <div class="car-price-line">
+              <strong>{{ car.dailyPrice !== null ? formatCurrency(car.dailyPrice) : 'Not set' }} / Tag</strong>
+              <span>{{ car.dailyPrice !== null ? formatCurrency(car.dailyPrice) : 'Not set' }} Gesamtpreis</span>
             </div>
           </article>
         } @empty {
           <p class="empty-state">No cars match your current search filters.</p>
         }
       </div>
+
+      @if (selectedCarDetails(); as selectedCarDetails) {
+        <div class="car-details-overlay" (click)="closeCarDetails()">
+          <aside class="car-details-drawer" (click)="$event.stopPropagation()">
+            <div class="car-details-header">
+              <div>
+                <p class="eyebrow">Car details</p>
+                <h3>{{ selectedCarDetails.name }}</h3>
+              </div>
+              <button type="button" class="ghost-button compact-button drawer-close" (click)="closeCarDetails()">
+                <span class="button-content">
+                  <i class="button-icon fa-solid fa-xmark" aria-hidden="true"></i>
+                  <span>Close</span>
+                </span>
+              </button>
+            </div>
+
+            <p class="drawer-description">{{ selectedCarDetails.description || 'No description provided.' }}</p>
+
+            <dl>
+              <div>
+                <dt>Location</dt>
+                <dd>{{ selectedCarDetails.location }}</dd>
+              </div>
+              <div>
+                <dt>Managed slots</dt>
+                <dd>{{ selectedCarDetails.availableSlots }} / {{ selectedCarDetails.totalSlots }}</dd>
+              </div>
+              <div>
+                <dt>Price/day</dt>
+                <dd>{{ selectedCarDetails.dailyPrice !== null ? formatCurrency(selectedCarDetails.dailyPrice) : 'Not set' }}</dd>
+              </div>
+              <div>
+                <dt>Model</dt>
+                <dd>{{ selectedCarDetails.model || 'Not set' }}</dd>
+              </div>
+              <div>
+                <dt>Type</dt>
+                <dd>{{ selectedCarDetails.carType || selectedCarDetails.type }}</dd>
+              </div>
+              <div>
+                <dt>Year</dt>
+                <dd>{{ selectedCarDetails.year ?? 'Not set' }}</dd>
+              </div>
+              <div>
+                <dt>Seats</dt>
+                <dd>{{ selectedCarDetails.seats ?? 'Not set' }}</dd>
+              </div>
+              <div>
+                <dt>Transmission</dt>
+                <dd>{{ selectedCarDetails.transmission || 'Not set' }}</dd>
+              </div>
+              <div>
+                <dt>Fuel</dt>
+                <dd>{{ selectedCarDetails.fuelType || 'Not set' }}</dd>
+              </div>
+              <div>
+                <dt>Baggage</dt>
+                <dd>{{ selectedCarDetails.baggageBags !== null ? selectedCarDetails.baggageBags + ' bags' : 'Not set' }}</dd>
+              </div>
+              <div>
+                <dt>AC</dt>
+                <dd>
+                  {{
+                    selectedCarDetails.hasAirConditioning === null
+                      ? 'Not set'
+                      : selectedCarDetails.hasAirConditioning
+                        ? 'Yes'
+                        : 'No'
+                  }}
+                </dd>
+              </div>
+              <div>
+                <dt>Power</dt>
+                <dd>{{ selectedCarDetails.horsepower !== null ? selectedCarDetails.horsepower + ' PS' : 'Not set' }}</dd>
+              </div>
+              <div>
+                <dt>Status</dt>
+                <dd>{{ selectedCarDetails.active ? 'Available' : 'Inactive' }}</dd>
+              </div>
+              <div>
+                <dt>{{ auth.isAuthenticated() ? 'Trips' : 'Access' }}</dt>
+                <dd>{{ auth.isAuthenticated() ? selectedCarDetails.confirmedBookings : 'Browse only' }}</dd>
+              </div>
+            </dl>
+
+            @if (selectedCarDetails.photoUrls.length) {
+              <div class="selected-photo-row">
+                @for (photoUrl of selectedCarDetails.photoUrls; track photoUrl) {
+                  <img class="selected-photo-thumb" [src]="photoUrl" [alt]="selectedCarDetails.name" />
+                }
+              </div>
+            }
+
+            <div class="car-actions">
+              <button
+                type="button"
+                class="ghost-button compact-button"
+                (click)="selectCar(selectedCarDetails.id)"
+              >
+                <span class="button-content">
+                  <i class="button-icon fa-solid fa-eye" aria-hidden="true"></i>
+                  <span>{{ selectedCarDetails.id === selectedCarId() ? 'Selected' : 'Select car' }}</span>
+                </span>
+              </button>
+              <button
+                type="button"
+                class="reserve-button compact-button"
+                (click)="openReservationModal(selectedCarDetails.id)"
+                [disabled]="!selectedCarDetails.active"
+              >
+                <span class="button-content">
+                  <i class="button-icon fa-solid fa-car-side" aria-hidden="true"></i>
+                  <span>{{ selectedCarDetails.active ? 'Reserve' : 'Unavailable' }}</span>
+                </span>
+              </button>
+            </div>
+          </aside>
+        </div>
+      }
     </article>
 
     <article id="reservations" class="panel reservations-panel">

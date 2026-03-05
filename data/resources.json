@@ -42,7 +42,7 @@
   "id" : 9,
   "name" : "Ford Mustang",
   "description" : "Muscle Car",
-  "type" : "CAR",
+  "type" : "Car",
   "location" : "Berlin",
   "active" : true,
   "photoUrls" : [ ]
