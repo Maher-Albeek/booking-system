@@ -1,65 +1,65 @@
 <main class="client-shell">
-  @if (pageMode === 'offers') {
-    <header class="home-search-header">
-      <div class="search-header-copy">
-        <p class="eyebrow">Find your car</p>
-        <h3>Search by location and dates</h3>
-      </div>
-
-      <div class="search-header-form">
-        <label class="field">
-          <span>Location</span>
-          <input
-            type="text"
-            name="homeSearchLocation"
-            [ngModel]="searchLocationInput()"
-            (ngModelChange)="searchLocationInput.set($event)"
-            placeholder="Berlin, Hamburg, Munich..."
-          />
-        </label>
-
-        <label class="field">
-          <span>Start date</span>
-          <input
-            type="date"
-            name="homeSearchStartDate"
-            [ngModel]="searchStartDateInput()"
-            (ngModelChange)="searchStartDateInput.set($event)"
-          />
-        </label>
-
-        <label class="field">
-          <span>End date</span>
-          <input
-            type="date"
-            name="homeSearchEndDate"
-            [ngModel]="searchEndDateInput()"
-            (ngModelChange)="searchEndDateInput.set($event)"
-          />
-        </label>
-
-        <div class="search-actions">
-          <button
-            type="button"
-            class="submit-button compact-button"
-            (click)="applySearchFilters()"
-            [disabled]="searchDateRangeInvalid()"
-          >
-            <span class="button-content">
-              <i class="button-icon fa-solid fa-magnifying-glass" aria-hidden="true"></i>
-              <span>Search</span>
-            </span>
-          </button>
+  <section class="hero" [class.hero-with-search]="pageMode === 'offers'">
+    @if (pageMode === 'offers') {
+      <header class="home-search-header">
+        <div class="search-header-copy">
+          <p class="eyebrow">Find your car</p>
+          <h3>Search by location and dates</h3>
         </div>
-      </div>
 
-      @if (searchDateRangeInvalid()) {
-        <p class="search-warning">End date must be the same day or after the start date.</p>
-      }
-    </header>
-  }
+        <div class="search-header-form">
+          <label class="field">
+            <span>Location</span>
+            <input
+              type="text"
+              name="homeSearchLocation"
+              [ngModel]="searchLocationInput()"
+              (ngModelChange)="searchLocationInput.set($event)"
+              placeholder="Berlin, Hamburg, Munich..."
+            />
+          </label>
 
-  <section class="hero">
+          <label class="field">
+            <span>Start date</span>
+            <input
+              type="date"
+              name="homeSearchStartDate"
+              [ngModel]="searchStartDateInput()"
+              (ngModelChange)="searchStartDateInput.set($event)"
+            />
+          </label>
+
+          <label class="field">
+            <span>End date</span>
+            <input
+              type="date"
+              name="homeSearchEndDate"
+              [ngModel]="searchEndDateInput()"
+              (ngModelChange)="searchEndDateInput.set($event)"
+            />
+          </label>
+
+          <div class="search-actions">
+            <button
+              type="button"
+              class="submit-button compact-button"
+              (click)="applySearchFilters()"
+              [disabled]="searchDateRangeInvalid()"
+            >
+              <span class="button-content">
+                <i class="button-icon fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+                <span>Search</span>
+              </span>
+            </button>
+          </div>
+        </div>
+
+        @if (searchDateRangeInvalid()) {
+          <p class="search-warning">End date must be the same day or after the start date.</p>
+        }
+      </header>
+    }
+
     <div class="hero-copy">
       @if (pageMode === 'offers') {
         <p class="eyebrow">User interface</p>
