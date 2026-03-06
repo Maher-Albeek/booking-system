@@ -134,6 +134,27 @@ type CarSummary = Resource & {
   confirmedBookings: number;
 };
 
+type OfferSection = {
+  id: number;
+  sortOrder: number;
+  title: string;
+  description: string;
+  imageUrl: string;
+  backgroundColor: string;
+  textColor: string;
+  heightPx: number;
+  columns: number;
+  descriptionColumnGapPx: number;
+  descriptionColumnDividerWidthPx: number;
+  descriptionColumnDividerColor: string;
+  titleFontSizePx: number;
+  descriptionFontSizePx: number;
+  titleXPercent: number;
+  titleYPercent: number;
+  descriptionXPercent: number;
+  descriptionYPercent: number;
+};
+
 type AccountDraft = {
   firstName: string;
   lastName: string;
@@ -179,6 +200,7 @@ export class UserPageComponent {
   protected readonly users = signal<User[]>([]);
   protected readonly bookings = signal<Booking[]>([]);
   protected readonly profileUser = signal<User | null>(null);
+  protected readonly publishedOfferSections = signal<OfferSection[]>([]);
 
   protected readonly selectedCarId = signal<number | null>(null);
   protected readonly selectedUserId = signal<number | null>(null);
@@ -764,6 +786,10 @@ export class UserPageComponent {
     return car?.photoUrls?.[0] ?? null;
   }
 
+  protected offerTextWidthPercent(xPercent: number): number {
+    return Math.max(24, 95 - this.clampNumber(xPercent, 0, 90, 8));
+  }
+
   protected applySearchFilters(): void {
     this.syncSearchFiltersFromInput();
   }
@@ -839,21 +865,26 @@ export class UserPageComponent {
       cars: this.http.get<ResourceResponse[]>('/api/resources/cars'),
       users: usersRequest,
       bookings: bookingsRequest,
-      profile: profileRequest
+      profile: profileRequest,
+      offers: this.http.get<OfferSection[]>('/api/offers/published')
     })
       .pipe(
         takeUntilDestroyed(this.destroyRef),
         finalize(() => this.loading.set(false))
       )
       .subscribe({
-        next: ({ cars, users, bookings, profile }) => {
+        next: ({ cars, users, bookings, profile, offers }) => {
           const normalizedCars = cars.map((car) => this.normalizeResource(car));
           const normalizedUsers = users.map((user) => this.normalizeUser(user));
           const normalizedProfile = profile ? this.normalizeUser(profile) : null;
+          const normalizedOffers = offers
+            .map((section, index) => this.normalizeOfferSection(section, index))
+            .sort((left, right) => left.sortOrder - right.sortOrder);
 
           this.cars.set(normalizedCars);
           this.users.set(normalizedUsers);
           this.bookings.set(bookings);
+          this.publishedOfferSections.set(normalizedOffers);
 
           if (normalizedProfile) {
             this.applyProfileUser(normalizedProfile);
@@ -1020,6 +1051,34 @@ export class UserPageComponent {
     };
   }
 
+  private normalizeOfferSection(section: Partial<OfferSection>, fallbackIndex: number): OfferSection {
+    return {
+      id: this.normalizePositiveInt(section.id) ?? fallbackIndex + 1,
+      sortOrder: this.normalizePositiveInt(section.sortOrder) ?? fallbackIndex,
+      title: (section.title ?? '').trim(),
+      description: (section.description ?? '').trim(),
+      imageUrl: (section.imageUrl ?? '').trim(),
+      backgroundColor: this.normalizeColor(section.backgroundColor, '#10243a'),
+      textColor: this.normalizeColor(section.textColor, '#f7f2ea'),
+      heightPx: this.normalizePositiveInt(section.heightPx) ?? 420,
+      columns: this.clampNumber(this.normalizePositiveInt(section.columns), 1, 3, 1),
+      descriptionColumnGapPx: this.clampNumber(this.normalizeNonNegativeInt(section.descriptionColumnGapPx), 0, 120, 24),
+      descriptionColumnDividerWidthPx: this.clampNumber(
+        this.normalizeNonNegativeInt(section.descriptionColumnDividerWidthPx),
+        0,
+        12,
+        1
+      ),
+      descriptionColumnDividerColor: this.normalizeColor(section.descriptionColumnDividerColor, '#f7f2ea'),
+      titleFontSizePx: this.clampNumber(this.normalizePositiveInt(section.titleFontSizePx), 20, 96, 38),
+      descriptionFontSizePx: this.clampNumber(this.normalizePositiveInt(section.descriptionFontSizePx), 12, 52, 18),
+      titleXPercent: this.clampNumber(section.titleXPercent ?? 8, 2, 80, 8),
+      titleYPercent: this.clampNumber(section.titleYPercent ?? 12, 2, 78, 12),
+      descriptionXPercent: this.clampNumber(section.descriptionXPercent ?? 8, 2, 80, 8),
+      descriptionYPercent: this.clampNumber(section.descriptionYPercent ?? 40, 2, 88, 40)
+    };
+  }
+
   private normalizeUser(user: UserResponse): User {
     return {
       id: user.id,
@@ -1163,6 +1222,35 @@ export class UserPageComponent {
     }
 
     return Number(value.toFixed(2));
+  }
+
+  private normalizePositiveInt(value: unknown): number | null {
+    if (typeof value !== 'number' || Number.isNaN(value) || value <= 0) {
+      return null;
+    }
+    return Math.round(value);
+  }
+
+  private normalizeNonNegativeInt(value: unknown): number | null {
+    if (typeof value !== 'number' || Number.isNaN(value) || value < 0) {
+      return null;
+    }
+    return Math.round(value);
+  }
+
+  private normalizeColor(value: string | null | undefined, fallback: string): string {
+    const normalized = (value ?? '').trim();
+    if (/^#[0-9a-fA-F]{6}$/.test(normalized)) {
+      return normalized;
+    }
+    return fallback;
+  }
+
+  private clampNumber(value: number | null, min: number, max: number, fallback: number): number {
+    if (value === null || Number.isNaN(value)) {
+      return fallback;
+    }
+    return Number(Math.max(min, Math.min(max, value)).toFixed(2));
   }
 
   private isCarAvailableInDateRange(resourceId: number, start: Date, end: Date): boolean {

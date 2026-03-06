@@ -140,6 +140,49 @@
     </section>
   }
 
+  @if (pageMode === 'offers' && publishedOfferSections().length) {
+    <section class="offer-sections">
+      @for (section of publishedOfferSections(); track section.id) {
+        <article
+          class="offer-section"
+          [style.height.px]="section.heightPx"
+          [style.background-color]="section.backgroundColor"
+          [style.color]="section.textColor"
+        >
+          @if (section.imageUrl) {
+            <img class="offer-section-image" [src]="section.imageUrl" [alt]="section.title || 'Offer image'" />
+          }
+          <div class="offer-section-overlay"></div>
+
+          <h3
+            class="offer-section-title"
+            [style.left.%]="section.titleXPercent"
+            [style.top.%]="section.titleYPercent"
+            [style.width.%]="offerTextWidthPercent(section.titleXPercent)"
+            [style.font-size.px]="section.titleFontSizePx"
+          >
+            {{ section.title }}
+          </h3>
+
+          <p
+            class="offer-section-description"
+            [style.left.%]="section.descriptionXPercent"
+            [style.top.%]="section.descriptionYPercent"
+            [style.width.%]="offerTextWidthPercent(section.descriptionXPercent)"
+            [style.font-size.px]="section.descriptionFontSizePx"
+            [style.column-count]="section.columns"
+            [style.column-gap.px]="section.descriptionColumnGapPx"
+            [style.column-rule-width.px]="section.descriptionColumnDividerWidthPx"
+            [style.column-rule-style]="section.descriptionColumnDividerWidthPx > 0 ? 'solid' : 'none'"
+            [style.column-rule-color]="section.descriptionColumnDividerColor"
+          >
+            {{ section.description }}
+          </p>
+        </article>
+      }
+    </section>
+  }
+
 
 
   <section class="layout">

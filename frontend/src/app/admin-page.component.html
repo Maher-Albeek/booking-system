@@ -99,6 +99,303 @@
     }
 
     <section class="admin-layout">
+      @if (showOffersPanel()) {
+        <article class="panel offers-panel">
+          <div class="panel-header">
+            <div>
+              <p class="eyebrow">Offer Builder</p>
+              <h3>Build and publish offer sections</h3>
+            </div>
+            <div class="offer-toolbar">
+              <button type="button" class="secondary-button" (click)="addOfferSection()">
+                Add section
+              </button>
+              <button type="button" (click)="saveOfferDraft()" [disabled]="isBusy('save-offer-draft')">
+                {{ isBusy('save-offer-draft') ? 'Saving draft...' : 'Save draft' }}
+              </button>
+              <button type="button" (click)="publishOfferDraft()" [disabled]="isBusy('publish-offer-draft')">
+                {{ isBusy('publish-offer-draft') ? 'Publishing...' : 'Publish to offers page' }}
+              </button>
+            </div>
+          </div>
+
+          <p class="panel-lead">
+            Draft sections: {{ offerDraftSections().length }} |
+            Published sections: {{ offerPublishedSections().length }}
+          </p>
+
+          <div class="offers-layout">
+            <aside class="offer-list">
+              @for (section of offerDraftSections(); track section.id; let index = $index) {
+                <article class="offer-list-item" [class.selected]="isOfferSectionSelected(section.id)">
+                  <button type="button" class="offer-select" (click)="selectOfferSection(section.id)">
+                    <strong>{{ section.title || ('Section ' + (index + 1)) }}</strong>
+                    <span>{{ section.columns }} col | {{ section.heightPx }}px</span>
+                  </button>
+
+                  <div class="offer-item-actions">
+                    <button type="button" class="ghost-button icon-button" (click)="moveOfferSection(section.id, -1)" [disabled]="index === 0">
+                      <i class="fa-solid fa-arrow-up" aria-hidden="true"></i>
+                    </button>
+                    <button type="button" class="ghost-button icon-button" (click)="moveOfferSection(section.id, 1)" [disabled]="index === offerDraftSections().length - 1">
+                      <i class="fa-solid fa-arrow-down" aria-hidden="true"></i>
+                    </button>
+                    <button type="button" class="ghost-button icon-button" (click)="removeOfferSection(section.id)">
+                      <i class="fa-solid fa-trash" aria-hidden="true"></i>
+                    </button>
+                  </div>
+                </article>
+              } @empty {
+                <p class="empty-state">No offer sections yet. Add the first section to start.</p>
+              }
+            </aside>
+
+            <div class="offer-editor">
+              @if (selectedOfferSection(); as section) {
+                <div class="offer-fields-grid">
+                  <label class="field field-wide">
+                    <span>Section title</span>
+                    <input
+                      type="text"
+                      name="offerSectionTitle"
+                      [ngModel]="section.title"
+                      (ngModelChange)="updateSelectedOfferSection({ title: $event })"
+                    />
+                  </label>
+
+                  <label class="field field-wide">
+                    <span>Section description</span>
+                    <textarea
+                      name="offerSectionDescription"
+                      rows="4"
+                      [ngModel]="section.description"
+                      (ngModelChange)="updateSelectedOfferSection({ description: $event })"
+                    ></textarea>
+                  </label>
+
+                  <label class="field field-wide">
+                    <span>Image URL (optional)</span>
+                    <input
+                      type="text"
+                      name="offerSectionImageUrl"
+                      [ngModel]="section.imageUrl"
+                      (ngModelChange)="updateSelectedOfferSection({ imageUrl: $event })"
+                    />
+                  </label>
+
+                  <label class="field">
+                    <span>Background color</span>
+                    <input
+                      type="color"
+                      name="offerSectionBackgroundColor"
+                      [ngModel]="section.backgroundColor"
+                      (ngModelChange)="updateSelectedOfferSection({ backgroundColor: $event })"
+                    />
+                  </label>
+
+                  <label class="field">
+                    <span>Text color</span>
+                    <input
+                      type="color"
+                      name="offerSectionTextColor"
+                      [ngModel]="section.textColor"
+                      (ngModelChange)="updateSelectedOfferSection({ textColor: $event })"
+                    />
+                  </label>
+
+                  <label class="field">
+                    <span>Section height (px)</span>
+                    <input
+                      type="number"
+                      min="220"
+                      max="980"
+                      name="offerSectionHeightPx"
+                      [ngModel]="section.heightPx"
+                      (ngModelChange)="updateSelectedOfferSection({ heightPx: $event })"
+                    />
+                  </label>
+
+                  <label class="field">
+                    <span>Description columns</span>
+                    <input
+                      type="number"
+                      min="1"
+                      max="3"
+                      name="offerSectionColumns"
+                      [ngModel]="section.columns"
+                      (ngModelChange)="updateSelectedOfferSection({ columns: $event })"
+                    />
+                  </label>
+
+                  <label class="field">
+                    <span>Column gap (px)</span>
+                    <input
+                      type="number"
+                      min="0"
+                      max="120"
+                      name="offerSectionColumnGap"
+                      [ngModel]="section.descriptionColumnGapPx"
+                      (ngModelChange)="updateSelectedOfferSection({ descriptionColumnGapPx: $event })"
+                    />
+                  </label>
+
+                  <label class="field">
+                    <span>Column divider width (px)</span>
+                    <input
+                      type="number"
+                      min="0"
+                      max="12"
+                      name="offerSectionColumnDividerWidth"
+                      [ngModel]="section.descriptionColumnDividerWidthPx"
+                      (ngModelChange)="updateSelectedOfferSection({ descriptionColumnDividerWidthPx: $event })"
+                    />
+                  </label>
+
+                  <label class="field">
+                    <span>Column divider color</span>
+                    <input
+                      type="color"
+                      name="offerSectionColumnDividerColor"
+                      [ngModel]="section.descriptionColumnDividerColor"
+                      (ngModelChange)="updateSelectedOfferSection({ descriptionColumnDividerColor: $event })"
+                    />
+                  </label>
+
+                  <label class="field">
+                    <span>Title text size (px)</span>
+                    <input
+                      type="number"
+                      min="20"
+                      max="96"
+                      name="offerSectionTitleSize"
+                      [ngModel]="section.titleFontSizePx"
+                      (ngModelChange)="updateSelectedOfferSection({ titleFontSizePx: $event })"
+                    />
+                  </label>
+
+                  <label class="field">
+                    <span>Description text size (px)</span>
+                    <input
+                      type="number"
+                      min="12"
+                      max="52"
+                      name="offerSectionDescriptionSize"
+                      [ngModel]="section.descriptionFontSizePx"
+                      (ngModelChange)="updateSelectedOfferSection({ descriptionFontSizePx: $event })"
+                    />
+                  </label>
+                </div>
+
+                <div class="offer-position-grid">
+                  <label class="field">
+                    <span>Title X (%)</span>
+                    <input
+                      type="range"
+                      min="2"
+                      max="80"
+                      step="0.5"
+                      name="offerSectionTitleX"
+                      [ngModel]="section.titleXPercent"
+                      (ngModelChange)="updateSelectedOfferSection({ titleXPercent: $event })"
+                    />
+                  </label>
+                  <label class="field">
+                    <span>Title Y (%)</span>
+                    <input
+                      type="range"
+                      min="2"
+                      max="78"
+                      step="0.5"
+                      name="offerSectionTitleY"
+                      [ngModel]="section.titleYPercent"
+                      (ngModelChange)="updateSelectedOfferSection({ titleYPercent: $event })"
+                    />
+                  </label>
+                  <label class="field">
+                    <span>Description X (%)</span>
+                    <input
+                      type="range"
+                      min="2"
+                      max="80"
+                      step="0.5"
+                      name="offerSectionDescriptionX"
+                      [ngModel]="section.descriptionXPercent"
+                      (ngModelChange)="updateSelectedOfferSection({ descriptionXPercent: $event })"
+                    />
+                  </label>
+                  <label class="field">
+                    <span>Description Y (%)</span>
+                    <input
+                      type="range"
+                      min="2"
+                      max="88"
+                      step="0.5"
+                      name="offerSectionDescriptionY"
+                      [ngModel]="section.descriptionYPercent"
+                      (ngModelChange)="updateSelectedOfferSection({ descriptionYPercent: $event })"
+                    />
+                  </label>
+                </div>
+
+                <section class="offer-preview-shell">
+                  <div class="offer-preview-title-row">
+                    <p class="eyebrow">Demo preview</p>
+                    <span>Drag title and description to reposition them</span>
+                  </div>
+
+                  <article
+                    class="offer-preview-canvas"
+                    [style.height.px]="section.heightPx"
+                    [style.background-color]="section.backgroundColor"
+                    [style.color]="section.textColor"
+                  >
+                    @if (section.imageUrl) {
+                      <img class="offer-preview-image" [src]="section.imageUrl" [alt]="section.title || 'Offer section image'" />
+                    }
+                    <div class="offer-preview-overlay"></div>
+
+                    <h4
+                      class="offer-preview-text draggable"
+                      [style.left.%]="section.titleXPercent"
+                      [style.top.%]="section.titleYPercent"
+                      [style.width.%]="offerTextWidthPercent(section.titleXPercent)"
+                      [style.font-size.px]="section.titleFontSizePx"
+                      (pointerdown)="startOfferElementDrag($event, section, 'title')"
+                      (pointermove)="onOfferElementDrag($event)"
+                      (pointerup)="endOfferElementDrag($event)"
+                      (pointercancel)="endOfferElementDrag($event)"
+                    >
+                      {{ section.title || 'Section title' }}
+                    </h4>
+
+                    <p
+                      class="offer-preview-text draggable description"
+                      [style.left.%]="section.descriptionXPercent"
+                      [style.top.%]="section.descriptionYPercent"
+                      [style.width.%]="offerTextWidthPercent(section.descriptionXPercent)"
+                      [style.font-size.px]="section.descriptionFontSizePx"
+                      [style.column-count]="section.columns"
+                      [style.column-gap.px]="section.descriptionColumnGapPx"
+                      [style.column-rule-width.px]="section.descriptionColumnDividerWidthPx"
+                      [style.column-rule-style]="section.descriptionColumnDividerWidthPx > 0 ? 'solid' : 'none'"
+                      [style.column-rule-color]="section.descriptionColumnDividerColor"
+                      (pointerdown)="startOfferElementDrag($event, section, 'description')"
+                      (pointermove)="onOfferElementDrag($event)"
+                      (pointerup)="endOfferElementDrag($event)"
+                      (pointercancel)="endOfferElementDrag($event)"
+                    >
+                      {{ section.description || 'Section description' }}
+                    </p>
+                  </article>
+                </section>
+              } @else {
+                <p class="empty-state">Select a section from the left or create a new one.</p>
+              }
+            </div>
+          </div>
+        </article>
+      }
+
       @if (showCarsPanel()) {
         <article class="panel fleet-panel">
         <div class="panel-header">

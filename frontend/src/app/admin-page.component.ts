@@ -4,7 +4,7 @@ import { Component, DestroyRef, computed, effect, inject, signal } from '@angula
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { finalize, forkJoin, Observable } from 'rxjs';
+import { finalize, forkJoin, Observable, switchMap } from 'rxjs';
 
 import { AuthStateService } from './auth-state.service';
 import { I18nService } from './i18n.service';
@@ -52,6 +52,39 @@ type Booking = {
 
 type UserRole = 'USER' | 'ADMIN';
 
+type OfferSection = {
+  id: number;
+  sortOrder: number;
+  title: string;
+  description: string;
+  imageUrl: string;
+  backgroundColor: string;
+  textColor: string;
+  heightPx: number;
+  columns: number;
+  descriptionColumnGapPx: number;
+  descriptionColumnDividerWidthPx: number;
+  descriptionColumnDividerColor: string;
+  titleFontSizePx: number;
+  descriptionFontSizePx: number;
+  titleXPercent: number;
+  titleYPercent: number;
+  descriptionXPercent: number;
+  descriptionYPercent: number;
+};
+
+type OfferDragState = {
+  pointerId: number;
+  sectionId: number;
+  target: 'title' | 'description';
+  startX: number;
+  startY: number;
+  startLeftPercent: number;
+  startTopPercent: number;
+  canvasWidth: number;
+  canvasHeight: number;
+};
+
 @Component({
   selector: 'app-admin-page',
   imports: [CommonModule, FormsModule, RouterLink],
@@ -73,10 +106,14 @@ export class AdminPageComponent {
   protected readonly isPhotoDragActive = signal(false);
   protected readonly editingCarId = signal<number | null>(null);
   protected readonly selectedCarId = signal<number | null>(null);
+  protected readonly selectedOfferSectionId = signal<number | null>(null);
+  protected readonly offerDragState = signal<OfferDragState | null>(null);
 
   protected readonly resources = signal<Resource[]>([]);
   protected readonly users = signal<User[]>([]);
   protected readonly bookings = signal<Booking[]>([]);
+  protected readonly offerDraftSections = signal<OfferSection[]>([]);
+  protected readonly offerPublishedSections = signal<OfferSection[]>([]);
 
   protected carDraft = {
     name: '',
@@ -121,6 +158,15 @@ export class AdminPageComponent {
     }
 
     return this.cars().find((car) => car.id === selectedCarId) ?? null;
+  });
+
+  protected readonly selectedOfferSection = computed(() => {
+    const selectedSectionId = this.selectedOfferSectionId();
+    if (selectedSectionId === null) {
+      return null;
+    }
+
+    return this.offerDraftSections().find((section) => section.id === selectedSectionId) ?? null;
   });
 
   protected readonly stats = computed(() => [
@@ -179,7 +225,8 @@ export class AdminPageComponent {
   });
 
   protected readonly showToolsPanel = computed(() => this.pageMode === 'tools');
-  protected readonly showCarsPanel = computed(() => this.pageMode === 'offers' || this.pageMode === 'cars');
+  protected readonly showOffersPanel = computed(() => this.pageMode === 'offers');
+  protected readonly showCarsPanel = computed(() => this.pageMode === 'cars');
   protected readonly showUsersPanel = computed(() => this.pageMode === 'users');
 
   constructor() {
@@ -200,6 +247,145 @@ export class AdminPageComponent {
 
   protected isBusy(key: string): boolean {
     return this.busyKey() === key;
+  }
+
+  protected addOfferSection(): void {
+    const newSection = this.createDefaultOfferSection();
+    this.offerDraftSections.update((sections) => [...sections, newSection]);
+    this.selectedOfferSectionId.set(newSection.id);
+    this.success.set(null);
+    this.error.set(null);
+  }
+
+  protected selectOfferSection(sectionId: number): void {
+    this.selectedOfferSectionId.set(sectionId);
+  }
+
+  protected isOfferSectionSelected(sectionId: number): boolean {
+    return this.selectedOfferSectionId() === sectionId;
+  }
+
+  protected removeOfferSection(sectionId: number): void {
+    const nextSections = this.offerDraftSections().filter((section) => section.id !== sectionId);
+    this.offerDraftSections.set(this.reorderOfferSections(nextSections));
+
+    if (this.selectedOfferSectionId() === sectionId) {
+      this.selectedOfferSectionId.set(nextSections[0]?.id ?? null);
+    }
+  }
+
+  protected moveOfferSection(sectionId: number, direction: -1 | 1): void {
+    const sections = [...this.offerDraftSections()];
+    const currentIndex = sections.findIndex((section) => section.id === sectionId);
+    const targetIndex = currentIndex + direction;
+
+    if (currentIndex < 0 || targetIndex < 0 || targetIndex >= sections.length) {
+      return;
+    }
+
+    const [section] = sections.splice(currentIndex, 1);
+    sections.splice(targetIndex, 0, section);
+    this.offerDraftSections.set(this.reorderOfferSections(sections));
+  }
+
+  protected updateSelectedOfferSection(patch: Partial<OfferSection>): void {
+    const selectedSectionId = this.selectedOfferSectionId();
+    if (selectedSectionId === null) {
+      return;
+    }
+
+    this.updateOfferSection(selectedSectionId, patch);
+  }
+
+  protected saveOfferDraft(): void {
+    this.runRequest(
+      'save-offer-draft',
+      this.http.put<OfferSection[]>('/api/offers/draft', this.offerDraftSections()),
+      'Offer draft saved successfully.'
+    );
+  }
+
+  protected publishOfferDraft(): void {
+    this.runRequest(
+      'publish-offer-draft',
+      this.http
+        .put<OfferSection[]>('/api/offers/draft', this.offerDraftSections())
+        .pipe(switchMap(() => this.http.post<OfferSection[]>('/api/offers/publish', {}))),
+      'Offer page is now published.'
+    );
+  }
+
+  protected startOfferElementDrag(event: PointerEvent, section: OfferSection, target: 'title' | 'description'): void {
+    const handle = event.currentTarget as HTMLElement | null;
+    const canvas = handle?.closest('.offer-preview-canvas') as HTMLElement | null;
+    if (!handle || !canvas) {
+      return;
+    }
+
+    handle.setPointerCapture(event.pointerId);
+    const canvasRect = canvas.getBoundingClientRect();
+    const startLeftPercent = target === 'title' ? section.titleXPercent : section.descriptionXPercent;
+    const startTopPercent = target === 'title' ? section.titleYPercent : section.descriptionYPercent;
+
+    this.offerDragState.set({
+      pointerId: event.pointerId,
+      sectionId: section.id,
+      target,
+      startX: event.clientX,
+      startY: event.clientY,
+      startLeftPercent,
+      startTopPercent,
+      canvasWidth: canvasRect.width,
+      canvasHeight: canvasRect.height
+    });
+
+    event.preventDefault();
+  }
+
+  protected onOfferElementDrag(event: PointerEvent): void {
+    const dragState = this.offerDragState();
+    if (!dragState || dragState.pointerId !== event.pointerId) {
+      return;
+    }
+
+    const deltaLeftPercent =
+      dragState.canvasWidth > 0
+        ? ((event.clientX - dragState.startX) / dragState.canvasWidth) * 100
+        : 0;
+    const deltaTopPercent =
+      dragState.canvasHeight > 0
+        ? ((event.clientY - dragState.startY) / dragState.canvasHeight) * 100
+        : 0;
+
+    const leftPercent = this.clampPercent(dragState.startLeftPercent + deltaLeftPercent, 2, 80);
+    const topPercent = this.clampPercent(dragState.startTopPercent + deltaTopPercent, 2, 88);
+
+    if (dragState.target === 'title') {
+      this.updateOfferSection(dragState.sectionId, {
+        titleXPercent: leftPercent,
+        titleYPercent: topPercent
+      });
+      return;
+    }
+
+    this.updateOfferSection(dragState.sectionId, {
+      descriptionXPercent: leftPercent,
+      descriptionYPercent: topPercent
+    });
+  }
+
+  protected endOfferElementDrag(event: PointerEvent): void {
+    const dragState = this.offerDragState();
+    const handle = event.currentTarget as HTMLElement | null;
+    if (dragState && handle?.hasPointerCapture(dragState.pointerId)) {
+      handle.releasePointerCapture(dragState.pointerId);
+    }
+
+    this.offerDragState.set(null);
+  }
+
+  protected offerTextWidthPercent(xPercent: number): number {
+    return Math.max(24, 95 - this.clampPercent(xPercent, 0, 90));
   }
 
   protected saveCar(): void {
@@ -437,17 +623,29 @@ export class AdminPageComponent {
     forkJoin({
       resources: this.http.get<ResourceResponse[]>('/api/resources'),
       users: this.http.get<User[]>('/api/users'),
-      bookings: this.http.get<Booking[]>('/api/bookings')
+      bookings: this.http.get<Booking[]>('/api/bookings'),
+      offerDraft: this.http.get<OfferSection[]>('/api/offers/draft'),
+      offerPublished: this.http.get<OfferSection[]>('/api/offers/published')
     })
       .pipe(
         takeUntilDestroyed(this.destroyRef),
         finalize(() => this.loading.set(false))
       )
       .subscribe({
-        next: ({ resources, users, bookings }) => {
+        next: ({ resources, users, bookings, offerDraft, offerPublished }) => {
           this.resources.set(resources.map((resource) => this.normalizeResource(resource)));
           this.users.set(users);
           this.bookings.set(bookings);
+          this.offerDraftSections.set(
+            this.reorderOfferSections(
+              offerDraft.map((section, index) => this.normalizeOfferSection(section, index))
+            )
+          );
+          this.offerPublishedSections.set(
+            this.reorderOfferSections(
+              offerPublished.map((section, index) => this.normalizeOfferSection(section, index))
+            )
+          );
           this.syncDraftDefaults();
         },
         error: (error: HttpErrorResponse) => {
@@ -464,9 +662,22 @@ export class AdminPageComponent {
   private syncDraftDefaults(): void {
     const selectedCarId = this.selectedCarId();
     const selectedCarStillExists = this.cars().some((car) => car.id === selectedCarId);
+    const selectedOfferSectionId = this.selectedOfferSectionId();
+    const selectedOfferSectionStillExists = this.offerDraftSections().some(
+      (section) => section.id === selectedOfferSectionId
+    );
 
     if (selectedCarId !== null && !selectedCarStillExists) {
       this.selectedCarId.set(null);
+    }
+
+    if (selectedOfferSectionId !== null && !selectedOfferSectionStillExists) {
+      this.selectedOfferSectionId.set(this.offerDraftSections()[0]?.id ?? null);
+      return;
+    }
+
+    if (selectedOfferSectionId === null && this.offerDraftSections().length) {
+      this.selectedOfferSectionId.set(this.offerDraftSections()[0].id);
     }
   }
 
@@ -489,6 +700,130 @@ export class AdminPageComponent {
       photoUrlsText: '',
       uploadedPhotoUrls: []
     };
+  }
+
+  private updateOfferSection(sectionId: number, patch: Partial<OfferSection>): void {
+    this.offerDraftSections.update((sections) =>
+      sections.map((section) =>
+        section.id === sectionId
+          ? this.normalizeOfferSection(
+              {
+                ...section,
+                ...patch
+              },
+              section.sortOrder
+            )
+          : section
+      )
+    );
+  }
+
+  private createDefaultOfferSection(): OfferSection {
+    const nextId = this.nextOfferSectionId();
+    return {
+      id: nextId,
+      sortOrder: this.offerDraftSections().length,
+      title: `Section ${nextId}`,
+      description: 'Describe your offer here.',
+      imageUrl: '',
+      backgroundColor: '#10243a',
+      textColor: '#f7f2ea',
+      heightPx: 420,
+      columns: 1,
+      descriptionColumnGapPx: 24,
+      descriptionColumnDividerWidthPx: 1,
+      descriptionColumnDividerColor: '#f7f2ea',
+      titleFontSizePx: 38,
+      descriptionFontSizePx: 18,
+      titleXPercent: 8,
+      titleYPercent: 12,
+      descriptionXPercent: 8,
+      descriptionYPercent: 38
+    };
+  }
+
+  private nextOfferSectionId(): number {
+    const allIds = [...this.offerDraftSections(), ...this.offerPublishedSections()].map((section) => section.id);
+    const maxId = allIds.length ? Math.max(...allIds) : 0;
+    return maxId + 1;
+  }
+
+  private reorderOfferSections(sections: OfferSection[]): OfferSection[] {
+    return sections.map((section, index) => ({
+      ...section,
+      sortOrder: index
+    }));
+  }
+
+  private normalizeOfferSection(section: Partial<OfferSection>, fallbackIndex: number): OfferSection {
+    return {
+      id: this.normalizePositiveInt(section.id) ?? fallbackIndex + 1,
+      sortOrder: this.normalizePositiveInt(section.sortOrder) ?? fallbackIndex,
+      title: (section.title ?? '').trim(),
+      description: (section.description ?? '').trim(),
+      imageUrl: (section.imageUrl ?? '').trim(),
+      backgroundColor: this.normalizeColor(section.backgroundColor, '#10243a'),
+      textColor: this.normalizeColor(section.textColor, '#f7f2ea'),
+      heightPx: this.clampInt(this.normalizePositiveInt(section.heightPx), 220, 980, 420),
+      columns: this.clampInt(this.normalizePositiveInt(section.columns), 1, 3, 1),
+      descriptionColumnGapPx: this.clampInt(this.normalizeNonNegativeInt(section.descriptionColumnGapPx), 0, 120, 24),
+      descriptionColumnDividerWidthPx: this.clampInt(
+        this.normalizeNonNegativeInt(section.descriptionColumnDividerWidthPx),
+        0,
+        12,
+        1
+      ),
+      descriptionColumnDividerColor: this.normalizeColor(section.descriptionColumnDividerColor, '#f7f2ea'),
+      titleFontSizePx: this.clampInt(this.normalizePositiveInt(section.titleFontSizePx), 20, 96, 38),
+      descriptionFontSizePx: this.clampInt(this.normalizePositiveInt(section.descriptionFontSizePx), 12, 52, 18),
+      titleXPercent: this.clampPercent(this.normalizeNumber(section.titleXPercent), 2, 80, 8),
+      titleYPercent: this.clampPercent(this.normalizeNumber(section.titleYPercent), 2, 78, 12),
+      descriptionXPercent: this.clampPercent(this.normalizeNumber(section.descriptionXPercent), 2, 80, 8),
+      descriptionYPercent: this.clampPercent(this.normalizeNumber(section.descriptionYPercent), 2, 88, 38)
+    };
+  }
+
+  private normalizePositiveInt(value: unknown): number | null {
+    if (typeof value !== 'number' || Number.isNaN(value) || value <= 0) {
+      return null;
+    }
+    return Math.round(value);
+  }
+
+  private normalizeNonNegativeInt(value: unknown): number | null {
+    if (typeof value !== 'number' || Number.isNaN(value) || value < 0) {
+      return null;
+    }
+    return Math.round(value);
+  }
+
+  private normalizeNumber(value: unknown): number | null {
+    if (typeof value !== 'number' || Number.isNaN(value) || !Number.isFinite(value)) {
+      return null;
+    }
+    return Number(value.toFixed(2));
+  }
+
+  private normalizeColor(value: string | null | undefined, fallback: string): string {
+    const normalized = (value ?? '').trim();
+    if (/^#[0-9a-fA-F]{6}$/.test(normalized)) {
+      return normalized;
+    }
+    return fallback;
+  }
+
+  private clampInt(value: number | null, min: number, max: number, fallback: number): number {
+    if (value === null) {
+      return fallback;
+    }
+    return Math.max(min, Math.min(max, value));
+  }
+
+  private clampPercent(value: number | null, min: number, max: number, fallback = min): number {
+    if (value === null) {
+      return fallback;
+    }
+    return Number(Math.max(min, Math.min(max, value)).toFixed(2));
   }
 
   private normalizeResource(resource: ResourceResponse): Resource {
