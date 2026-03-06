@@ -59,8 +59,8 @@ export class AuthStateService {
     }
   }
 
-  landingRoute(): '/admin' | '/user' {
-    return this.isAdmin() ? '/admin' : '/user';
+  landingRoute(): '/admin/tools' | '/offers' {
+    return this.isAdmin() ? '/admin/tools' : '/offers';
   }
 
   syncUser(user: Partial<AuthUser>): void {

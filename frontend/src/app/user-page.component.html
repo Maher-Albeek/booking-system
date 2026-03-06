@@ -1,85 +1,100 @@
 <main class="client-shell">
-  <header class="home-search-header">
-    <div class="search-header-copy">
-      <p class="eyebrow">Find your car</p>
-      <h3>Search by location and dates</h3>
-    </div>
-
-    <div class="search-header-form">
-      <label class="field">
-        <span>Location</span>
-        <input
-          type="text"
-          name="homeSearchLocation"
-          [ngModel]="searchLocationInput()"
-          (ngModelChange)="searchLocationInput.set($event)"
-          placeholder="Berlin, Hamburg, Munich..."
-        />
-      </label>
-
-      <label class="field">
-        <span>Start date</span>
-        <input
-          type="date"
-          name="homeSearchStartDate"
-          [ngModel]="searchStartDateInput()"
-          (ngModelChange)="searchStartDateInput.set($event)"
-        />
-      </label>
-
-      <label class="field">
-        <span>End date</span>
-        <input
-          type="date"
-          name="homeSearchEndDate"
-          [ngModel]="searchEndDateInput()"
-          (ngModelChange)="searchEndDateInput.set($event)"
-        />
-      </label>
-
-      <div class="search-actions">
-        <button
-          type="button"
-          class="submit-button compact-button"
-          (click)="applySearchFilters()"
-          [disabled]="searchDateRangeInvalid()"
-        >
-          <span class="button-content">
-            <i class="button-icon fa-solid fa-magnifying-glass" aria-hidden="true"></i>
-            <span>Search</span>
-          </span>
-        </button>
+  @if (pageMode === 'offers') {
+    <header class="home-search-header">
+      <div class="search-header-copy">
+        <p class="eyebrow">Find your car</p>
+        <h3>Search by location and dates</h3>
       </div>
-    </div>
 
-    @if (searchDateRangeInvalid()) {
-      <p class="search-warning">End date must be the same day or after the start date.</p>
-    }
-  </header>
+      <div class="search-header-form">
+        <label class="field">
+          <span>Location</span>
+          <input
+            type="text"
+            name="homeSearchLocation"
+            [ngModel]="searchLocationInput()"
+            (ngModelChange)="searchLocationInput.set($event)"
+            placeholder="Berlin, Hamburg, Munich..."
+          />
+        </label>
+
+        <label class="field">
+          <span>Start date</span>
+          <input
+            type="date"
+            name="homeSearchStartDate"
+            [ngModel]="searchStartDateInput()"
+            (ngModelChange)="searchStartDateInput.set($event)"
+          />
+        </label>
+
+        <label class="field">
+          <span>End date</span>
+          <input
+            type="date"
+            name="homeSearchEndDate"
+            [ngModel]="searchEndDateInput()"
+            (ngModelChange)="searchEndDateInput.set($event)"
+          />
+        </label>
+
+        <div class="search-actions">
+          <button
+            type="button"
+            class="submit-button compact-button"
+            (click)="applySearchFilters()"
+            [disabled]="searchDateRangeInvalid()"
+          >
+            <span class="button-content">
+              <i class="button-icon fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+              <span>Search</span>
+            </span>
+          </button>
+        </div>
+      </div>
+
+      @if (searchDateRangeInvalid()) {
+        <p class="search-warning">End date must be the same day or after the start date.</p>
+      }
+    </header>
+  }
 
   <section class="hero">
     <div class="hero-copy">
-      <p class="eyebrow">User interface</p>
-      <h2>{{ title }}</h2>
-      <p>
-        Browse and reserve cars by selecting your own start and end date-time directly against the
-        Spring API.
-      </p>
+      @if (pageMode === 'offers') {
+        <p class="eyebrow">User interface</p>
+        <h2>{{ title }}</h2>
+        <p>
+          Browse and reserve cars by selecting your own start and end date-time directly against
+          the Spring API.
+        </p>
+      } @else {
+        <p class="eyebrow">My bookings</p>
+        <h2>Manage your reservations</h2>
+        <p>All your booking entries are listed on this dedicated page.</p>
+      }
     </div>
 
     <div class="hero-actions">
       <button type="button" (click)="reload()" [disabled]="loading() || submitting() || accountSaving()">
         <span class="button-content">
           <i class="button-icon fa-solid fa-rotate-right" aria-hidden="true"></i>
-          <span>{{ loading() ? 'Refreshing...' : 'Refresh availability' }}</span>
+          <span>{{ loading() ? 'Refreshing...' : pageMode === 'offers' ? 'Refresh availability' : 'Refresh bookings' }}</span>
         </span>
       </button>
       @if (auth.isAuthenticated()) {
         <div class="hero-shortcuts">
-          <a routerLink="/user" fragment="reservations" class="shortcut-link">
-            <i class="button-icon fa-solid fa-calendar-check" aria-hidden="true"></i>
-            <span>My bookings</span>
-          </a>
+          @if (pageMode === 'offers') {
+            <a routerLink="/my-bookings" class="shortcut-link">
+              <i class="button-icon fa-solid fa-calendar-check" aria-hidden="true"></i>
+              <span>My bookings</span>
+            </a>
+          } @else {
+            <a routerLink="/offers" class="shortcut-link">
+              <i class="button-icon fa-solid fa-car-side" aria-hidden="true"></i>
+              <span>Back to offers</span>
+            </a>
+          }
         </div>
       }
     </div>
@@ -130,7 +145,8 @@
 
 
   <section class="layout">
-    <article class="panel fleet-panel">
+    @if (pageMode === 'offers') {
+      <article class="panel fleet-panel">
       <div class="panel-header">
         <div>
           <p class="eyebrow">Fleet</p>
@@ -301,9 +317,11 @@
           </aside>
         </div>
       }
-    </article>
+      </article>
+    }
 
-    <article id="reservations" class="panel reservations-panel">
+    @if (pageMode === 'bookings') {
+      <article id="reservations" class="panel reservations-panel">
       <div class="panel-header">
         <div>
           <p class="eyebrow">Reservations</p>
@@ -377,10 +395,11 @@
           }
         }
       </div>
-    </article>
+      </article>
+    }
   </section>
 
-  @if (reservationModalOpen() && selectedCar()) {
+  @if (pageMode === 'offers' && reservationModalOpen() && selectedCar()) {
     <section class="modal-backdrop" (click)="closeReservationModalOnBackdrop($event)">
       <article
         class="modal-card"

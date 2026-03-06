@@ -3,7 +3,7 @@ import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { finalize, forkJoin, of } from 'rxjs';
 
 import { AuthStateService, AuthUser } from './auth-state.service';
@@ -155,8 +155,11 @@ type AccountDraft = {
 export class UserPageComponent {
   private readonly http = inject(HttpClient);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly route = inject(ActivatedRoute);
 
   protected readonly auth = inject(AuthStateService);
+  protected readonly pageMode: 'offers' | 'bookings' =
+    this.route.snapshot.data['userPageMode'] === 'bookings' ? 'bookings' : 'offers';
   protected readonly title = 'Book Your Next Car';
   protected readonly supportedPaymentMethods = PAYMENT_METHOD_OPTIONS;
   protected readonly paymentMethodMeta = PAYMENT_METHOD_META;

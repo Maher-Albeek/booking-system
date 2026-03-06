@@ -1,15 +1,15 @@
 <main class="account-shell">
-  <nav class="home-menu-bar" aria-label="Account page shortcuts">
-    <a routerLink="/user">Home</a>
-    <a routerLink="/account">Account</a>
-    <a routerLink="/user" fragment="reservations">Reservations</a>
-  </nav>
-
   <section class="hero">
     <div>
       <p class="eyebrow">Account</p>
-      <h2>Manage your profile</h2>
-      <p>Account management is now separated from the booking page.</p>
+      <h2>{{ pageMode === 'payment' ? 'Manage payment methods' : 'Manage your profile' }}</h2>
+      <p>
+        {{
+          pageMode === 'payment'
+            ? 'This page is dedicated to payment method preferences.'
+            : 'This page is dedicated to personal profile details.'
+        }}
+      </p>
     </div>
 
     <button type="button" class="submit-button compact-button" (click)="reload()" [disabled]="loading() || saving()">
@@ -44,8 +44,8 @@
     <section class="panel account-panel">
       <div class="panel-header">
         <div>
-          <p class="eyebrow">Profile</p>
-          <h3>Personal data and payment methods</h3>
+          <p class="eyebrow">{{ pageMode === 'payment' ? 'Payment' : 'Profile' }}</p>
+          <h3>{{ pageMode === 'payment' ? 'Saved payment methods' : 'Personal profile details' }}</h3>
         </div>
         <span class="profile-pill">
           {{ accountCompleteness().completed }}/{{ accountCompleteness().total }} fields saved
@@ -85,126 +85,130 @@
         </section>
 
         <form class="account-form" (ngSubmit)="saveAccount()">
-          <div class="account-fields">
-            <label class="field">
-              <span>First name</span>
-              <input
-                type="text"
-                name="accountFirstName"
-                [ngModel]="accountDraft.firstName"
-                (ngModelChange)="accountDraft.firstName = $event"
-                autocomplete="given-name"
-              />
-            </label>
+          @if (pageMode === 'profile') {
+            <div class="account-fields">
+              <label class="field">
+                <span>First name</span>
+                <input
+                  type="text"
+                  name="accountFirstName"
+                  [ngModel]="accountDraft.firstName"
+                  (ngModelChange)="accountDraft.firstName = $event"
+                  autocomplete="given-name"
+                />
+              </label>
 
-            <label class="field">
-              <span>Last name</span>
-              <input
-                type="text"
-                name="accountLastName"
-                [ngModel]="accountDraft.lastName"
-                (ngModelChange)="accountDraft.lastName = $event"
-                autocomplete="family-name"
-              />
-            </label>
+              <label class="field">
+                <span>Last name</span>
+                <input
+                  type="text"
+                  name="accountLastName"
+                  [ngModel]="accountDraft.lastName"
+                  (ngModelChange)="accountDraft.lastName = $event"
+                  autocomplete="family-name"
+                />
+              </label>
 
-            <label class="field">
-              <span>Birth date</span>
-              <input
-                type="date"
-                name="accountBirthDate"
-                [ngModel]="accountDraft.birthDate"
-                (ngModelChange)="accountDraft.birthDate = $event"
-                autocomplete="bday"
-              />
-            </label>
+              <label class="field">
+                <span>Birth date</span>
+                <input
+                  type="date"
+                  name="accountBirthDate"
+                  [ngModel]="accountDraft.birthDate"
+                  (ngModelChange)="accountDraft.birthDate = $event"
+                  autocomplete="bday"
+                />
+              </label>
 
-            <label class="field">
-              <span>Street</span>
-              <input
-                type="text"
-                name="accountAddressStreet"
-                [ngModel]="accountDraft.addressStreet"
-                (ngModelChange)="accountDraft.addressStreet = $event"
-                autocomplete="address-line1"
-              />
-            </label>
+              <label class="field">
+                <span>Street</span>
+                <input
+                  type="text"
+                  name="accountAddressStreet"
+                  [ngModel]="accountDraft.addressStreet"
+                  (ngModelChange)="accountDraft.addressStreet = $event"
+                  autocomplete="address-line1"
+                />
+              </label>
 
-            <label class="field">
-              <span>House number</span>
-              <input
-                type="text"
-                name="accountAddressHouseNumber"
-                [ngModel]="accountDraft.addressHouseNumber"
-                (ngModelChange)="accountDraft.addressHouseNumber = $event"
-                autocomplete="address-line2"
-              />
-            </label>
+              <label class="field">
+                <span>House number</span>
+                <input
+                  type="text"
+                  name="accountAddressHouseNumber"
+                  [ngModel]="accountDraft.addressHouseNumber"
+                  (ngModelChange)="accountDraft.addressHouseNumber = $event"
+                  autocomplete="address-line2"
+                />
+              </label>
 
-            <label class="field">
-              <span>Postal code</span>
-              <input
-                type="text"
-                name="accountAddressPostalCode"
-                [ngModel]="accountDraft.addressPostalCode"
-                (ngModelChange)="accountDraft.addressPostalCode = $event"
-                autocomplete="postal-code"
-              />
-            </label>
+              <label class="field">
+                <span>Postal code</span>
+                <input
+                  type="text"
+                  name="accountAddressPostalCode"
+                  [ngModel]="accountDraft.addressPostalCode"
+                  (ngModelChange)="accountDraft.addressPostalCode = $event"
+                  autocomplete="postal-code"
+                />
+              </label>
 
-            <label class="field">
-              <span>City</span>
-              <input
-                type="text"
-                name="accountAddressCity"
-                [ngModel]="accountDraft.addressCity"
-                (ngModelChange)="accountDraft.addressCity = $event"
-                autocomplete="address-level2"
-              />
-            </label>
+              <label class="field">
+                <span>City</span>
+                <input
+                  type="text"
+                  name="accountAddressCity"
+                  [ngModel]="accountDraft.addressCity"
+                  (ngModelChange)="accountDraft.addressCity = $event"
+                  autocomplete="address-level2"
+                />
+              </label>
 
-            <label class="field">
-              <span>Country</span>
-              <input
-                type="text"
-                name="accountAddressCountry"
-                [ngModel]="accountDraft.addressCountry"
-                (ngModelChange)="accountDraft.addressCountry = $event"
-                autocomplete="country-name"
-              />
-            </label>
-          </div>
-
-          <section class="payment-methods">
-            <div class="payment-header">
-              <span>Payment methods</span>
-              <strong>Save one or more preferred methods</strong>
+              <label class="field">
+                <span>Country</span>
+                <input
+                  type="text"
+                  name="accountAddressCountry"
+                  [ngModel]="accountDraft.addressCountry"
+                  (ngModelChange)="accountDraft.addressCountry = $event"
+                  autocomplete="country-name"
+                />
+              </label>
             </div>
+          }
 
-            <div class="payment-grid">
-              @for (method of supportedPaymentMethods; track method) {
-                <label
-                  class="payment-option"
-                  [class.selected]="isPaymentMethodSelected(method)"
-                  [style.--payment-accent]="paymentMethodMeta[method].accent"
-                  [style.--payment-foreground]="paymentMethodMeta[method].foreground"
-                >
-                  <input
-                    type="checkbox"
-                    [checked]="isPaymentMethodSelected(method)"
-                    (change)="togglePaymentMethod(method, $any($event.target).checked)"
-                  />
-                  <span class="payment-logo" aria-hidden="true">
-                    <i [class]="paymentMethodMeta[method].iconClass"></i>
-                  </span>
-                  <span class="payment-copy">
-                    <strong>{{ method }}</strong>
-                    <small>{{ paymentMethodMeta[method].hint }}</small>
-                  </span>
-                </label>
-              }
-            </div>
-          </section>
+          @if (pageMode === 'payment') {
+            <section class="payment-methods">
+              <div class="payment-header">
+                <span>Payment methods</span>
+                <strong>Save one or more preferred methods</strong>
+              </div>
+
+              <div class="payment-grid">
+                @for (method of supportedPaymentMethods; track method) {
+                  <label
+                    class="payment-option"
+                    [class.selected]="isPaymentMethodSelected(method)"
+                    [style.--payment-accent]="paymentMethodMeta[method].accent"
+                    [style.--payment-foreground]="paymentMethodMeta[method].foreground"
+                  >
+                    <input
+                      type="checkbox"
+                      [checked]="isPaymentMethodSelected(method)"
+                      (change)="togglePaymentMethod(method, $any($event.target).checked)"
+                    />
+                    <span class="payment-logo" aria-hidden="true">
+                      <i [class]="paymentMethodMeta[method].iconClass"></i>
+                    </span>
+                    <span class="payment-copy">
+                      <strong>{{ method }}</strong>
+                      <small>{{ paymentMethodMeta[method].hint }}</small>
+                    </span>
+                  </label>
+                }
+              </div>
+            </section>
+          }
 
           <div class="account-actions">
             <button type="submit" class="submit-button compact-button" [disabled]="saving() || avatarUploading()">

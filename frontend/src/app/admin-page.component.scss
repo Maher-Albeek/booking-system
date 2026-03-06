@@ -429,6 +429,12 @@ textarea {
   background: rgba(255, 255, 255, 0.04);
 }
 
+a.list-card {
+  display: block;
+  color: inherit;
+  text-decoration: none;
+}
+
 dl {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));

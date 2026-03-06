@@ -3,7 +3,7 @@ import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 
 import { AuthStateService } from './auth-state.service';
@@ -93,8 +93,11 @@ type AccountDraft = {
 export class AccountPageComponent {
   private readonly http = inject(HttpClient);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly route = inject(ActivatedRoute);
 
   protected readonly auth = inject(AuthStateService);
+  protected readonly pageMode: 'profile' | 'payment' =
+    this.route.snapshot.data['accountPageMode'] === 'payment' ? 'payment' : 'profile';
   protected readonly supportedPaymentMethods = PAYMENT_METHOD_OPTIONS;
   protected readonly paymentMethodMeta = PAYMENT_METHOD_META;
   protected readonly loading = signal(true);

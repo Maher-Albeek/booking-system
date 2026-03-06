@@ -14,18 +14,15 @@
     <section class="hero">
       <div class="hero-copy">
         <p class="eyebrow">Admin interface</p>
-        <h2>Manage cars, bookings, and users</h2>
-        <p>
-          Use the live Spring endpoints to maintain the fleet, monitor reservations, and
-          create or delete user accounts.
-        </p>
+        <h2>{{ heroTitle() }}</h2>
+        <p>{{ heroDescription() }}</p>
       </div>
 
       <div class="hero-actions">
         <button type="button" (click)="reload()" [disabled]="loading() || busyKey() !== null">
           {{ loading() ? 'Refreshing...' : 'Refresh admin data' }}
         </button>
-        <p class="hero-hint">Route: <code>/admin</code> | API base: <code>/api</code></p>
+        <p class="hero-hint">API base: <code>/api</code></p>
       </div>
     </section>
 
@@ -60,8 +57,51 @@
       }
     </section>
 
+    @if (showToolsPanel()) {
+      <section class="admin-layout">
+        <article class="panel users-panel">
+          <div class="panel-header">
+            <div>
+              <p class="eyebrow">Admin pages</p>
+              <h3>Choose a dedicated management page</h3>
+            </div>
+          </div>
+
+          <div class="admin-list">
+            <a routerLink="/admin/manage-offers" class="list-card">
+              <div class="list-topline">
+                <div>
+                  <strong>Manage offers</strong>
+                  <p>Open the offers management page.</p>
+                </div>
+              </div>
+            </a>
+
+            <a routerLink="/admin/manage-cars" class="list-card">
+              <div class="list-topline">
+                <div>
+                  <strong>Manage cars</strong>
+                  <p>Create, edit, and remove cars.</p>
+                </div>
+              </div>
+            </a>
+
+            <a routerLink="/admin/manage-users" class="list-card">
+              <div class="list-topline">
+                <div>
+                  <strong>Manage users</strong>
+                  <p>Create and remove user accounts.</p>
+                </div>
+              </div>
+            </a>
+          </div>
+        </article>
+      </section>
+    }
+
     <section class="admin-layout">
-      <article class="panel fleet-panel">
+      @if (showCarsPanel()) {
+        <article class="panel fleet-panel">
         <div class="panel-header">
           <div>
             <p class="eyebrow">Cars</p>
@@ -427,9 +467,11 @@
             </aside>
           </div>
         }
-      </article>
+        </article>
+      }
 
-      <article class="panel users-panel">
+      @if (showUsersPanel()) {
+        <article class="panel users-panel">
         <div class="panel-header">
           <div>
             <p class="eyebrow">Users</p>
@@ -500,7 +542,8 @@
             <p class="empty-state">No users are currently stored.</p>
           }
         </div>
-      </article>
+        </article>
+      }
     </section>
   </main>
 }

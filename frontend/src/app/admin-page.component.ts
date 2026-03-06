@@ -3,6 +3,7 @@ import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Component, DestroyRef, computed, effect, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { finalize, forkJoin, Observable } from 'rxjs';
 
 import { AuthStateService } from './auth-state.service';
@@ -52,15 +53,17 @@ type UserRole = 'USER' | 'ADMIN';
 
 @Component({
   selector: 'app-admin-page',
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, RouterLink],
   templateUrl: './admin-page.component.html',
   styleUrl: './admin-page.component.scss'
 })
 export class AdminPageComponent {
   private readonly http = inject(HttpClient);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly route = inject(ActivatedRoute);
 
   protected readonly auth = inject(AuthStateService);
+  protected readonly pageMode: 'tools' | 'offers' | 'cars' | 'users' = this.resolvePageMode();
   protected readonly loading = signal(true);
   protected readonly busyKey = signal<string | null>(null);
   protected readonly error = signal<string | null>(null);
@@ -140,6 +143,42 @@ export class AdminPageComponent {
       note: `${this.bookings().filter((booking) => booking.status === 'CONFIRMED').length} confirmed`
     }
   ]);
+
+  protected readonly heroTitle = computed(() => {
+    if (this.pageMode === 'users') {
+      return 'Manage users';
+    }
+
+    if (this.pageMode === 'offers') {
+      return 'Manage offers';
+    }
+
+    if (this.pageMode === 'cars') {
+      return 'Manage cars';
+    }
+
+    return 'Admin tools';
+  });
+
+  protected readonly heroDescription = computed(() => {
+    if (this.pageMode === 'users') {
+      return 'Create and remove user accounts from this dedicated users page.';
+    }
+
+    if (this.pageMode === 'offers') {
+      return 'Maintain public offers and vehicle availability.';
+    }
+
+    if (this.pageMode === 'cars') {
+      return 'Create, edit, and delete fleet cars.';
+    }
+
+    return 'Choose a dedicated admin area: offers, cars, or users.';
+  });
+
+  protected readonly showToolsPanel = computed(() => this.pageMode === 'tools');
+  protected readonly showCarsPanel = computed(() => this.pageMode === 'offers' || this.pageMode === 'cars');
+  protected readonly showUsersPanel = computed(() => this.pageMode === 'users');
 
   constructor() {
     effect(() => {
@@ -363,6 +402,28 @@ export class AdminPageComponent {
 
   protected primaryPhotoUrl(resource: Resource): string | null {
     return resource.photoUrls[0] ?? null;
+  }
+
+  private resolvePageMode(): 'tools' | 'offers' | 'cars' | 'users' {
+    const dataMode = this.route.snapshot.data['adminPageMode'];
+    if (dataMode === 'offers' || dataMode === 'cars' || dataMode === 'users' || dataMode === 'tools') {
+      return dataMode;
+    }
+
+    const path = this.route.snapshot.routeConfig?.path ?? '';
+    if (path.includes('manage-offers')) {
+      return 'offers';
+    }
+
+    if (path.includes('manage-cars')) {
+      return 'cars';
+    }
+
+    if (path.includes('manage-users')) {
+      return 'users';
+    }
+
+    return 'tools';
   }
 
   private loadData(): void {

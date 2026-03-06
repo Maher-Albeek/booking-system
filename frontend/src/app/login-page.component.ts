@@ -85,7 +85,7 @@ export class LoginPageComponent {
       .pipe(finalize(() => this.registerSubmitting.set(false)))
       .subscribe({
         next: () => {
-          void this.router.navigateByUrl('/user');
+          void this.router.navigateByUrl('/offers');
         },
         error: (error: HttpErrorResponse) => {
           this.registerError.set(this.readApiError(error, 'Registration failed.'));

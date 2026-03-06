@@ -1,0 +1,47 @@
+<main class="legal-shell">
+  <section class="legal-card">
+    <p class="eyebrow">Legal</p>
+    <h1>{{ title() }}</h1>
+    <p class="summary">{{ summary() }}</p>
+
+    @if (mode() === 'impressum') {
+      <dl class="legal-grid">
+        <div>
+          <dt>Company</dt>
+          <dd>Booking System GmbH</dd>
+        </div>
+        <div>
+          <dt>Address</dt>
+          <dd>Musterstrasse 10, 10115 Berlin</dd>
+        </div>
+        <div>
+          <dt>Email</dt>
+          <dd>legal@example.com</dd>
+        </div>
+        <div>
+          <dt>Phone</dt>
+          <dd>+49 30 000000</dd>
+        </div>
+      </dl>
+    } @else {
+      <dl class="legal-grid">
+        <div>
+          <dt>Data controller</dt>
+          <dd>Booking System GmbH</dd>
+        </div>
+        <div>
+          <dt>Purpose</dt>
+          <dd>Account handling, car bookings, and payment preference storage.</dd>
+        </div>
+        <div>
+          <dt>Stored fields</dt>
+          <dd>Name, email, address, bookings, and selected payment methods.</dd>
+        </div>
+        <div>
+          <dt>Requests</dt>
+          <dd>Contact legal@example.com for access, correction, or deletion.</dd>
+        </div>
+      </dl>
+    }
+  </section>
+</main>

@@ -1,30 +1,30 @@
 <main class="app-shell">
-  @if (auth.isAuthenticated()) {
-    <header class="app-chrome">
-      <div class="brand-block">
-        <img class="brand-logo" src="/favicon.ico" alt="Booking System logo" />
-        <div class="brand-copy">
-          <p class="eyebrow">Booking System</p>
-          <strong>{{ pageTitle() }}</strong>
-          <span>{{ pageSummary() }}</span>
-        </div>
+  <header class="app-chrome">
+    <div class="brand-block">
+      <img class="brand-logo" src="/favicon.ico" alt="Booking System logo" />
+      <div class="brand-copy">
+        <p class="eyebrow">Booking System</p>
+        <strong>{{ pageTitle() }}</strong>
+        <span>{{ pageSummary() }}</span>
       </div>
+    </div>
 
-      <nav class="route-switcher" aria-label="Interface switcher">
-        <a routerLink="/user" routerLinkActive="active" class="route-link">User Page</a>
-        @if (auth.isAdmin()) {
-          <a routerLink="/admin" routerLinkActive="active" class="route-link">Admin Page</a>
-        }
-      </nav>
-
-      <div class="user-menu-shell">
-        <button
-          type="button"
-          class="user-menu-trigger"
-          [attr.aria-expanded]="userMenuOpen()"
-          aria-haspopup="menu"
-          (click)="toggleUserMenu()"
+    <nav class="route-switcher" aria-label="Main navigation">
+      @for (link of navLinks(); track link.path) {
+        <a
+          [routerLink]="link.path"
+          routerLinkActive="active"
+          [routerLinkActiveOptions]="{ exact: true }"
+          class="route-link"
         >
+          {{ link.label }}
+        </a>
+      }
+    </nav>
+
+    <div class="session-shell">
+      @if (auth.isAuthenticated()) {
+        <span class="session-pill">
           <span class="avatar-circle">
             @if (auth.user()?.avatarUrl) {
               <img [src]="auth.user()?.avatarUrl" alt="User avatar" />
@@ -32,43 +32,18 @@
               <span>{{ userInitials() }}</span>
             }
           </span>
-
-          <span class="user-menu-copy">
-            <span>{{ auth.user()?.name }}</span>
-            <strong>{{ auth.user()?.role === 'ADMIN' ? 'Administrator' : 'Customer' }}</strong>
+          <span class="session-copy">
+            <strong>{{ auth.user()?.name }}</strong>
+            <small>{{ roleLabel() }}</small>
           </span>
+        </span>
 
-          <i class="menu-chevron fa-solid fa-chevron-down" aria-hidden="true"></i>
-        </button>
-
-        @if (userMenuOpen()) {
-          <div class="user-menu" role="menu">
-            <a routerLink="/account" class="menu-link" role="menuitem" (click)="closeUserMenu()">
-              <i class="menu-icon fa-solid fa-user-gear" aria-hidden="true"></i>
-              <span>Manage account</span>
-            </a>
-
-            <a routerLink="/user" fragment="reservations" class="menu-link" role="menuitem" (click)="closeUserMenu()">
-              <i class="menu-icon fa-solid fa-calendar-check" aria-hidden="true"></i>
-              <span>My bookings</span>
-            </a>
-
-            @if (auth.isAdmin()) {
-              <a routerLink="/admin" class="menu-link" role="menuitem" (click)="closeUserMenu()">
-                <i class="menu-icon fa-solid fa-screwdriver-wrench" aria-hidden="true"></i>
-                <span>Admin tools</span>
-              </a>
-            }
-
-            <button type="button" class="menu-link logout-link" role="menuitem" (click)="logout()">
-              <i class="menu-icon fa-solid fa-right-from-bracket" aria-hidden="true"></i>
-              <span>Logout</span>
-            </button>
-          </div>
-        }
-      </div>
-    </header>
-  }
+        <button type="button" class="logout-button" (click)="logout()">Logout</button>
+      } @else {
+        <span class="guest-pill">Guest mode</span>
+      }
+    </div>
+  </header>
 
   <router-outlet></router-outlet>
 </main>

@@ -18,7 +18,7 @@ export const adminGuard: CanActivateFn = () => {
     return router.createUrlTree(['/login']);
   }
 
-  return auth.isAdmin() ? true : router.createUrlTree(['/user']);
+  return auth.isAdmin() ? true : router.createUrlTree(['/offers']);
 };
 
 export const loginRedirectGuard: CanActivateFn = () => {
