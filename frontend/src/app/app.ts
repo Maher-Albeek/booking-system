@@ -1,13 +1,13 @@
 import { CommonModule } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
 import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { FormsModule } from '@angular/forms';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
-import { filter } from 'rxjs';
+import { filter, finalize } from 'rxjs';
 
 import { AuthStateService } from './auth-state.service';
 import { LANGUAGE_OPTIONS, I18nService, LanguageCode } from './i18n.service';
-
-type HeaderSection = 'login' | 'offers' | 'bookings' | 'profile' | 'payment' | 'admin' | 'legal';
 
 type HeaderLink = {
   path: string;
@@ -16,7 +16,7 @@ type HeaderLink = {
 
 @Component({
   selector: 'app-root',
-  imports: [CommonModule, RouterLink, RouterLinkActive, RouterOutlet],
+  imports: [CommonModule, FormsModule, RouterLink, RouterLinkActive, RouterOutlet],
   templateUrl: './app.html',
   styleUrl: './app.scss'
 })
@@ -27,54 +27,23 @@ export class App {
   protected readonly auth = inject(AuthStateService);
   protected readonly i18n = inject(I18nService);
   protected readonly languageOptions = LANGUAGE_OPTIONS;
-  protected readonly activeSection = signal<HeaderSection>('offers');
-
-  protected readonly pageTitle = computed(() =>
-    this.activeSection() === 'admin'
-      ? this.i18n.t('app.title.admin')
-      : this.activeSection() === 'profile'
-        ? this.i18n.t('app.title.profile')
-      : this.activeSection() === 'bookings'
-        ? this.i18n.t('app.title.bookings')
-      : this.activeSection() === 'payment'
-        ? this.i18n.t('app.title.payment')
-      : this.activeSection() === 'legal'
-        ? this.i18n.t('app.title.legal')
-      : this.activeSection() === 'login'
-        ? this.i18n.t('app.title.login')
-      : this.i18n.t('app.title.offers')
-  );
-
-  protected readonly pageSummary = computed(() =>
-    this.activeSection() === 'admin'
-      ? this.i18n.t('app.summary.admin')
-      : this.activeSection() === 'profile'
-        ? this.i18n.t('app.summary.profile')
-      : this.activeSection() === 'bookings'
-        ? this.i18n.t('app.summary.bookings')
-      : this.activeSection() === 'payment'
-        ? this.i18n.t('app.summary.payment')
-      : this.activeSection() === 'legal'
-        ? this.i18n.t('app.summary.legal')
-      : this.activeSection() === 'login'
-        ? this.i18n.t('app.summary.login')
-      : this.i18n.t('app.summary.offers')
-  );
-
-  protected readonly roleLabel = computed(() => {
-    if (!this.auth.isAuthenticated()) {
-      return this.i18n.t('app.role.guest');
-    }
-
-    return this.auth.isAdmin() ? this.i18n.t('app.role.admin') : this.i18n.t('app.role.user');
-  });
+  protected readonly menuOpen = signal(false);
+  protected readonly authModalOpen = signal(false);
+  protected readonly authMode = signal<'login' | 'register'>('login');
+  protected readonly identifier = signal('');
+  protected readonly password = signal('');
+  protected readonly submitting = signal(false);
+  protected readonly error = signal<string | null>(null);
+  protected readonly registerName = signal('');
+  protected readonly registerEmail = signal('');
+  protected readonly registerPassword = signal('');
+  protected readonly registerSubmitting = signal(false);
+  protected readonly registerError = signal<string | null>(null);
 
   protected readonly navLinks = computed<HeaderLink[]>(() => {
     const links: HeaderLink[] = [{ path: '/offers', label: this.i18n.t('app.link.offers') }];
 
-    if (!this.auth.isAuthenticated()) {
-      links.push({ path: '/login', label: this.i18n.t('app.link.login') });
-    } else {
+    if (this.auth.isAuthenticated()) {
       links.push(
         { path: '/my-profile', label: this.i18n.t('app.link.myProfile') },
         { path: '/my-bookings', label: this.i18n.t('app.link.myBookings') },
@@ -112,7 +81,7 @@ export class App {
   });
 
   constructor() {
-    this.syncActiveSection(this.router.url);
+    this.handleRoute(this.router.url);
 
     this.router.events
       .pipe(
@@ -120,12 +89,98 @@ export class App {
         takeUntilDestroyed(this.destroyRef)
       )
       .subscribe((event) => {
-        this.syncActiveSection(event.urlAfterRedirects);
+        this.handleRoute(event.urlAfterRedirects);
+      });
+  }
+
+  protected toggleMenu(): void {
+    this.menuOpen.update((value) => !value);
+  }
+
+  protected closeMenu(): void {
+    this.menuOpen.set(false);
+  }
+
+  protected openAuthModal(mode: 'login' | 'register' = 'login'): void {
+    this.setAuthMode(mode);
+    this.authModalOpen.set(true);
+    this.closeMenu();
+  }
+
+  protected closeAuthModal(): void {
+    this.authModalOpen.set(false);
+    this.error.set(null);
+    this.registerError.set(null);
+  }
+
+  protected setAuthMode(mode: 'login' | 'register'): void {
+    this.authMode.set(mode);
+    this.error.set(null);
+    this.registerError.set(null);
+  }
+
+  protected submitLogin(): void {
+    const identifier = this.identifier().trim();
+    const password = this.password().trim();
+
+    if (!identifier || !password) {
+      this.error.set(this.i18n.t('login.error.credentialsRequired'));
+      return;
+    }
+
+    this.submitting.set(true);
+    this.error.set(null);
+
+    this.auth
+      .login(identifier, password)
+      .pipe(finalize(() => this.submitting.set(false)))
+      .subscribe({
+        next: () => {
+          this.closeAuthModal();
+          void this.router.navigateByUrl(this.auth.landingRoute());
+        },
+        error: (error: HttpErrorResponse) => {
+          this.error.set(this.readApiError(error, this.i18n.t('login.error.loginFailed')));
+        }
+      });
+  }
+
+  protected submitRegistration(): void {
+    const name = this.registerName().trim();
+    const email = this.registerEmail().trim();
+    const password = this.registerPassword().trim();
+
+    if (!name || !email) {
+      this.registerError.set(this.i18n.t('login.error.registrationNameEmailRequired'));
+      return;
+    }
+
+    if (password.length < 6) {
+      this.registerError.set(this.i18n.t('login.error.passwordLength'));
+      return;
+    }
+
+    this.registerSubmitting.set(true);
+    this.registerError.set(null);
+
+    this.auth
+      .register(name, email, password)
+      .pipe(finalize(() => this.registerSubmitting.set(false)))
+      .subscribe({
+        next: () => {
+          this.closeAuthModal();
+          void this.router.navigateByUrl('/offers');
+        },
+        error: (error: HttpErrorResponse) => {
+          this.registerError.set(this.readApiError(error, this.i18n.t('login.error.registrationFailed')));
+        }
       });
   }
 
   protected logout(): void {
     this.auth.logout();
+    this.closeMenu();
+    this.closeAuthModal();
     void this.router.navigate(['/offers']);
   }
 
@@ -143,39 +198,32 @@ export class App {
     this.setLanguage(language);
   }
 
-  private syncActiveSection(url: string): void {
-    const path = url.split('?')[0];
+  private handleRoute(url: string): void {
+    this.closeMenu();
 
-    if (path.startsWith('/admin')) {
-      this.activeSection.set('admin');
+    const [path, query = ''] = url.split('?');
+    if (!path.startsWith('/login')) {
       return;
     }
 
-    if (path.startsWith('/my-profile') || path.startsWith('/account')) {
-      this.activeSection.set('profile');
-      return;
+    const params = new URLSearchParams(query);
+    const mode = params.get('mode') === 'register' ? 'register' : 'login';
+    this.openAuthModal(mode);
+    void this.router.navigate(['/offers'], { replaceUrl: true });
+  }
+
+  private readApiError(error: HttpErrorResponse, fallback: string): string {
+    if (typeof error.error === 'string' && error.error.trim()) {
+      return error.error;
     }
 
-    if (path.startsWith('/my-bookings')) {
-      this.activeSection.set('bookings');
-      return;
+    if (error.error && typeof error.error === 'object') {
+      const message = (error.error as { message?: string }).message;
+      if (message) {
+        return message;
+      }
     }
 
-    if (path.startsWith('/payment-methods')) {
-      this.activeSection.set('payment');
-      return;
-    }
-
-    if (path.startsWith('/impressum') || path.startsWith('/datenschutz')) {
-      this.activeSection.set('legal');
-      return;
-    }
-
-    if (path.startsWith('/login')) {
-      this.activeSection.set('login');
-      return;
-    }
-
-    this.activeSection.set('offers');
+    return fallback;
   }
 }
