@@ -11,11 +11,13 @@ public class Resources {
     private String location;
     private String model;
     private String carType;
+    private String color;
     private Integer year;
     private Integer seats;
     private String transmission;
     private String fuelType;
     private Double dailyPrice;
+    private String priceUnit;
     private Integer baggageBags;
     private Boolean hasAirConditioning;
     private Integer horsepower;
@@ -43,6 +45,9 @@ public class Resources {
     public String getCarType() { return carType; }
     public void setCarType(String carType) { this.carType = normalizeText(carType); }
 
+    public String getColor() { return color; }
+    public void setColor(String color) { this.color = normalizeText(color); }
+
     public Integer getYear() { return year; }
     public void setYear(Integer year) { this.year = year != null && year > 0 ? year : null; }
 
@@ -59,6 +64,9 @@ public class Resources {
     public void setDailyPrice(Double dailyPrice) {
         this.dailyPrice = dailyPrice != null && dailyPrice >= 0 ? dailyPrice : null;
     }
+
+    public String getPriceUnit() { return priceUnit; }
+    public void setPriceUnit(String priceUnit) { this.priceUnit = normalizeText(priceUnit); }
 
     public Integer getBaggageBags() { return baggageBags; }
     public void setBaggageBags(Integer baggageBags) {

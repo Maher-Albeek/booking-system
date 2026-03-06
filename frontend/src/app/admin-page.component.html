@@ -476,6 +476,16 @@
           </label>
 
           <label class="field">
+            <span>{{ i18n.t('admin.field.color') }}</span>
+            <input
+              type="text"
+              name="carColor"
+              [(ngModel)]="carDraft.color"
+              [placeholder]="i18n.t('admin.placeholder.color')"
+            />
+          </label>
+
+          <label class="field">
             <span>{{ i18n.t('admin.field.year') }}</span>
             <input
               type="number"
@@ -528,6 +538,16 @@
               min="0"
               step="0.01"
               placeholder="79.90"
+            />
+          </label>
+
+          <label class="field">
+            <span>{{ i18n.t('admin.field.priceUnit') }}</span>
+            <input
+              type="text"
+              name="carPriceUnit"
+              [(ngModel)]="carDraft.priceUnit"
+              [placeholder]="i18n.t('admin.placeholder.priceUnit')"
             />
           </label>
 
@@ -639,6 +659,7 @@
                 <span class="chip"><i class="fa-solid fa-user-group" aria-hidden="true"></i> {{ car.seats ?? '-' }}</span>
                 <span class="chip"><i class="fa-solid fa-suitcase-rolling" aria-hidden="true"></i> {{ car.baggageBags ?? '-' }}</span>
                 <span class="chip"><i class="fa-solid fa-gears" aria-hidden="true"></i> {{ car.transmission || i18n.t('common.notSet') }}</span>
+                <span class="chip"><i class="fa-solid fa-palette" aria-hidden="true"></i> {{ car.color || i18n.t('common.notSet') }}</span>
               </div>
 
               <div class="car-image-wrap">
@@ -654,8 +675,8 @@
               </p>
 
               <div class="car-price-line">
-                <strong>{{ formatCurrency(car.dailyPrice) }} / {{ i18n.t('admin.car.perDay') }}</strong>
-                <span>{{ formatCurrency(car.dailyPrice) }} {{ i18n.t('admin.car.totalPrice') }}</span>
+                <strong>{{ formatPrice(car.dailyPrice, car.priceUnit) }} / {{ i18n.t('admin.car.perDay') }}</strong>
+                <span>{{ formatPrice(car.dailyPrice, car.priceUnit) }} {{ i18n.t('admin.car.totalPrice') }}</span>
               </div>
             </article>
           } @empty {
@@ -692,6 +713,10 @@
                   <dd>{{ selectedCar.carType || i18n.t('common.notSet') }}</dd>
                 </div>
                 <div>
+                  <dt>{{ i18n.t('admin.field.color') }}</dt>
+                  <dd>{{ selectedCar.color || i18n.t('common.notSet') }}</dd>
+                </div>
+                <div>
                   <dt>{{ i18n.t('admin.field.year') }}</dt>
                   <dd>{{ selectedCar.year ?? i18n.t('common.notSet') }}</dd>
                 </div>
@@ -709,7 +734,11 @@
                 </div>
                 <div>
                   <dt>{{ i18n.t('admin.field.pricePerDay') }}</dt>
-                  <dd>{{ formatCurrency(selectedCar.dailyPrice) }}</dd>
+                  <dd>{{ formatPrice(selectedCar.dailyPrice, selectedCar.priceUnit) }}</dd>
+                </div>
+                <div>
+                  <dt>{{ i18n.t('admin.field.priceUnit') }}</dt>
+                  <dd>{{ selectedCar.priceUnit || i18n.t('common.notSet') }}</dd>
                 </div>
                 <div>
                   <dt>{{ i18n.t('admin.field.baggage') }}</dt>

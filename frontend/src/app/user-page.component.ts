@@ -63,11 +63,13 @@ type Resource = {
   location: string;
   model: string | null;
   carType: string | null;
+  color: string | null;
   year: number | null;
   seats: number | null;
   transmission: string | null;
   fuelType: string | null;
   dailyPrice: number | null;
+  priceUnit: string | null;
   baggageBags: number | null;
   hasAirConditioning: boolean | null;
   horsepower: number | null;
@@ -682,7 +684,7 @@ export class UserPageComponent {
           let pricingNote = '';
           if (estimatedTotalPrice !== null && estimatedDays) {
             pricingNote = ` ${this.i18n.t('user.success.totalPrice', {
-              total: this.formatCurrency(estimatedTotalPrice),
+              total: this.formatPrice(estimatedTotalPrice, selectedCar.priceUnit),
               days: estimatedDays
             })}`;
           }
@@ -842,7 +844,7 @@ export class UserPageComponent {
     }
 
     const total = Number((car.dailyPrice * days).toFixed(2));
-    return this.i18n.t('user.label.totalWithDays', { total: this.formatCurrency(total), days });
+    return this.i18n.t('user.label.totalWithDays', { total: this.formatPrice(total, car.priceUnit), days });
   }
 
   private loadData(): void {
@@ -1038,11 +1040,13 @@ export class UserPageComponent {
       ...resource,
       model: resource.model ?? null,
       carType: resource.carType ?? null,
+      color: this.normalizeText(resource.color),
       year: this.normalizeWholeNumber(resource.year),
       seats: this.normalizeWholeNumber(resource.seats),
       transmission: resource.transmission ?? null,
       fuelType: resource.fuelType ?? null,
       dailyPrice: this.normalizeDecimal(resource.dailyPrice),
+      priceUnit: this.normalizePriceUnit(resource.priceUnit),
       baggageBags: this.normalizeWholeNumber(resource.baggageBags),
       hasAirConditioning:
         typeof resource.hasAirConditioning === 'boolean' ? resource.hasAirConditioning : null,
@@ -1185,11 +1189,17 @@ export class UserPageComponent {
     return `${this.formatDay(start)} | ${this.formatTime(start)} - ${this.formatTime(end)}`;
   }
 
-  protected formatCurrency(value: number): string {
-    return new Intl.NumberFormat(this.i18n.locale(), {
-      style: 'currency',
-      currency: 'EUR'
+  protected formatPrice(value: number | null | undefined, priceUnit: string | null | undefined): string {
+    if (typeof value !== 'number' || Number.isNaN(value)) {
+      return this.i18n.t('common.notSet');
+    }
+
+    const normalizedUnit = this.normalizePriceUnit(priceUnit);
+    const formattedValue = new Intl.NumberFormat(this.i18n.locale(), {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
     }).format(value);
+    return `${formattedValue} ${normalizedUnit}`;
   }
 
   private calculateRentalDays(startValue: string, endValue: string): number | null {
@@ -1222,6 +1232,15 @@ export class UserPageComponent {
     }
 
     return Number(value.toFixed(2));
+  }
+
+  private normalizeText(value: string | null | undefined): string | null {
+    const normalizedValue = (value ?? '').trim();
+    return normalizedValue || null;
+  }
+
+  private normalizePriceUnit(value: string | null | undefined): string {
+    return this.normalizeText(value) ?? '€';
   }
 
   private normalizePositiveInt(value: unknown): number | null {

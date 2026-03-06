@@ -218,6 +218,7 @@
                 <span class="chip"><i class="fa-solid fa-user-group" aria-hidden="true"></i> {{ car.seats ?? '-' }}</span>
                 <span class="chip"><i class="fa-solid fa-suitcase-rolling" aria-hidden="true"></i> {{ car.baggageBags ?? '-' }}</span>
                 <span class="chip"><i class="fa-solid fa-gears" aria-hidden="true"></i> {{ car.transmission || i18n.t('common.notSet') }}</span>
+                <span class="chip"><i class="fa-solid fa-palette" aria-hidden="true"></i> {{ car.color || i18n.t('common.notSet') }}</span>
               </div>
 
               <div class="car-image-wrap">
@@ -233,8 +234,8 @@
               </p>
 
               <div class="car-price-line">
-                <strong>{{ car.dailyPrice !== null ? formatCurrency(car.dailyPrice) : i18n.t('common.notSet') }} / {{ i18n.t('user.fleet.perDay') }}</strong>
-                <span>{{ car.dailyPrice !== null ? formatCurrency(car.dailyPrice) : i18n.t('common.notSet') }} {{ i18n.t('user.fleet.totalPrice') }}</span>
+                <strong>{{ formatPrice(car.dailyPrice, car.priceUnit) }} / {{ i18n.t('user.fleet.perDay') }}</strong>
+                <span>{{ formatPrice(car.dailyPrice, car.priceUnit) }} {{ i18n.t('user.fleet.totalPrice') }}</span>
               </div>
             </article>
           } @empty {
@@ -272,7 +273,11 @@
               </div>
               <div>
                 <dt>{{ i18n.t('user.car.pricePerDay') }}</dt>
-                <dd>{{ selectedCarDetails.dailyPrice !== null ? formatCurrency(selectedCarDetails.dailyPrice) : i18n.t('common.notSet') }}</dd>
+                <dd>{{ formatPrice(selectedCarDetails.dailyPrice, selectedCarDetails.priceUnit) }}</dd>
+              </div>
+              <div>
+                <dt>{{ i18n.t('user.car.color') }}</dt>
+                <dd>{{ selectedCarDetails.color || i18n.t('common.notSet') }}</dd>
               </div>
               <div>
                 <dt>{{ i18n.t('user.car.model') }}</dt>
@@ -476,7 +481,7 @@
             <p>
               {{ selectedCar()!.model || i18n.t('user.modal.modelNotSet') }} | {{ selectedCar()!.carType || selectedCar()!.type }}
               | {{ selectedCar()!.seats ?? '-' }} {{ i18n.t('user.modal.seats') }} | {{ selectedCar()!.transmission || '-' }}
-              | {{ selectedCar()!.fuelType || '-' }}
+              | {{ selectedCar()!.fuelType || '-' }} | {{ i18n.t('user.car.color') }}: {{ selectedCar()!.color || '-' }}
             </p>
             <p>
               {{ selectedCar()!.baggageBags !== null ? selectedCar()!.baggageBags + ' ' + i18n.t('user.car.bags') : i18n.t('user.modal.baggageDash') }}
@@ -502,12 +507,12 @@
           <section class="client-summary">
             <span>{{ i18n.t('user.modal.priceSummary') }}</span>
             <strong>
-              {{ formatCurrency(bookingPricePreview()!.totalPrice) }}
+              {{ formatPrice(bookingPricePreview()!.totalPrice, selectedCar()!.priceUnit) }}
             </strong>
             <p>
               {{ bookingPricePreview()!.days }} {{ bookingPricePreview()!.days === 1 ? i18n.t('common.day') : i18n.t('common.days') }}
               x
-              {{ formatCurrency(bookingPricePreview()!.dailyPrice) }}
+              {{ formatPrice(bookingPricePreview()!.dailyPrice, selectedCar()!.priceUnit) }}
             </p>
           </section>
         }

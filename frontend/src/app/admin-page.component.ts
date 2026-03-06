@@ -17,11 +17,13 @@ type Resource = {
   location: string;
   model: string | null;
   carType: string | null;
+  color: string | null;
   year: number | null;
   seats: number | null;
   transmission: string | null;
   fuelType: string | null;
   dailyPrice: number | null;
+  priceUnit: string | null;
   baggageBags: number | null;
   hasAirConditioning: boolean | null;
   horsepower: number | null;
@@ -121,11 +123,13 @@ export class AdminPageComponent {
     location: '',
     model: '',
     carType: '',
+    color: '',
     year: null as number | null,
     seats: null as number | null,
     transmission: 'Automatic',
     fuelType: 'Benzin',
     dailyPrice: null as number | null,
+    priceUnit: '€',
     baggageBags: null as number | null,
     hasAirConditioning: true,
     horsepower: null as number | null,
@@ -424,11 +428,13 @@ export class AdminPageComponent {
       location: car.location,
       model: car.model ?? '',
       carType: car.carType ?? '',
+      color: car.color ?? '',
       year: car.year,
       seats: car.seats,
       transmission: car.transmission ?? 'Automatic',
       fuelType: car.fuelType ?? 'Benzin',
       dailyPrice: car.dailyPrice,
+      priceUnit: car.priceUnit ?? '€',
       baggageBags: car.baggageBags,
       hasAirConditioning: car.hasAirConditioning ?? true,
       horsepower: car.horsepower,
@@ -579,15 +585,17 @@ export class AdminPageComponent {
     return hasAirConditioning ? this.i18n.t('common.yes') : this.i18n.t('common.no');
   }
 
-  protected formatCurrency(amount: number | null | undefined): string {
+  protected formatPrice(amount: number | null | undefined, priceUnit: string | null | undefined): string {
     if (typeof amount !== 'number' || Number.isNaN(amount)) {
       return this.i18n.t('common.notSet');
     }
 
-    return new Intl.NumberFormat(this.i18n.locale(), {
-      style: 'currency',
-      currency: 'EUR'
+    const normalizedUnit = this.normalizePriceUnit(priceUnit);
+    const formattedAmount = new Intl.NumberFormat(this.i18n.locale(), {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
     }).format(amount);
+    return `${formattedAmount} ${normalizedUnit}`;
   }
 
   protected primaryPhotoUrl(resource: Resource): string | null {
@@ -688,11 +696,13 @@ export class AdminPageComponent {
       location: '',
       model: '',
       carType: '',
+      color: '',
       year: null,
       seats: null,
       transmission: 'Automatic',
       fuelType: 'Benzin',
       dailyPrice: null,
+      priceUnit: '€',
       baggageBags: null,
       hasAirConditioning: true,
       horsepower: null,
@@ -831,11 +841,13 @@ export class AdminPageComponent {
       ...resource,
       model: resource.model ?? null,
       carType: resource.carType ?? null,
+      color: this.normalizeText(resource.color),
       year: this.normalizeWholeNumber(resource.year),
       seats: this.normalizeWholeNumber(resource.seats),
       transmission: resource.transmission ?? null,
       fuelType: resource.fuelType ?? null,
       dailyPrice: this.normalizeDecimal(resource.dailyPrice),
+      priceUnit: this.normalizePriceUnit(resource.priceUnit),
       baggageBags: this.normalizeWholeNumber(resource.baggageBags),
       hasAirConditioning:
         typeof resource.hasAirConditioning === 'boolean' ? resource.hasAirConditioning : null,
@@ -852,11 +864,13 @@ export class AdminPageComponent {
       location,
       model: this.carDraft.model.trim() || null,
       carType: this.carDraft.carType.trim() || null,
+      color: this.normalizeText(this.carDraft.color),
       year: this.normalizeWholeNumber(this.carDraft.year),
       seats: this.normalizeWholeNumber(this.carDraft.seats),
       transmission: this.carDraft.transmission.trim() || null,
       fuelType: this.carDraft.fuelType.trim() || null,
       dailyPrice: this.normalizeDecimal(this.carDraft.dailyPrice),
+      priceUnit: this.normalizePriceUnit(this.carDraft.priceUnit),
       baggageBags: this.normalizeWholeNumber(this.carDraft.baggageBags),
       hasAirConditioning: this.carDraft.hasAirConditioning,
       horsepower: this.normalizeWholeNumber(this.carDraft.horsepower),
@@ -879,6 +893,15 @@ export class AdminPageComponent {
     }
 
     return Number(value.toFixed(2));
+  }
+
+  private normalizeText(value: string | null | undefined): string | null {
+    const normalizedValue = (value ?? '').trim();
+    return normalizedValue || null;
+  }
+
+  private normalizePriceUnit(value: string | null | undefined): string {
+    return this.normalizeText(value) ?? '€';
   }
 
   private parsePhotoUrls(value: string): string[] {
