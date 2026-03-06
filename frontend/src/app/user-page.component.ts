@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
-import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, computed, effect, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
@@ -259,21 +259,31 @@ export class UserPageComponent {
     return startDate > endDate;
   });
 
+  protected readonly hasCompleteSearchFilters = computed(() => {
+    const location = this.searchLocation().trim();
+    const start = this.searchStartDate().trim();
+    const end = this.searchEndDate().trim();
+    return Boolean(location && start && end);
+  });
+
   protected readonly filteredCarSummaries = computed<CarSummary[]>(() => {
+    if (!this.hasCompleteSearchFilters()) {
+      return [];
+    }
+
     const locationQuery = this.searchLocation().trim().toLowerCase();
     const start = this.searchStartDate().trim();
     const end = this.searchEndDate().trim();
-    const hasValidDateRange = Boolean(start && end && !this.searchDateRangeInvalid());
-    const requestedStart = hasValidDateRange ? new Date(`${start}T00:00:00`) : null;
-    const requestedEnd = hasValidDateRange ? new Date(`${end}T23:59:59`) : null;
+    const requestedStart = new Date(`${start}T00:00:00`);
+    const requestedEnd = new Date(`${end}T23:59:59`);
+
+    if (Number.isNaN(requestedStart.getTime()) || Number.isNaN(requestedEnd.getTime())) {
+      return [];
+    }
 
     return this.carSummaries().filter((car) => {
-      const matchesLocation = !locationQuery || car.location.toLowerCase().includes(locationQuery);
-      const matchesDateRange =
-        !hasValidDateRange ||
-        (requestedStart !== null &&
-          requestedEnd !== null &&
-          this.isCarAvailableInDateRange(car.id, requestedStart, requestedEnd));
+      const matchesLocation = car.location.toLowerCase().includes(locationQuery);
+      const matchesDateRange = this.isCarAvailableInDateRange(car.id, requestedStart, requestedEnd);
 
       return matchesLocation && matchesDateRange;
     });
@@ -410,6 +420,10 @@ export class UserPageComponent {
   );
 
   constructor() {
+    effect(() => {
+      this.syncSearchFiltersFromInput();
+    });
+
     this.loadData();
   }
 
@@ -746,13 +760,7 @@ export class UserPageComponent {
   }
 
   protected applySearchFilters(): void {
-    if (this.searchDateRangeInvalid()) {
-      return;
-    }
-
-    this.searchLocation.set(this.searchLocationInput().trim());
-    this.searchStartDate.set(this.searchStartDateInput().trim());
-    this.searchEndDate.set(this.searchEndDateInput().trim());
+    this.syncSearchFiltersFromInput();
   }
 
   protected clearSearchFilters(): void {
@@ -762,6 +770,27 @@ export class UserPageComponent {
     this.searchLocation.set('');
     this.searchStartDate.set('');
     this.searchEndDate.set('');
+  }
+
+  private syncSearchFiltersFromInput(): void {
+    const location = this.searchLocationInput().trim();
+    const start = this.searchStartDateInput().trim();
+    const end = this.searchEndDateInput().trim();
+    const hasInvalidDateRange = this.searchDateRangeInvalid();
+
+    if (!location || !start || !end || hasInvalidDateRange) {
+      this.searchLocation.set('');
+      this.searchStartDate.set('');
+      this.searchEndDate.set('');
+      if (this.carDetailsId() !== null) {
+        this.carDetailsId.set(null);
+      }
+      return;
+    }
+
+    this.searchLocation.set(location);
+    this.searchStartDate.set(start);
+    this.searchEndDate.set(end);
   }
 
   protected bookingContactName(booking: Booking): string {

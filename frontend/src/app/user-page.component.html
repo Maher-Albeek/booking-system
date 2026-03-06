@@ -154,49 +154,53 @@
         </div>
       </div>
 
-      <div class="car-showcase-grid">
-        @for (car of filteredCarSummaries(); track car.id) {
-          <article
-            class="car-showcase-card"
-            [class.inactive]="!car.active"
-            role="button"
-            tabindex="0"
-            (click)="openCarDetails(car.id)"
-            (keydown)="onCarCardKeydown($event, car.id)"
-          >
-            <div class="car-showcase-head">
-              <strong>{{ car.name | uppercase }}</strong>
-              <p>{{ car.description || car.carType || 'Fleet vehicle' }}</p>
-            </div>
+      @if (!hasCompleteSearchFilters()) {
+        <p class="empty-state">Enter location, start date, and end date to display available cars.</p>
+      } @else {
+        <div class="car-showcase-grid">
+          @for (car of filteredCarSummaries(); track car.id) {
+            <article
+              class="car-showcase-card"
+              [class.inactive]="!car.active"
+              role="button"
+              tabindex="0"
+              (click)="openCarDetails(car.id)"
+              (keydown)="onCarCardKeydown($event, car.id)"
+            >
+              <div class="car-showcase-head">
+                <strong>{{ car.name | uppercase }}</strong>
+                <p>{{ car.description || car.carType || 'Fleet vehicle' }}</p>
+              </div>
 
-            <div class="car-chip-row">
-              <span class="chip">{{ car.carType || 'Oder ahnliches Modell' }}</span>
-              <span class="chip"><i class="fa-solid fa-user-group" aria-hidden="true"></i> {{ car.seats ?? '-' }}</span>
-              <span class="chip"><i class="fa-solid fa-suitcase-rolling" aria-hidden="true"></i> {{ car.baggageBags ?? '-' }}</span>
-              <span class="chip"><i class="fa-solid fa-gears" aria-hidden="true"></i> {{ car.transmission || 'Not set' }}</span>
-            </div>
+              <div class="car-chip-row">
+                <span class="chip">{{ car.carType || 'Oder ahnliches Modell' }}</span>
+                <span class="chip"><i class="fa-solid fa-user-group" aria-hidden="true"></i> {{ car.seats ?? '-' }}</span>
+                <span class="chip"><i class="fa-solid fa-suitcase-rolling" aria-hidden="true"></i> {{ car.baggageBags ?? '-' }}</span>
+                <span class="chip"><i class="fa-solid fa-gears" aria-hidden="true"></i> {{ car.transmission || 'Not set' }}</span>
+              </div>
 
-            <div class="car-image-wrap">
-              @if (primaryPhotoUrl(car); as photoUrl) {
-                <img class="showcase-image" [src]="photoUrl" [alt]="car.name" />
-              } @else {
-                <div class="showcase-image placeholder">No image uploaded</div>
-              }
-            </div>
+              <div class="car-image-wrap">
+                @if (primaryPhotoUrl(car); as photoUrl) {
+                  <img class="showcase-image" [src]="photoUrl" [alt]="car.name" />
+                } @else {
+                  <div class="showcase-image placeholder">No image uploaded</div>
+                }
+              </div>
 
-            <p class="car-availability">
-              <i class="fa-solid fa-check" aria-hidden="true"></i> Unbegrenzte Kilometer verfugbar
-            </p>
+              <p class="car-availability">
+                <i class="fa-solid fa-check" aria-hidden="true"></i> Unbegrenzte Kilometer verfugbar
+              </p>
 
-            <div class="car-price-line">
-              <strong>{{ car.dailyPrice !== null ? formatCurrency(car.dailyPrice) : 'Not set' }} / Tag</strong>
-              <span>{{ car.dailyPrice !== null ? formatCurrency(car.dailyPrice) : 'Not set' }} Gesamtpreis</span>
-            </div>
-          </article>
-        } @empty {
-          <p class="empty-state">No cars match your current search filters.</p>
-        }
-      </div>
+              <div class="car-price-line">
+                <strong>{{ car.dailyPrice !== null ? formatCurrency(car.dailyPrice) : 'Not set' }} / Tag</strong>
+                <span>{{ car.dailyPrice !== null ? formatCurrency(car.dailyPrice) : 'Not set' }} Gesamtpreis</span>
+              </div>
+            </article>
+          } @empty {
+            <p class="empty-state">No cars match your current search filters.</p>
+          }
+        </div>
+      }
 
       @if (selectedCarDetails(); as selectedCarDetails) {
         <div class="car-details-overlay" (click)="closeCarDetails()">
