@@ -1,22 +1,21 @@
 <section class="login-shell">
   <article class="login-card">
     <div class="login-copy">
-      <p class="eyebrow">Booking System</p>
-      <h1>{{ mode() === 'login' ? 'Sign in to continue' : 'Create your user account' }}</h1>
+      <p class="eyebrow">{{ i18n.t('app.brand') }}</p>
+      <h1>{{ mode() === 'login' ? i18n.t('login.title.signIn') : i18n.t('login.title.register') }}</h1>
       <p>
-        Browse cars as a guest, then sign in to book. If you do not have an account yet, register
-        here and the app will create a <code>USER</code> account for you.
+        {{ i18n.t('login.description') }}
       </p>
     </div>
 
-    <div class="mode-switch" aria-label="Authentication mode">
+    <div class="mode-switch" [attr.aria-label]="i18n.t('login.mode.aria')">
       <button
         type="button"
         class="mode-button"
         [class.active]="mode() === 'login'"
         (click)="setMode('login')"
       >
-        Login
+        {{ i18n.t('login.mode.login') }}
       </button>
       <button
         type="button"
@@ -24,100 +23,100 @@
         [class.active]="mode() === 'register'"
         (click)="setMode('register')"
       >
-        Register
+        {{ i18n.t('login.mode.register') }}
       </button>
     </div>
 
     @if (mode() === 'login') {
       @if (error()) {
         <section class="login-banner error">
-          <strong>Authentication issue</strong>
+          <strong>{{ i18n.t('login.banner.authIssue') }}</strong>
           <span>{{ error() }}</span>
         </section>
       }
 
       <form class="login-form" (ngSubmit)="submit()">
         <label class="field">
-          <span>Email or username</span>
+          <span>{{ i18n.t('login.field.identifier') }}</span>
           <input
             type="text"
             name="identifier"
             [ngModel]="identifier()"
             (ngModelChange)="identifier.set($event)"
-            placeholder="user@example.com"
+            [placeholder]="i18n.t('login.placeholder.email')"
             autocomplete="username"
           />
         </label>
 
         <label class="field">
-          <span>Password</span>
+          <span>{{ i18n.t('login.field.password') }}</span>
           <input
             type="password"
             name="password"
             [ngModel]="password()"
             (ngModelChange)="password.set($event)"
-            placeholder="Enter your password"
+            [placeholder]="i18n.t('login.placeholder.password')"
             autocomplete="current-password"
           />
         </label>
 
         <button type="submit" [disabled]="submitting()">
-          {{ submitting() ? 'Signing in...' : 'Login' }}
+          {{ submitting() ? i18n.t('login.action.signingIn') : i18n.t('login.mode.login') }}
         </button>
       </form>
     } @else {
       @if (registerError()) {
         <section class="login-banner error">
-          <strong>Registration issue</strong>
+          <strong>{{ i18n.t('login.banner.registrationIssue') }}</strong>
           <span>{{ registerError() }}</span>
         </section>
       }
 
       <form class="login-form" (ngSubmit)="submitRegistration()">
         <label class="field">
-          <span>Name</span>
+          <span>{{ i18n.t('login.field.name') }}</span>
           <input
             type="text"
             name="registerName"
             [ngModel]="registerName()"
             (ngModelChange)="registerName.set($event)"
-            placeholder="Enter your name"
+            [placeholder]="i18n.t('login.placeholder.name')"
             autocomplete="name"
           />
         </label>
 
         <label class="field">
-          <span>Email</span>
+          <span>{{ i18n.t('login.field.email') }}</span>
           <input
             type="email"
             name="registerEmail"
             [ngModel]="registerEmail()"
             (ngModelChange)="registerEmail.set($event)"
-            placeholder="user@example.com"
+            [placeholder]="i18n.t('login.placeholder.email')"
             autocomplete="email"
           />
         </label>
 
         <label class="field">
-          <span>Password</span>
+          <span>{{ i18n.t('login.field.password') }}</span>
           <input
             type="password"
             name="registerPassword"
             [ngModel]="registerPassword()"
             (ngModelChange)="registerPassword.set($event)"
-            placeholder="Minimum 6 characters"
+            [placeholder]="i18n.t('login.placeholder.passwordMin')"
             autocomplete="new-password"
           />
         </label>
 
         <button type="submit" [disabled]="registerSubmitting()">
-          {{ registerSubmitting() ? 'Creating account...' : 'Register as user' }}
+          {{ registerSubmitting() ? i18n.t('login.action.creatingAccount') : i18n.t('login.action.registerAsUser') }}
         </button>
       </form>
     }
 
     <p class="login-link">
-      <a routerLink="/offers">Continue as guest</a>
+      <a routerLink="/offers">{{ i18n.t('login.action.continueGuest') }}</a>
     </p>
   </article>
 </section>

@@ -6,6 +6,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 
 import { AuthStateService } from './auth-state.service';
+import { I18nService } from './i18n.service';
 
 @Component({
   selector: 'app-login-page',
@@ -18,6 +19,7 @@ export class LoginPageComponent {
   private readonly router = inject(Router);
 
   protected readonly auth = inject(AuthStateService);
+  protected readonly i18n = inject(I18nService);
   protected readonly mode = signal<'login' | 'register'>(
     this.route.snapshot.queryParamMap.get('mode') === 'register' ? 'register' : 'login'
   );
@@ -42,7 +44,7 @@ export class LoginPageComponent {
     const password = this.password().trim();
 
     if (!identifier || !password) {
-      this.error.set('Enter your email or username and password.');
+      this.error.set(this.i18n.t('login.error.credentialsRequired'));
       return;
     }
 
@@ -57,7 +59,7 @@ export class LoginPageComponent {
           void this.router.navigateByUrl(this.auth.landingRoute());
         },
         error: (error: HttpErrorResponse) => {
-          this.error.set(this.readApiError(error, 'Login failed.'));
+          this.error.set(this.readApiError(error, this.i18n.t('login.error.loginFailed')));
         }
       });
   }
@@ -68,12 +70,12 @@ export class LoginPageComponent {
     const password = this.registerPassword().trim();
 
     if (!name || !email) {
-      this.registerError.set('Enter your name and email address.');
+      this.registerError.set(this.i18n.t('login.error.registrationNameEmailRequired'));
       return;
     }
 
     if (password.length < 6) {
-      this.registerError.set('Password must be at least 6 characters long.');
+      this.registerError.set(this.i18n.t('login.error.passwordLength'));
       return;
     }
 
@@ -88,7 +90,7 @@ export class LoginPageComponent {
           void this.router.navigateByUrl('/offers');
         },
         error: (error: HttpErrorResponse) => {
-          this.registerError.set(this.readApiError(error, 'Registration failed.'));
+          this.registerError.set(this.readApiError(error, this.i18n.t('login.error.registrationFailed')));
         }
       });
   }

@@ -5,6 +5,7 @@ import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } fro
 import { filter } from 'rxjs';
 
 import { AuthStateService } from './auth-state.service';
+import { LANGUAGE_OPTIONS, I18nService, LanguageCode } from './i18n.service';
 
 type HeaderSection = 'login' | 'offers' | 'bookings' | 'profile' | 'payment' | 'admin' | 'legal';
 
@@ -24,73 +25,75 @@ export class App {
   private readonly destroyRef = inject(DestroyRef);
 
   protected readonly auth = inject(AuthStateService);
+  protected readonly i18n = inject(I18nService);
+  protected readonly languageOptions = LANGUAGE_OPTIONS;
   protected readonly activeSection = signal<HeaderSection>('offers');
 
   protected readonly pageTitle = computed(() =>
     this.activeSection() === 'admin'
-      ? 'Admin workspace'
+      ? this.i18n.t('app.title.admin')
       : this.activeSection() === 'profile'
-        ? 'My profile'
+        ? this.i18n.t('app.title.profile')
       : this.activeSection() === 'bookings'
-        ? 'My bookings'
+        ? this.i18n.t('app.title.bookings')
       : this.activeSection() === 'payment'
-        ? 'Payment methods'
+        ? this.i18n.t('app.title.payment')
       : this.activeSection() === 'legal'
-        ? 'Legal pages'
+        ? this.i18n.t('app.title.legal')
       : this.activeSection() === 'login'
-        ? 'Sign in'
-      : 'Offers'
+        ? this.i18n.t('app.title.login')
+      : this.i18n.t('app.title.offers')
   );
 
   protected readonly pageSummary = computed(() =>
     this.activeSection() === 'admin'
-      ? 'Manage cars, users, and reservations.'
+      ? this.i18n.t('app.summary.admin')
       : this.activeSection() === 'profile'
-        ? 'Edit your personal profile details.'
+        ? this.i18n.t('app.summary.profile')
       : this.activeSection() === 'bookings'
-        ? 'Review and manage your reservations.'
+        ? this.i18n.t('app.summary.bookings')
       : this.activeSection() === 'payment'
-        ? 'Set and update your payment options.'
+        ? this.i18n.t('app.summary.payment')
       : this.activeSection() === 'legal'
-        ? 'Impressum and Datenschutz information.'
+        ? this.i18n.t('app.summary.legal')
       : this.activeSection() === 'login'
-        ? 'Authenticate with your booking account.'
-      : 'Browse available car offers.'
+        ? this.i18n.t('app.summary.login')
+      : this.i18n.t('app.summary.offers')
   );
 
   protected readonly roleLabel = computed(() => {
     if (!this.auth.isAuthenticated()) {
-      return 'Guest';
+      return this.i18n.t('app.role.guest');
     }
 
-    return this.auth.isAdmin() ? 'Administrator' : 'User';
+    return this.auth.isAdmin() ? this.i18n.t('app.role.admin') : this.i18n.t('app.role.user');
   });
 
   protected readonly navLinks = computed<HeaderLink[]>(() => {
-    const links: HeaderLink[] = [{ path: '/offers', label: 'Offers' }];
+    const links: HeaderLink[] = [{ path: '/offers', label: this.i18n.t('app.link.offers') }];
 
     if (!this.auth.isAuthenticated()) {
-      links.push({ path: '/login', label: 'Login' });
+      links.push({ path: '/login', label: this.i18n.t('app.link.login') });
     } else {
       links.push(
-        { path: '/my-profile', label: 'My Profile' },
-        { path: '/my-bookings', label: 'My Bookings' },
-        { path: '/payment-methods', label: 'My Payment Method' }
+        { path: '/my-profile', label: this.i18n.t('app.link.myProfile') },
+        { path: '/my-bookings', label: this.i18n.t('app.link.myBookings') },
+        { path: '/payment-methods', label: this.i18n.t('app.link.paymentMethods') }
       );
     }
 
     if (this.auth.isAdmin()) {
       links.push(
-        { path: '/admin/tools', label: 'Admin Tools' },
-        { path: '/admin/manage-offers', label: 'Manage Offers' },
-        { path: '/admin/manage-cars', label: 'Manage Cars' },
-        { path: '/admin/manage-users', label: 'Manage Users' }
+        { path: '/admin/tools', label: this.i18n.t('app.link.adminTools') },
+        { path: '/admin/manage-offers', label: this.i18n.t('app.link.manageOffers') },
+        { path: '/admin/manage-cars', label: this.i18n.t('app.link.manageCars') },
+        { path: '/admin/manage-users', label: this.i18n.t('app.link.manageUsers') }
       );
     }
 
     links.push(
-      { path: '/impressum', label: 'Impressum' },
-      { path: '/datenschutz', label: 'Datenschutz' }
+      { path: '/impressum', label: this.i18n.t('app.link.impressum') },
+      { path: '/datenschutz', label: this.i18n.t('app.link.datenschutz') }
     );
 
     return links;
@@ -124,6 +127,20 @@ export class App {
   protected logout(): void {
     this.auth.logout();
     void this.router.navigate(['/offers']);
+  }
+
+  protected setLanguage(language: LanguageCode): void {
+    this.i18n.setLanguage(language);
+  }
+
+  protected onLanguageChange(event: Event): void {
+    const target = event.target as HTMLSelectElement | null;
+    const language = target?.value as LanguageCode | undefined;
+    if (!language) {
+      return;
+    }
+
+    this.setLanguage(language);
   }
 
   private syncActiveSection(url: string): void {

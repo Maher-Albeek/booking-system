@@ -7,6 +7,7 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { finalize, forkJoin, Observable } from 'rxjs';
 
 import { AuthStateService } from './auth-state.service';
+import { I18nService } from './i18n.service';
 
 type Resource = {
   id: number;
@@ -63,6 +64,7 @@ export class AdminPageComponent {
   private readonly route = inject(ActivatedRoute);
 
   protected readonly auth = inject(AuthStateService);
+  protected readonly i18n = inject(I18nService);
   protected readonly pageMode: 'tools' | 'offers' | 'cars' | 'users' = this.resolvePageMode();
   protected readonly loading = signal(true);
   protected readonly busyKey = signal<string | null>(null);
@@ -123,57 +125,57 @@ export class AdminPageComponent {
 
   protected readonly stats = computed(() => [
     {
-      label: 'Cars',
+      label: this.i18n.t('admin.stats.cars'),
       value: this.cars().length,
-      note: `${this.cars().filter((car) => car.active).length} active`
+      note: `${this.cars().filter((car) => car.active).length} ${this.i18n.t('admin.stats.active')}`
     },
     {
-      label: 'Active Cars',
+      label: this.i18n.t('admin.stats.activeCars'),
       value: this.cars().filter((car) => car.active).length,
-      note: `${this.cars().length} total cars`
+      note: `${this.cars().length} ${this.i18n.t('admin.stats.totalCars')}`
     },
     {
-      label: 'Users',
+      label: this.i18n.t('admin.stats.users'),
       value: this.users().length,
-      note: `${this.users().filter((user) => (user.role ?? '').toUpperCase() === 'ADMIN').length} admins`
+      note: `${this.users().filter((user) => (user.role ?? '').toUpperCase() === 'ADMIN').length} ${this.i18n.t('admin.stats.admins')}`
     },
     {
-      label: 'Bookings',
+      label: this.i18n.t('admin.stats.bookings'),
       value: this.bookings().length,
-      note: `${this.bookings().filter((booking) => booking.status === 'CONFIRMED').length} confirmed`
+      note: `${this.bookings().filter((booking) => booking.status === 'CONFIRMED').length} ${this.i18n.t('admin.stats.confirmed')}`
     }
   ]);
 
   protected readonly heroTitle = computed(() => {
     if (this.pageMode === 'users') {
-      return 'Manage users';
+      return this.i18n.t('admin.hero.usersTitle');
     }
 
     if (this.pageMode === 'offers') {
-      return 'Manage offers';
+      return this.i18n.t('admin.hero.offersTitle');
     }
 
     if (this.pageMode === 'cars') {
-      return 'Manage cars';
+      return this.i18n.t('admin.hero.carsTitle');
     }
 
-    return 'Admin tools';
+    return this.i18n.t('admin.hero.toolsTitle');
   });
 
   protected readonly heroDescription = computed(() => {
     if (this.pageMode === 'users') {
-      return 'Create and remove user accounts from this dedicated users page.';
+      return this.i18n.t('admin.hero.usersDescription');
     }
 
     if (this.pageMode === 'offers') {
-      return 'Maintain public offers and vehicle availability.';
+      return this.i18n.t('admin.hero.offersDescription');
     }
 
     if (this.pageMode === 'cars') {
-      return 'Create, edit, and delete fleet cars.';
+      return this.i18n.t('admin.hero.carsDescription');
     }
 
-    return 'Choose a dedicated admin area: offers, cars, or users.';
+    return this.i18n.t('admin.hero.toolsDescription');
   });
 
   protected readonly showToolsPanel = computed(() => this.pageMode === 'tools');
@@ -206,7 +208,7 @@ export class AdminPageComponent {
     const editingCarId = this.editingCarId();
 
     if (!name || !location) {
-      this.error.set('Enter a car name and location before saving.');
+      this.error.set(this.i18n.t('admin.error.carNameLocationRequired'));
       return;
     }
 
@@ -221,7 +223,7 @@ export class AdminPageComponent {
     this.runRequest(
       'save-car',
       request,
-      editingCarId === null ? 'Car added to the fleet.' : 'Car updated.',
+      editingCarId === null ? this.i18n.t('admin.success.carAdded') : this.i18n.t('admin.success.carUpdated'),
       () => this.cancelCarEdit()
     );
   }
@@ -306,14 +308,14 @@ export class AdminPageComponent {
   }
 
   protected deleteCar(carId: number): void {
-    if (typeof window !== 'undefined' && !window.confirm('Delete this car from the fleet?')) {
+    if (typeof window !== 'undefined' && !window.confirm(this.i18n.t('admin.confirm.deleteCar'))) {
       return;
     }
 
     this.runRequest(
       `delete-car-${carId}`,
       this.http.delete<void>(`/api/resources/${carId}`),
-      'Car removed from the fleet.',
+      this.i18n.t('admin.success.carDeleted'),
       () => {
         if (this.selectedCarId() === carId) {
           this.closeCarDetails();
@@ -332,12 +334,12 @@ export class AdminPageComponent {
     const password = this.userDraft.password.trim();
 
     if (!name || !email) {
-      this.error.set('Enter a user name and email address.');
+      this.error.set(this.i18n.t('admin.error.userNameEmailRequired'));
       return;
     }
 
     if (password.length < 6) {
-      this.error.set('Password must be at least 6 characters long.');
+      this.error.set(this.i18n.t('admin.error.passwordLength'));
       return;
     }
 
@@ -349,7 +351,7 @@ export class AdminPageComponent {
         password,
         role: this.userDraft.role
       }),
-      'User account created.',
+      this.i18n.t('admin.success.userCreated'),
       () => {
         this.userDraft = {
           name: '',
@@ -362,39 +364,41 @@ export class AdminPageComponent {
   }
 
   protected deleteUser(userId: number): void {
-    if (typeof window !== 'undefined' && !window.confirm('Delete this user account?')) {
+    if (typeof window !== 'undefined' && !window.confirm(this.i18n.t('admin.confirm.deleteUser'))) {
       return;
     }
 
     this.runRequest(
       `delete-user-${userId}`,
       this.http.delete<void>(`/api/users/${userId}`),
-      'User account removed.'
+      this.i18n.t('admin.success.userDeleted')
     );
   }
 
   protected roleLabel(role: string | null): string {
-    return role ? role.toUpperCase() : 'USER';
+    return role?.toUpperCase() === 'ADMIN'
+      ? this.i18n.t('app.role.admin')
+      : this.i18n.t('app.role.user');
   }
 
   protected photoCountLabel(photoUrls: string[] | null | undefined): string {
     const count = photoUrls?.length ?? 0;
-    return count === 1 ? '1 photo' : `${count} photos`;
+    return count === 1 ? this.i18n.t('admin.photo.one') : this.i18n.t('admin.photo.many', { count });
   }
 
   protected climateLabel(hasAirConditioning: boolean | null | undefined): string {
     if (hasAirConditioning === null || hasAirConditioning === undefined) {
-      return 'Not set';
+      return this.i18n.t('common.notSet');
     }
-    return hasAirConditioning ? 'Yes' : 'No';
+    return hasAirConditioning ? this.i18n.t('common.yes') : this.i18n.t('common.no');
   }
 
   protected formatCurrency(amount: number | null | undefined): string {
     if (typeof amount !== 'number' || Number.isNaN(amount)) {
-      return 'Not set';
+      return this.i18n.t('common.notSet');
     }
 
-    return new Intl.NumberFormat('de-DE', {
+    return new Intl.NumberFormat(this.i18n.locale(), {
       style: 'currency',
       currency: 'EUR'
     }).format(amount);
@@ -450,7 +454,7 @@ export class AdminPageComponent {
           this.error.set(
             this.readApiError(
               error,
-              'Admin data could not be loaded. Make sure the Spring Boot API is running.'
+              this.i18n.t('admin.error.loadFailed')
             )
           );
         }
@@ -558,7 +562,7 @@ export class AdminPageComponent {
 
     if (!imageFiles.length) {
       if (files.length) {
-        this.error.set('Only image files can be dropped into the car photo area.');
+        this.error.set(this.i18n.t('admin.error.photoImageOnly'));
       }
       return;
     }
@@ -574,7 +578,7 @@ export class AdminPageComponent {
       };
     } catch (error) {
       this.error.set(
-        error instanceof Error ? error.message : 'Images could not be converted to AVIF format.'
+        error instanceof Error ? error.message : this.i18n.t('admin.error.photoConvertFailed')
       );
     }
   }
@@ -587,7 +591,7 @@ export class AdminPageComponent {
 
     const context = canvas.getContext('2d');
     if (!context) {
-      throw new Error('Image conversion failed because the canvas context is unavailable.');
+      throw new Error(this.i18n.t('admin.error.canvasUnavailable'));
     }
 
     context.drawImage(image, 0, 0);
@@ -600,7 +604,7 @@ export class AdminPageComponent {
             return;
           }
 
-          reject(new Error('Your browser could not encode this image as AVIF.'));
+          reject(new Error(this.i18n.t('admin.error.browserAvifFailed')));
         },
         'image/avif',
         0.82
@@ -622,7 +626,7 @@ export class AdminPageComponent {
 
       image.onerror = () => {
         URL.revokeObjectURL(objectUrl);
-        reject(new Error(`"${file.name}" could not be loaded for AVIF conversion.`));
+        reject(new Error(this.i18n.t('admin.error.fileLoadFailed', { fileName: file.name })));
       };
 
       image.src = objectUrl;
@@ -639,10 +643,10 @@ export class AdminPageComponent {
           return;
         }
 
-        reject(new Error('Converted AVIF image could not be read.'));
+        reject(new Error(this.i18n.t('admin.error.avifReadFailed')));
       };
 
-      reader.onerror = () => reject(reader.error ?? new Error('Converted AVIF image could not be read.'));
+      reader.onerror = () => reject(reader.error ?? new Error(this.i18n.t('admin.error.avifReadFailed')));
       reader.readAsDataURL(blob);
     });
   }
@@ -673,7 +677,7 @@ export class AdminPageComponent {
           this.loadData();
         },
         error: (error: HttpErrorResponse) => {
-          this.error.set(this.readApiError(error, 'The admin action could not be completed.'));
+          this.error.set(this.readApiError(error, this.i18n.t('admin.error.actionFailed')));
         }
       });
   }

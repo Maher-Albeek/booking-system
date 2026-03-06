@@ -1,15 +1,15 @@
 <main class="app-shell">
   <header class="app-chrome">
     <div class="brand-block">
-      <img class="brand-logo" src="/favicon.ico" alt="Booking System logo" />
+      <img class="brand-logo" src="/favicon.ico" [alt]="i18n.t('app.logoAlt')" />
       <div class="brand-copy">
-        <p class="eyebrow">Booking System</p>
+        <p class="eyebrow">{{ i18n.t('app.brand') }}</p>
         <strong>{{ pageTitle() }}</strong>
         <span>{{ pageSummary() }}</span>
       </div>
     </div>
 
-    <nav class="route-switcher" aria-label="Main navigation">
+    <nav class="route-switcher" [attr.aria-label]="i18n.t('app.nav.main')">
       @for (link of navLinks(); track link.path) {
         <a
           [routerLink]="link.path"
@@ -22,12 +22,27 @@
       }
     </nav>
 
-    <div class="session-shell">
+    <div class="header-controls">
+      <div class="language-switcher">
+        <i class="fa-solid fa-language language-icon" aria-hidden="true"></i>
+        <select
+          class="language-select"
+          [value]="i18n.language()"
+          (change)="onLanguageChange($event)"
+          [attr.aria-label]="i18n.t('app.languages.aria')"
+        >
+          @for (language of languageOptions; track language.code) {
+            <option [value]="language.code">{{ language.label }}</option>
+          }
+        </select>
+      </div>
+
+      <div class="session-shell">
       @if (auth.isAuthenticated()) {
         <span class="session-pill">
           <span class="avatar-circle">
             @if (auth.user()?.avatarUrl) {
-              <img [src]="auth.user()?.avatarUrl" alt="User avatar" />
+              <img [src]="auth.user()?.avatarUrl" [alt]="i18n.t('app.session.avatar')" />
             } @else {
               <span>{{ userInitials() }}</span>
             }
@@ -38,10 +53,11 @@
           </span>
         </span>
 
-        <button type="button" class="logout-button" (click)="logout()">Logout</button>
+        <button type="button" class="logout-button" (click)="logout()">{{ i18n.t('app.session.logout') }}</button>
       } @else {
-        <span class="guest-pill">Guest mode</span>
+        <span class="guest-pill">{{ i18n.t('app.session.guest') }}</span>
       }
+      </div>
     </div>
   </header>
 

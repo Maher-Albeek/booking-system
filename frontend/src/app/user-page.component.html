@@ -3,24 +3,24 @@
     @if (pageMode === 'offers') {
       <header class="home-search-header">
         <div class="search-header-copy">
-          <p class="eyebrow">Find your car</p>
-          <h3>Search by location and dates</h3>
+          <p class="eyebrow">{{ i18n.t('user.search.findCar') }}</p>
+          <h3>{{ i18n.t('user.search.byLocationAndDates') }}</h3>
         </div>
 
         <div class="search-header-form">
           <label class="field">
-            <span>Location</span>
+            <span>{{ i18n.t('common.location') }}</span>
             <input
               type="text"
               name="homeSearchLocation"
               [ngModel]="searchLocationInput()"
               (ngModelChange)="searchLocationInput.set($event)"
-              placeholder="Berlin, Hamburg, Munich..."
+              [placeholder]="i18n.t('user.search.locationPlaceholder')"
             />
           </label>
 
           <label class="field">
-            <span>Start date</span>
+            <span>{{ i18n.t('common.startDate') }}</span>
             <input
               type="date"
               name="homeSearchStartDate"
@@ -30,7 +30,7 @@
           </label>
 
           <label class="field">
-            <span>End date</span>
+            <span>{{ i18n.t('common.endDate') }}</span>
             <input
               type="date"
               name="homeSearchEndDate"
@@ -48,30 +48,29 @@
             >
               <span class="button-content">
                 <i class="button-icon fa-solid fa-magnifying-glass" aria-hidden="true"></i>
-                <span>Search</span>
+                <span>{{ i18n.t('common.search') }}</span>
               </span>
             </button>
           </div>
         </div>
 
         @if (searchDateRangeInvalid()) {
-          <p class="search-warning">End date must be the same day or after the start date.</p>
+          <p class="search-warning">{{ i18n.t('user.search.invalidRange') }}</p>
         }
       </header>
     }
 
     <div class="hero-copy">
       @if (pageMode === 'offers') {
-        <p class="eyebrow">User interface</p>
-        <h2>{{ title }}</h2>
+        <p class="eyebrow">{{ i18n.t('user.hero.interface') }}</p>
+        <h2>{{ title() }}</h2>
         <p>
-          Browse and reserve cars by selecting your own start and end date-time directly against
-          the Spring API.
+          {{ i18n.t('user.hero.offersDescription') }}
         </p>
       } @else {
-        <p class="eyebrow">My bookings</p>
-        <h2>Manage your reservations</h2>
-        <p>All your booking entries are listed on this dedicated page.</p>
+        <p class="eyebrow">{{ i18n.t('app.title.bookings') }}</p>
+        <h2>{{ i18n.t('user.hero.manageReservations') }}</h2>
+        <p>{{ i18n.t('user.hero.bookingsDescription') }}</p>
       }
     </div>
 
@@ -79,7 +78,7 @@
       <button type="button" (click)="reload()" [disabled]="loading() || submitting() || accountSaving()">
         <span class="button-content">
           <i class="button-icon fa-solid fa-rotate-right" aria-hidden="true"></i>
-          <span>{{ loading() ? 'Refreshing...' : pageMode === 'offers' ? 'Refresh availability' : 'Refresh bookings' }}</span>
+          <span>{{ loading() ? i18n.t('common.refreshing') : pageMode === 'offers' ? i18n.t('user.action.refreshAvailability') : i18n.t('user.action.refreshBookings') }}</span>
         </span>
       </button>
       @if (auth.isAuthenticated()) {
@@ -87,12 +86,12 @@
           @if (pageMode === 'offers') {
             <a routerLink="/my-bookings" class="shortcut-link">
               <i class="button-icon fa-solid fa-calendar-check" aria-hidden="true"></i>
-              <span>My bookings</span>
+              <span>{{ i18n.t('app.title.bookings') }}</span>
             </a>
           } @else {
             <a routerLink="/offers" class="shortcut-link">
               <i class="button-icon fa-solid fa-car-side" aria-hidden="true"></i>
-              <span>Back to offers</span>
+              <span>{{ i18n.t('user.action.backToOffers') }}</span>
             </a>
           }
         </div>
@@ -102,19 +101,19 @@
 
   @if (error()) {
     <section class="banner error">
-      <strong>Booking API issue</strong>
+      <strong>{{ i18n.t('user.banner.apiIssue') }}</strong>
       <span>{{ error() }}</span>
     </section>
   }
 
   @if (!error() && loading()) {
     <section class="banner loading">
-      <strong>Loading data</strong>
+      <strong>{{ i18n.t('user.banner.loadingTitle') }}</strong>
       <span>
         {{
           auth.isAuthenticated()
-            ? 'Fetching profile, cars, and booking data.'
-            : 'Fetching cars and booking data.'
+            ? i18n.t('user.banner.loadingAuthenticated')
+            : i18n.t('user.banner.loadingGuest')
         }}
       </span>
     </section>
@@ -122,22 +121,21 @@
 
   @if (success()) {
     <section class="banner success">
-      <strong>Updated</strong>
+      <strong>{{ i18n.t('common.updated') }}</strong>
       <span>{{ success() }}</span>
     </section>
   }
 
   @if (!auth.isAuthenticated()) {
     <section class="banner info">
-      <strong>Guest access</strong>
-      <span>You can browse available cars now. Login or register before booking.</span>
+      <strong>{{ i18n.t('user.banner.guestAccess') }}</strong>
+      <span>{{ i18n.t('user.banner.guestAccessText') }}</span>
     </section>
   } @else if (accountCompleteness().completed < accountCompleteness().total) {
     <section class="banner info">
-      <strong>Profile incomplete</strong>
+      <strong>{{ i18n.t('user.banner.profileIncomplete') }}</strong>
       <span>
-        Save first name, last name, full address fields, birth date, and at least one payment
-        method on the account page to speed up booking.
+        {{ i18n.t('user.banner.profileIncompleteText') }}
       </span>
     </section>
   }
@@ -149,13 +147,13 @@
       <article class="panel fleet-panel">
       <div class="panel-header">
         <div>
-          <p class="eyebrow">Fleet</p>
-          <h3>Choose your car</h3>
+          <p class="eyebrow">{{ i18n.t('user.fleet.eyebrow') }}</p>
+          <h3>{{ i18n.t('user.fleet.chooseCar') }}</h3>
         </div>
       </div>
 
       @if (!hasCompleteSearchFilters()) {
-        <p class="empty-state">Enter location, start date, and end date to display available cars.</p>
+        <p class="empty-state">{{ i18n.t('user.fleet.enterFilters') }}</p>
       } @else {
         <div class="car-showcase-grid">
           @for (car of filteredCarSummaries(); track car.id) {
@@ -169,35 +167,35 @@
             >
               <div class="car-showcase-head">
                 <strong>{{ car.name | uppercase }}</strong>
-                <p>{{ car.description || car.carType || 'Fleet vehicle' }}</p>
+                <p>{{ car.description || car.carType || i18n.t('user.fleet.fleetVehicle') }}</p>
               </div>
 
               <div class="car-chip-row">
-                <span class="chip">{{ car.carType || 'Oder ahnliches Modell' }}</span>
+                <span class="chip">{{ car.carType || i18n.t('user.fleet.similarModel') }}</span>
                 <span class="chip"><i class="fa-solid fa-user-group" aria-hidden="true"></i> {{ car.seats ?? '-' }}</span>
                 <span class="chip"><i class="fa-solid fa-suitcase-rolling" aria-hidden="true"></i> {{ car.baggageBags ?? '-' }}</span>
-                <span class="chip"><i class="fa-solid fa-gears" aria-hidden="true"></i> {{ car.transmission || 'Not set' }}</span>
+                <span class="chip"><i class="fa-solid fa-gears" aria-hidden="true"></i> {{ car.transmission || i18n.t('common.notSet') }}</span>
               </div>
 
               <div class="car-image-wrap">
                 @if (primaryPhotoUrl(car); as photoUrl) {
                   <img class="showcase-image" [src]="photoUrl" [alt]="car.name" />
                 } @else {
-                  <div class="showcase-image placeholder">No image uploaded</div>
+                  <div class="showcase-image placeholder">{{ i18n.t('user.fleet.noImage') }}</div>
                 }
               </div>
 
               <p class="car-availability">
-                <i class="fa-solid fa-check" aria-hidden="true"></i> Unbegrenzte Kilometer verfugbar
+                <i class="fa-solid fa-check" aria-hidden="true"></i> {{ i18n.t('user.fleet.unlimitedKm') }}
               </p>
 
               <div class="car-price-line">
-                <strong>{{ car.dailyPrice !== null ? formatCurrency(car.dailyPrice) : 'Not set' }} / Tag</strong>
-                <span>{{ car.dailyPrice !== null ? formatCurrency(car.dailyPrice) : 'Not set' }} Gesamtpreis</span>
+                <strong>{{ car.dailyPrice !== null ? formatCurrency(car.dailyPrice) : i18n.t('common.notSet') }} / {{ i18n.t('user.fleet.perDay') }}</strong>
+                <span>{{ car.dailyPrice !== null ? formatCurrency(car.dailyPrice) : i18n.t('common.notSet') }} {{ i18n.t('user.fleet.totalPrice') }}</span>
               </div>
             </article>
           } @empty {
-            <p class="empty-state">No cars match your current search filters.</p>
+            <p class="empty-state">{{ i18n.t('user.fleet.noMatchFilters') }}</p>
           }
         </div>
       }
@@ -207,83 +205,83 @@
           <aside class="car-details-drawer" (click)="$event.stopPropagation()">
             <div class="car-details-header">
               <div>
-                <p class="eyebrow">Car details</p>
+                <p class="eyebrow">{{ i18n.t('user.car.details') }}</p>
                 <h3>{{ selectedCarDetails.name }}</h3>
               </div>
               <button type="button" class="ghost-button compact-button drawer-close" (click)="closeCarDetails()">
                 <span class="button-content">
                   <i class="button-icon fa-solid fa-xmark" aria-hidden="true"></i>
-                  <span>Close</span>
+                  <span>{{ i18n.t('common.close') }}</span>
                 </span>
               </button>
             </div>
 
-            <p class="drawer-description">{{ selectedCarDetails.description || 'No description provided.' }}</p>
+            <p class="drawer-description">{{ selectedCarDetails.description || i18n.t('user.car.noDescription') }}</p>
 
             <dl>
               <div>
-                <dt>Location</dt>
+                <dt>{{ i18n.t('common.location') }}</dt>
                 <dd>{{ selectedCarDetails.location }}</dd>
               </div>
               <div>
-                <dt>Confirmed bookings</dt>
+                <dt>{{ i18n.t('user.car.confirmedBookings') }}</dt>
                 <dd>{{ selectedCarDetails.confirmedBookings }}</dd>
               </div>
               <div>
-                <dt>Price/day</dt>
-                <dd>{{ selectedCarDetails.dailyPrice !== null ? formatCurrency(selectedCarDetails.dailyPrice) : 'Not set' }}</dd>
+                <dt>{{ i18n.t('user.car.pricePerDay') }}</dt>
+                <dd>{{ selectedCarDetails.dailyPrice !== null ? formatCurrency(selectedCarDetails.dailyPrice) : i18n.t('common.notSet') }}</dd>
               </div>
               <div>
-                <dt>Model</dt>
-                <dd>{{ selectedCarDetails.model || 'Not set' }}</dd>
+                <dt>{{ i18n.t('user.car.model') }}</dt>
+                <dd>{{ selectedCarDetails.model || i18n.t('common.notSet') }}</dd>
               </div>
               <div>
-                <dt>Type</dt>
+                <dt>{{ i18n.t('user.car.type') }}</dt>
                 <dd>{{ selectedCarDetails.carType || selectedCarDetails.type }}</dd>
               </div>
               <div>
-                <dt>Year</dt>
-                <dd>{{ selectedCarDetails.year ?? 'Not set' }}</dd>
+                <dt>{{ i18n.t('user.car.year') }}</dt>
+                <dd>{{ selectedCarDetails.year ?? i18n.t('common.notSet') }}</dd>
               </div>
               <div>
-                <dt>Seats</dt>
-                <dd>{{ selectedCarDetails.seats ?? 'Not set' }}</dd>
+                <dt>{{ i18n.t('user.car.seats') }}</dt>
+                <dd>{{ selectedCarDetails.seats ?? i18n.t('common.notSet') }}</dd>
               </div>
               <div>
-                <dt>Transmission</dt>
-                <dd>{{ selectedCarDetails.transmission || 'Not set' }}</dd>
+                <dt>{{ i18n.t('user.car.transmission') }}</dt>
+                <dd>{{ selectedCarDetails.transmission || i18n.t('common.notSet') }}</dd>
               </div>
               <div>
-                <dt>Fuel</dt>
-                <dd>{{ selectedCarDetails.fuelType || 'Not set' }}</dd>
+                <dt>{{ i18n.t('user.car.fuel') }}</dt>
+                <dd>{{ selectedCarDetails.fuelType || i18n.t('common.notSet') }}</dd>
               </div>
               <div>
-                <dt>Baggage</dt>
-                <dd>{{ selectedCarDetails.baggageBags !== null ? selectedCarDetails.baggageBags + ' bags' : 'Not set' }}</dd>
+                <dt>{{ i18n.t('user.car.baggage') }}</dt>
+                <dd>{{ selectedCarDetails.baggageBags !== null ? selectedCarDetails.baggageBags + ' ' + i18n.t('user.car.bags') : i18n.t('common.notSet') }}</dd>
               </div>
               <div>
-                <dt>AC</dt>
+                <dt>{{ i18n.t('user.car.ac') }}</dt>
                 <dd>
                   {{
                     selectedCarDetails.hasAirConditioning === null
-                      ? 'Not set'
+                      ? i18n.t('common.notSet')
                       : selectedCarDetails.hasAirConditioning
-                        ? 'Yes'
-                        : 'No'
+                        ? i18n.t('common.yes')
+                        : i18n.t('common.no')
                   }}
                 </dd>
               </div>
               <div>
-                <dt>Power</dt>
-                <dd>{{ selectedCarDetails.horsepower !== null ? selectedCarDetails.horsepower + ' PS' : 'Not set' }}</dd>
+                <dt>{{ i18n.t('user.car.power') }}</dt>
+                <dd>{{ selectedCarDetails.horsepower !== null ? selectedCarDetails.horsepower + ' PS' : i18n.t('common.notSet') }}</dd>
               </div>
               <div>
-                <dt>Status</dt>
-                <dd>{{ selectedCarDetails.active ? 'Available' : 'Inactive' }}</dd>
+                <dt>{{ i18n.t('user.car.status') }}</dt>
+                <dd>{{ selectedCarDetails.active ? i18n.t('user.car.available') : i18n.t('common.inactive') }}</dd>
               </div>
               <div>
-                <dt>{{ auth.isAuthenticated() ? 'Trips' : 'Access' }}</dt>
-                <dd>{{ auth.isAuthenticated() ? selectedCarDetails.confirmedBookings : 'Browse only' }}</dd>
+                <dt>{{ auth.isAuthenticated() ? i18n.t('user.car.trips') : i18n.t('user.car.access') }}</dt>
+                <dd>{{ auth.isAuthenticated() ? selectedCarDetails.confirmedBookings : i18n.t('user.car.browseOnly') }}</dd>
               </div>
             </dl>
 
@@ -303,7 +301,7 @@
               >
                 <span class="button-content">
                   <i class="button-icon fa-solid fa-eye" aria-hidden="true"></i>
-                  <span>{{ selectedCarDetails.id === selectedCarId() ? 'Selected' : 'Select car' }}</span>
+                  <span>{{ selectedCarDetails.id === selectedCarId() ? i18n.t('common.selected') : i18n.t('user.action.selectCar') }}</span>
                 </span>
               </button>
               <button
@@ -314,7 +312,7 @@
               >
                 <span class="button-content">
                   <i class="button-icon fa-solid fa-car-side" aria-hidden="true"></i>
-                  <span>{{ selectedCarDetails.active ? 'Reserve' : 'Unavailable' }}</span>
+                  <span>{{ selectedCarDetails.active ? i18n.t('user.action.reserve') : i18n.t('common.unavailable') }}</span>
                 </span>
               </button>
             </div>
@@ -328,14 +326,14 @@
       <article id="reservations" class="panel reservations-panel">
       <div class="panel-header">
         <div>
-          <p class="eyebrow">Reservations</p>
-          <h3>Current bookings</h3>
+          <p class="eyebrow">{{ i18n.t('user.bookings.eyebrow') }}</p>
+          <h3>{{ i18n.t('user.bookings.current') }}</h3>
         </div>
       </div>
 
       <div class="reservation-list">
         @if (!auth.isAuthenticated()) {
-          <p class="empty-state">Login to view and manage your bookings.</p>
+          <p class="empty-state">{{ i18n.t('user.bookings.loginToView') }}</p>
         } @else {
           @for (booking of visibleBookings(); track booking.id) {
             <section class="reservation-card">
@@ -351,31 +349,31 @@
 
               <dl>
                 <div>
-                  <dt>Period</dt>
+                  <dt>{{ i18n.t('user.booking.period') }}</dt>
                   <dd>{{ bookingPeriodLabel(booking) }}</dd>
                 </div>
                 <div>
-                  <dt>Service</dt>
-                  <dd>{{ booking.serviceName || 'No label provided' }}</dd>
+                  <dt>{{ i18n.t('user.booking.service') }}</dt>
+                  <dd>{{ booking.serviceName || i18n.t('user.booking.noLabel') }}</dd>
                 </div>
                 <div>
-                  <dt>Total price</dt>
+                  <dt>{{ i18n.t('user.booking.totalPrice') }}</dt>
                   <dd>{{ bookingTotalPriceLabel(booking) }}</dd>
                 </div>
                 <div>
-                  <dt>Payment</dt>
-                  <dd>{{ booking.paymentMethod || 'Not recorded' }}</dd>
+                  <dt>{{ i18n.t('user.booking.payment') }}</dt>
+                  <dd>{{ booking.paymentMethod || i18n.t('common.notRecorded') }}</dd>
                 </div>
                 <div>
-                  <dt>Birth date</dt>
+                  <dt>{{ i18n.t('user.booking.birthDate') }}</dt>
                   <dd>{{ formatCalendarDate(booking.birthDate) }}</dd>
                 </div>
                 <div>
-                  <dt>Address</dt>
-                  <dd>{{ booking.address || 'Not recorded' }}</dd>
+                  <dt>{{ i18n.t('user.booking.address') }}</dt>
+                  <dd>{{ booking.address || i18n.t('common.notRecorded') }}</dd>
                 </div>
                 <div>
-                  <dt>Booked at</dt>
+                  <dt>{{ i18n.t('user.booking.bookedAt') }}</dt>
                   <dd>{{ formatDate(booking.bookingTime) }}</dd>
                 </div>
               </dl>
@@ -389,13 +387,13 @@
                 >
                   <span class="button-content">
                     <i class="button-icon fa-solid fa-trash-can" aria-hidden="true"></i>
-                    <span>{{ cancellingId() === booking.id ? 'Cancelling...' : 'Cancel booking' }}</span>
+                    <span>{{ cancellingId() === booking.id ? i18n.t('user.action.cancelling') : i18n.t('user.action.cancelBooking') }}</span>
                   </span>
                 </button>
               }
             </section>
           } @empty {
-            <p class="empty-state">No bookings available yet.</p>
+            <p class="empty-state">{{ i18n.t('user.bookings.noneYet') }}</p>
           }
         }
       </div>
@@ -413,8 +411,8 @@
       >
         <div class="modal-header">
           <div>
-            <p class="eyebrow">Reserve</p>
-            <h3 id="reservation-modal-title">Complete your booking</h3>
+            <p class="eyebrow">{{ i18n.t('user.modal.reserve') }}</p>
+            <h3 id="reservation-modal-title">{{ i18n.t('user.modal.completeBooking') }}</h3>
           </div>
           <button
             type="button"
@@ -423,7 +421,7 @@
           >
             <span class="button-content">
               <i class="button-icon fa-solid fa-xmark" aria-hidden="true"></i>
-              <span>Close</span>
+              <span>{{ i18n.t('common.close') }}</span>
             </span>
           </button>
         </div>
@@ -433,14 +431,14 @@
             <strong>{{ selectedCar()!.name }}</strong>
             <p>{{ selectedCar()!.description }} | {{ selectedCar()!.location }}</p>
             <p>
-              {{ selectedCar()!.model || 'Model not set' }} | {{ selectedCar()!.carType || selectedCar()!.type }}
-              | {{ selectedCar()!.seats ?? '-' }} seats | {{ selectedCar()!.transmission || '-' }}
+              {{ selectedCar()!.model || i18n.t('user.modal.modelNotSet') }} | {{ selectedCar()!.carType || selectedCar()!.type }}
+              | {{ selectedCar()!.seats ?? '-' }} {{ i18n.t('user.modal.seats') }} | {{ selectedCar()!.transmission || '-' }}
               | {{ selectedCar()!.fuelType || '-' }}
             </p>
             <p>
-              {{ selectedCar()!.baggageBags !== null ? selectedCar()!.baggageBags + ' bags' : 'Baggage: -' }}
-              | Klima: {{ selectedCar()!.hasAirConditioning === null ? '-' : selectedCar()!.hasAirConditioning ? 'Yes' : 'No' }}
-              | {{ selectedCar()!.horsepower !== null ? selectedCar()!.horsepower + ' PS' : 'PS: -' }}
+              {{ selectedCar()!.baggageBags !== null ? selectedCar()!.baggageBags + ' ' + i18n.t('user.car.bags') : i18n.t('user.modal.baggageDash') }}
+              | {{ i18n.t('user.modal.acLabel') }}: {{ selectedCar()!.hasAirConditioning === null ? '-' : selectedCar()!.hasAirConditioning ? i18n.t('common.yes') : i18n.t('common.no') }}
+              | {{ selectedCar()!.horsepower !== null ? selectedCar()!.horsepower + ' PS' : i18n.t('user.modal.psDash') }}
             </p>
             @if (selectedCarPhotos().length) {
               <div class="selected-photo-row">
@@ -453,18 +451,18 @@
           @if (bookingWindowPreview()) {
             <span class="slot-summary">{{ bookingWindowPreview() }}</span>
           } @else {
-            <span class="slot-summary muted">Select start and end date-time below</span>
+            <span class="slot-summary muted">{{ i18n.t('user.modal.selectDateRange') }}</span>
           }
         </section>
 
         @if (bookingPricePreview()) {
           <section class="client-summary">
-            <span>Price summary</span>
+            <span>{{ i18n.t('user.modal.priceSummary') }}</span>
             <strong>
               {{ formatCurrency(bookingPricePreview()!.totalPrice) }}
             </strong>
             <p>
-              {{ bookingPricePreview()!.days }} day{{ bookingPricePreview()!.days === 1 ? '' : 's' }}
+              {{ bookingPricePreview()!.days }} {{ bookingPricePreview()!.days === 1 ? i18n.t('common.day') : i18n.t('common.days') }}
               x
               {{ formatCurrency(bookingPricePreview()!.dailyPrice) }}
             </p>
@@ -475,25 +473,25 @@
           @if (!auth.isAuthenticated()) {
             <section class="guest-panel">
               <div>
-                <span>Booking access</span>
-                <strong>Sign in to confirm a reservation.</strong>
-                <p>Create a new user account if this is your first visit.</p>
+                <span>{{ i18n.t('user.stats.bookingAccess') }}</span>
+                <strong>{{ i18n.t('user.modal.signInToReserve') }}</strong>
+                <p>{{ i18n.t('user.modal.createAccountFirstVisit') }}</p>
               </div>
               <div class="guest-actions">
                 <a routerLink="/login" class="cta-link">
                   <i class="button-icon fa-solid fa-right-to-bracket" aria-hidden="true"></i>
-                  <span>Login</span>
+                  <span>{{ i18n.t('app.link.login') }}</span>
                 </a>
                 <a routerLink="/login" [queryParams]="{ mode: 'register' }" class="secondary-link">
                   <i class="button-icon fa-solid fa-user-plus" aria-hidden="true"></i>
-                  <span>Register</span>
+                  <span>{{ i18n.t('login.mode.register') }}</span>
                 </a>
               </div>
             </section>
           } @else {
             @if (canChooseUser()) {
               <label class="field">
-                <span>Client profile</span>
+                <span>{{ i18n.t('user.modal.clientProfile') }}</span>
                 <select
                   [ngModel]="selectedUserId()"
                   (ngModelChange)="selectUser($event)"
@@ -506,39 +504,39 @@
               </label>
             } @else if (selectedUser() || auth.user()) {
               <section class="client-summary">
-                <span>Client profile</span>
+                <span>{{ i18n.t('user.modal.clientProfile') }}</span>
                 <strong>{{ selectedUser()?.name || auth.user()!.name }}</strong>
-                <p>{{ selectedUser()?.email || auth.user()!.email || 'No email stored for this profile.' }}</p>
+                <p>{{ selectedUser()?.email || auth.user()!.email || i18n.t('user.modal.noEmailProfile') }}</p>
               </section>
             }
 
             <div class="booking-fields">
               <label class="field">
-                <span>Vorname</span>
+                <span>{{ i18n.t('account.field.firstName') }}</span>
                 <input
                   type="text"
                   name="bookingFirstName"
                   [ngModel]="bookingFirstName()"
                   (ngModelChange)="bookingFirstName.set($event)"
-                  placeholder="Vorname"
+                  [placeholder]="i18n.t('account.field.firstName')"
                   autocomplete="given-name"
                 />
               </label>
 
               <label class="field">
-                <span>Nachname</span>
+                <span>{{ i18n.t('account.field.lastName') }}</span>
                 <input
                   type="text"
                   name="bookingLastName"
                   [ngModel]="bookingLastName()"
                   (ngModelChange)="bookingLastName.set($event)"
-                  placeholder="Nachname"
+                  [placeholder]="i18n.t('account.field.lastName')"
                   autocomplete="family-name"
                 />
               </label>
 
               <label class="field">
-                <span>Geburtsdatum</span>
+                <span>{{ i18n.t('account.field.birthDate') }}</span>
                 <input
                   type="date"
                   name="bookingBirthDate"
@@ -549,7 +547,7 @@
               </label>
 
               <label class="field">
-                <span>Start date and time</span>
+                <span>{{ i18n.t('user.modal.startDateTime') }}</span>
                 <input
                   type="datetime-local"
                   name="bookingStartDateTime"
@@ -560,7 +558,7 @@
               </label>
 
               <label class="field">
-                <span>End date and time</span>
+                <span>{{ i18n.t('user.modal.endDateTime') }}</span>
                 <input
                   type="datetime-local"
                   name="bookingEndDateTime"
@@ -574,8 +572,8 @@
 
               <section class="payment-methods booking-payment-methods field-wide">
                 <div class="payment-header">
-                  <span>Payment options</span>
-                  <strong>Select one preferred method</strong>
+                  <span>{{ i18n.t('user.modal.paymentOptions') }}</span>
+                  <strong>{{ i18n.t('user.modal.selectPreferredPayment') }}</strong>
                 </div>
 
                 <div class="payment-grid">
@@ -593,7 +591,7 @@
                       </span>
                       <span class="payment-copy">
                         <strong>{{ method }}</strong>
-                        <small>{{ paymentMethodMeta[method].hint }}</small>
+                        <small>{{ i18n.t(paymentMethodMeta[method].hintKey) }}</small>
                       </span>
                     </button>
                   }
@@ -601,25 +599,25 @@
               </section>
 
               <label class="field field-wide">
-                <span>Adresse</span>
+                <span>{{ i18n.t('user.booking.address') }}</span>
                 <textarea
                   name="bookingAddress"
                   [ngModel]="bookingAddress()"
                   (ngModelChange)="bookingAddress.set($event)"
                   rows="3"
-                  placeholder="Strasse, Hausnummer, PLZ, Ort"
+                  [placeholder]="i18n.t('user.modal.addressPlaceholder')"
                   autocomplete="street-address"
                 ></textarea>
               </label>
 
               <label class="field field-wide">
-                <span>Trip label</span>
+                <span>{{ i18n.t('user.modal.tripLabel') }}</span>
                 <input
                   type="text"
                   name="serviceName"
                   [ngModel]="serviceName()"
                   (ngModelChange)="serviceName.set($event)"
-                  placeholder="Airport transfer, city trip, weekend drive..."
+                  [placeholder]="i18n.t('user.modal.tripLabelPlaceholder')"
                 />
               </label>
             </div>
@@ -627,19 +625,18 @@
 
           <section class="slot-picker">
             <div class="slot-header">
-              <span>Availability rule</span>
-              <strong>No overlapping bookings per car</strong>
+              <span>{{ i18n.t('user.modal.availabilityRule') }}</span>
+              <strong>{{ i18n.t('user.modal.noOverlapRule') }}</strong>
             </div>
 
             <p class="empty-state small">
-              If another confirmed booking already overlaps this period, booking will be rejected.
+              {{ i18n.t('user.modal.overlapWarning') }}
             </p>
           </section>
 
           @if (auth.isAuthenticated()) {
             <p class="form-note">
-              Your saved account data is used as a starting point, but you can adjust the booking
-              details before confirmation.
+              {{ i18n.t('user.modal.savedDataNote') }}
             </p>
 
             <div class="modal-actions">
@@ -650,21 +647,21 @@
               >
                 <span class="button-content">
                   <i class="button-icon fa-solid fa-xmark" aria-hidden="true"></i>
-                  <span>Cancel</span>
+                  <span>{{ i18n.t('common.cancel') }}</span>
                 </span>
               </button>
               <button type="submit" class="submit-button compact-button" [disabled]="bookingDisabled()">
                 <span class="button-content">
                   <i class="button-icon fa-solid fa-circle-check" aria-hidden="true"></i>
-                  <span>{{ submitting() ? 'Saving booking...' : 'Confirm booking' }}</span>
+                  <span>{{ submitting() ? i18n.t('user.action.savingBooking') : i18n.t('user.action.confirmBooking') }}</span>
                 </span>
               </button>
             </div>
 
-            <p class="form-note">Submitting this form sends a live <code>POST /api/bookings</code>.</p>
+            <p class="form-note">{{ i18n.t('user.modal.livePostNote') }} <code>POST /api/bookings</code>.</p>
           } @else {
             <p class="form-note">
-              Car browsing stays open for guests. Login or register to send
+              {{ i18n.t('user.modal.guestBrowseNote') }}
               <code>POST /api/bookings</code>.
             </p>
           }

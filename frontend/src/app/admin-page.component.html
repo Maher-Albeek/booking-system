@@ -1,11 +1,10 @@
 @if (!auth.isAdmin()) {
   <main class="admin-shell">
     <section class="locked-panel">
-      <p class="eyebrow">Admin access required</p>
-      <h2>You must sign in as an admin to open this page</h2>
+      <p class="eyebrow">{{ i18n.t('admin.locked.eyebrow') }}</p>
+      <h2>{{ i18n.t('admin.locked.title') }}</h2>
       <p>
-        The <code>/admin</code> route is protected. Use an administrator account on the login page
-        to access these management tools.
+        {{ i18n.t('admin.locked.description') }}
       </p>
     </section>
   </main>
@@ -13,36 +12,36 @@
   <main class="admin-shell">
     <section class="hero">
       <div class="hero-copy">
-        <p class="eyebrow">Admin interface</p>
+        <p class="eyebrow">{{ i18n.t('admin.eyebrow') }}</p>
         <h2>{{ heroTitle() }}</h2>
         <p>{{ heroDescription() }}</p>
       </div>
 
       <div class="hero-actions">
         <button type="button" (click)="reload()" [disabled]="loading() || busyKey() !== null">
-          {{ loading() ? 'Refreshing...' : 'Refresh admin data' }}
+          {{ loading() ? i18n.t('common.refreshing') : i18n.t('admin.action.refreshData') }}
         </button>
-        <p class="hero-hint">API base: <code>/api</code></p>
+        <p class="hero-hint">{{ i18n.t('admin.apiBase') }}: <code>/api</code></p>
       </div>
     </section>
 
     @if (error()) {
       <section class="banner error">
-        <strong>Admin API issue</strong>
+        <strong>{{ i18n.t('admin.banner.apiIssue') }}</strong>
         <span>{{ error() }}</span>
       </section>
     }
 
     @if (!error() && loading()) {
       <section class="banner loading">
-        <strong>Loading admin data</strong>
-        <span>Fetching cars, users, and bookings.</span>
+        <strong>{{ i18n.t('admin.banner.loadingTitle') }}</strong>
+        <span>{{ i18n.t('admin.banner.loadingText') }}</span>
       </section>
     }
 
     @if (success()) {
       <section class="banner success">
-        <strong>Updated</strong>
+        <strong>{{ i18n.t('common.updated') }}</strong>
         <span>{{ success() }}</span>
       </section>
     }
@@ -62,8 +61,8 @@
         <article class="panel users-panel">
           <div class="panel-header">
             <div>
-              <p class="eyebrow">Admin pages</p>
-              <h3>Choose a dedicated management page</h3>
+              <p class="eyebrow">{{ i18n.t('admin.tools.pages') }}</p>
+              <h3>{{ i18n.t('admin.tools.choosePage') }}</h3>
             </div>
           </div>
 
@@ -71,8 +70,8 @@
             <a routerLink="/admin/manage-offers" class="list-card">
               <div class="list-topline">
                 <div>
-                  <strong>Manage offers</strong>
-                  <p>Open the offers management page.</p>
+                  <strong>{{ i18n.t('admin.tools.manageOffers') }}</strong>
+                  <p>{{ i18n.t('admin.tools.manageOffersDesc') }}</p>
                 </div>
               </div>
             </a>
@@ -80,8 +79,8 @@
             <a routerLink="/admin/manage-cars" class="list-card">
               <div class="list-topline">
                 <div>
-                  <strong>Manage cars</strong>
-                  <p>Create, edit, and remove cars.</p>
+                  <strong>{{ i18n.t('admin.tools.manageCars') }}</strong>
+                  <p>{{ i18n.t('admin.tools.manageCarsDesc') }}</p>
                 </div>
               </div>
             </a>
@@ -89,8 +88,8 @@
             <a routerLink="/admin/manage-users" class="list-card">
               <div class="list-topline">
                 <div>
-                  <strong>Manage users</strong>
-                  <p>Create and remove user accounts.</p>
+                  <strong>{{ i18n.t('admin.tools.manageUsers') }}</strong>
+                  <p>{{ i18n.t('admin.tools.manageUsersDesc') }}</p>
                 </div>
               </div>
             </a>
@@ -104,83 +103,83 @@
         <article class="panel fleet-panel">
         <div class="panel-header">
           <div>
-            <p class="eyebrow">Cars</p>
-            <h3>Manage fleet cars</h3>
+            <p class="eyebrow">{{ i18n.t('admin.cars.eyebrow') }}</p>
+            <h3>{{ i18n.t('admin.cars.title') }}</h3>
           </div>
         </div>
 
         <form class="admin-form" (ngSubmit)="saveCar()">
           <div class="form-header">
             <div>
-              <p class="eyebrow">{{ editingCarId() === null ? 'Create car' : 'Editing car' }}</p>
+              <p class="eyebrow">{{ editingCarId() === null ? i18n.t('admin.cars.createCar') : i18n.t('admin.cars.editingCar') }}</p>
               <p class="panel-lead">
                 {{
                   editingCarId() === null
-                    ? 'Add a new fleet car.'
-                    : 'Update the selected car and save the changes.'
+                    ? i18n.t('admin.cars.createLead')
+                    : i18n.t('admin.cars.updateLead')
                 }}
               </p>
             </div>
 
             @if (editingCarId() !== null) {
               <button type="button" class="secondary-button" (click)="cancelCarEdit()">
-                Cancel edit
+                {{ i18n.t('admin.action.cancelEdit') }}
               </button>
             }
           </div>
 
           <label class="field">
-            <span>Car name</span>
+            <span>{{ i18n.t('admin.field.carName') }}</span>
             <input
               type="text"
               name="carName"
               [(ngModel)]="carDraft.name"
-              placeholder="BMW X5"
+              [placeholder]="i18n.t('admin.placeholder.carName')"
             />
           </label>
 
           <label class="field">
-            <span>Description</span>
+            <span>{{ i18n.t('admin.field.description') }}</span>
             <input
               type="text"
               name="carDescription"
               [(ngModel)]="carDraft.description"
-              placeholder="Premium transfer vehicle"
+              [placeholder]="i18n.t('admin.placeholder.description')"
             />
           </label>
 
           <label class="field">
-            <span>Location</span>
+            <span>{{ i18n.t('admin.field.location') }}</span>
             <input
               type="text"
               name="carLocation"
               [(ngModel)]="carDraft.location"
-              placeholder="Berlin Garage"
+              [placeholder]="i18n.t('admin.placeholder.location')"
             />
           </label>
 
           <label class="field">
-            <span>Model</span>
+            <span>{{ i18n.t('admin.field.model') }}</span>
             <input
               type="text"
               name="carModel"
               [(ngModel)]="carDraft.model"
-              placeholder="X5"
+              [placeholder]="i18n.t('admin.placeholder.model')"
             />
           </label>
 
           <label class="field">
-            <span>Type</span>
+            <span>{{ i18n.t('admin.field.type') }}</span>
             <input
               type="text"
               name="carType"
               [(ngModel)]="carDraft.carType"
-              placeholder="SUV, Sedan, Van..."
+              [placeholder]="i18n.t('admin.placeholder.type')"
             />
           </label>
 
           <label class="field">
-            <span>Year</span>
+            <span>{{ i18n.t('admin.field.year') }}</span>
             <input
               type="number"
               name="carYear"
@@ -192,7 +191,7 @@
           </label>
 
           <label class="field">
-            <span>Seats</span>
+            <span>{{ i18n.t('admin.field.seats') }}</span>
             <input
               type="number"
               name="carSeats"
@@ -204,27 +203,27 @@
           </label>
 
           <label class="field">
-            <span>Transmission</span>
+            <span>{{ i18n.t('admin.field.transmission') }}</span>
             <select name="carTransmission" [(ngModel)]="carDraft.transmission">
-              <option value="Automatic">Automatic</option>
-              <option value="Manual">Manual</option>
-              <option value="Hybrid">Hybrid</option>
+              <option value="Automatic">{{ i18n.t('admin.option.automatic') }}</option>
+              <option value="Manual">{{ i18n.t('admin.option.manual') }}</option>
+              <option value="Hybrid">{{ i18n.t('admin.option.hybrid') }}</option>
             </select>
           </label>
 
           <label class="field">
-            <span>Fuel</span>
+            <span>{{ i18n.t('admin.field.fuel') }}</span>
             <select name="carFuelType" [(ngModel)]="carDraft.fuelType">
-              <option value="Benzin">Benzin</option>
-              <option value="Diesel">Diesel</option>
-              <option value="Electro">Electro</option>
-              <option value="Gas">Gas</option>
-              <option value="Hybrid">Hybrid</option>
+              <option value="Benzin">{{ i18n.t('admin.option.benzin') }}</option>
+              <option value="Diesel">{{ i18n.t('admin.option.diesel') }}</option>
+              <option value="Electro">{{ i18n.t('admin.option.electro') }}</option>
+              <option value="Gas">{{ i18n.t('admin.option.gas') }}</option>
+              <option value="Hybrid">{{ i18n.t('admin.option.hybrid') }}</option>
             </select>
           </label>
 
           <label class="field">
-            <span>Price per day (EUR)</span>
+            <span>{{ i18n.t('admin.field.pricePerDay') }}</span>
             <input
               type="number"
               name="carDailyPrice"
@@ -236,7 +235,7 @@
           </label>
 
           <label class="field">
-            <span>Baggage (bags)</span>
+            <span>{{ i18n.t('admin.field.baggage') }}</span>
             <input
               type="number"
               name="carBaggageBags"
@@ -248,7 +247,7 @@
           </label>
 
           <label class="field">
-            <span>Horsepower (PS)</span>
+            <span>{{ i18n.t('admin.field.horsepower') }}</span>
             <input
               type="number"
               name="carHorsepower"
@@ -260,7 +259,7 @@
           </label>
 
           <div class="field">
-            <span>Photos</span>
+            <span>{{ i18n.t('admin.field.photos') }}</span>
             <div
               class="photo-dropzone"
               [class.drag-active]="isPhotoDragActive()"
@@ -276,10 +275,10 @@
                 class="visually-hidden"
                 (change)="onPhotoInputChange($event)"
               />
-              <strong>Drag and drop images here</strong>
-              <p>Images are converted to AVIF, saved in the server car folder, and shown on the user page.</p>
+              <strong>{{ i18n.t('admin.photos.dragDrop') }}</strong>
+              <p>{{ i18n.t('admin.photos.help') }}</p>
               <button type="button" class="ghost-button inline-action" (click)="photoInput.click()">
-                Choose images
+                {{ i18n.t('admin.action.chooseImages') }}
               </button>
             </div>
           </div>
@@ -288,9 +287,9 @@
             <div class="draft-photo-grid">
               @for (photoUrl of carDraft.uploadedPhotoUrls; track photoUrl; let index = $index) {
                 <article class="draft-photo-card">
-                  <img [src]="photoUrl" alt="Uploaded car photo preview" />
+                  <img [src]="photoUrl" [alt]="i18n.t('admin.photos.previewAlt')" />
                   <button type="button" class="draft-photo-remove" (click)="removeDraftPhoto(index)">
-                    Remove
+                    {{ i18n.t('common.remove') }}
                   </button>
                 </article>
               }
@@ -298,28 +297,28 @@
           }
 
           <label class="field">
-            <span>Additional photo URLs</span>
+            <span>{{ i18n.t('admin.field.additionalPhotoUrls') }}</span>
             <textarea
               name="carPhotoUrls"
               [(ngModel)]="carDraft.photoUrlsText"
               rows="3"
-              placeholder="Optional: one URL per line"
+              [placeholder]="i18n.t('admin.placeholder.photoUrls')"
             ></textarea>
           </label>
 
           <label class="checkbox-field">
             <input type="checkbox" name="carAirConditioning" [(ngModel)]="carDraft.hasAirConditioning" />
-            <span>Air conditioning (Klima)</span>
+            <span>{{ i18n.t('admin.field.airConditioning') }}</span>
           </label>
 
           <label class="checkbox-field">
             <input type="checkbox" name="carActive" [(ngModel)]="carDraft.active" />
-            <span>Active and bookable</span>
+            <span>{{ i18n.t('admin.field.activeBookable') }}</span>
           </label>
 
           <div class="form-actions">
             <button type="submit" [disabled]="isBusy('save-car')">
-              {{ isBusy('save-car') ? 'Saving car...' : editingCarId() === null ? 'Add car' : 'Update car' }}
+              {{ isBusy('save-car') ? i18n.t('admin.action.savingCar') : editingCarId() === null ? i18n.t('admin.action.addCar') : i18n.t('admin.action.updateCar') }}
             </button>
           </div>
         </form>
@@ -335,35 +334,35 @@
             >
               <div class="car-showcase-head">
                 <strong>{{ car.name | uppercase }}</strong>
-                <p>{{ car.description || car.carType || 'Fleet vehicle' }}</p>
+                <p>{{ car.description || car.carType || i18n.t('admin.car.fleetVehicle') }}</p>
               </div>
 
               <div class="car-chip-row">
-                <span class="chip">{{ car.carType || 'Oder ahnliches Modell' }}</span>
+                <span class="chip">{{ car.carType || i18n.t('admin.car.similarModel') }}</span>
                 <span class="chip"><i class="fa-solid fa-user-group" aria-hidden="true"></i> {{ car.seats ?? '-' }}</span>
                 <span class="chip"><i class="fa-solid fa-suitcase-rolling" aria-hidden="true"></i> {{ car.baggageBags ?? '-' }}</span>
-                <span class="chip"><i class="fa-solid fa-gears" aria-hidden="true"></i> {{ car.transmission || 'Not set' }}</span>
+                <span class="chip"><i class="fa-solid fa-gears" aria-hidden="true"></i> {{ car.transmission || i18n.t('common.notSet') }}</span>
               </div>
 
               <div class="car-image-wrap">
                 @if (primaryPhotoUrl(car); as photoUrl) {
                   <img class="showcase-image" [src]="photoUrl" [alt]="car.name" />
                 } @else {
-                  <div class="showcase-image placeholder">No image uploaded</div>
+                  <div class="showcase-image placeholder">{{ i18n.t('admin.car.noImage') }}</div>
                 }
               </div>
 
               <p class="car-availability">
-                <i class="fa-solid fa-check" aria-hidden="true"></i> Unbegrenzte Kilometer verfugbar
+                <i class="fa-solid fa-check" aria-hidden="true"></i> {{ i18n.t('admin.car.unlimitedKm') }}
               </p>
 
               <div class="car-price-line">
-                <strong>{{ formatCurrency(car.dailyPrice) }} / Tag</strong>
-                <span>{{ formatCurrency(car.dailyPrice) }} Gesamtpreis</span>
+                <strong>{{ formatCurrency(car.dailyPrice) }} / {{ i18n.t('admin.car.perDay') }}</strong>
+                <span>{{ formatCurrency(car.dailyPrice) }} {{ i18n.t('admin.car.totalPrice') }}</span>
               </div>
             </article>
           } @empty {
-            <p class="empty-state">No cars are currently available in <code>/api/resources</code>.</p>
+            <p class="empty-state">{{ i18n.t('admin.car.noneAvailable') }} <code>/api/resources</code>.</p>
           }
         </div>
 
@@ -372,67 +371,67 @@
             <aside class="car-details-drawer" (click)="$event.stopPropagation()">
               <div class="car-details-header">
                 <div>
-                  <p class="eyebrow">Car details</p>
+                  <p class="eyebrow">{{ i18n.t('admin.car.details') }}</p>
                   <h3>{{ selectedCar.name }}</h3>
                 </div>
                 <button type="button" class="ghost-button drawer-close" (click)="closeCarDetails()">
-                  Close
+                  {{ i18n.t('common.close') }}
                 </button>
               </div>
 
-              <p class="drawer-description">{{ selectedCar.description || 'No description provided.' }}</p>
+              <p class="drawer-description">{{ selectedCar.description || i18n.t('admin.car.noDescription') }}</p>
 
               <dl>
                 <div>
-                  <dt>Location</dt>
+                  <dt>{{ i18n.t('admin.field.location') }}</dt>
                   <dd>{{ selectedCar.location }}</dd>
                 </div>
                 <div>
-                  <dt>Model</dt>
-                  <dd>{{ selectedCar.model || 'Not set' }}</dd>
+                  <dt>{{ i18n.t('admin.field.model') }}</dt>
+                  <dd>{{ selectedCar.model || i18n.t('common.notSet') }}</dd>
                 </div>
                 <div>
-                  <dt>Type</dt>
-                  <dd>{{ selectedCar.carType || 'Not set' }}</dd>
+                  <dt>{{ i18n.t('admin.field.type') }}</dt>
+                  <dd>{{ selectedCar.carType || i18n.t('common.notSet') }}</dd>
                 </div>
                 <div>
-                  <dt>Year</dt>
-                  <dd>{{ selectedCar.year ?? 'Not set' }}</dd>
+                  <dt>{{ i18n.t('admin.field.year') }}</dt>
+                  <dd>{{ selectedCar.year ?? i18n.t('common.notSet') }}</dd>
                 </div>
                 <div>
-                  <dt>Seats</dt>
-                  <dd>{{ selectedCar.seats ?? 'Not set' }}</dd>
+                  <dt>{{ i18n.t('admin.field.seats') }}</dt>
+                  <dd>{{ selectedCar.seats ?? i18n.t('common.notSet') }}</dd>
                 </div>
                 <div>
-                  <dt>Transmission</dt>
-                  <dd>{{ selectedCar.transmission || 'Not set' }}</dd>
+                  <dt>{{ i18n.t('admin.field.transmission') }}</dt>
+                  <dd>{{ selectedCar.transmission || i18n.t('common.notSet') }}</dd>
                 </div>
                 <div>
-                  <dt>Fuel</dt>
-                  <dd>{{ selectedCar.fuelType || 'Not set' }}</dd>
+                  <dt>{{ i18n.t('admin.field.fuel') }}</dt>
+                  <dd>{{ selectedCar.fuelType || i18n.t('common.notSet') }}</dd>
                 </div>
                 <div>
-                  <dt>Price/day</dt>
+                  <dt>{{ i18n.t('admin.field.pricePerDay') }}</dt>
                   <dd>{{ formatCurrency(selectedCar.dailyPrice) }}</dd>
                 </div>
                 <div>
-                  <dt>Baggage</dt>
-                  <dd>{{ selectedCar.baggageBags ?? 'Not set' }}</dd>
+                  <dt>{{ i18n.t('admin.field.baggage') }}</dt>
+                  <dd>{{ selectedCar.baggageBags ?? i18n.t('common.notSet') }}</dd>
                 </div>
                 <div>
-                  <dt>Klima</dt>
+                  <dt>{{ i18n.t('admin.field.airConditioningShort') }}</dt>
                   <dd>{{ climateLabel(selectedCar.hasAirConditioning) }}</dd>
                 </div>
                 <div>
-                  <dt>Horsepower</dt>
-                  <dd>{{ selectedCar.horsepower ? selectedCar.horsepower + ' PS' : 'Not set' }}</dd>
+                  <dt>{{ i18n.t('admin.field.horsepower') }}</dt>
+                  <dd>{{ selectedCar.horsepower ? selectedCar.horsepower + ' PS' : i18n.t('common.notSet') }}</dd>
                 </div>
                 <div>
-                  <dt>Status</dt>
-                  <dd>{{ selectedCar.active ? 'Active' : 'Inactive' }}</dd>
+                  <dt>{{ i18n.t('admin.field.status') }}</dt>
+                  <dd>{{ selectedCar.active ? i18n.t('common.active') : i18n.t('common.inactive') }}</dd>
                 </div>
                 <div>
-                  <dt>Photos</dt>
+                  <dt>{{ i18n.t('admin.field.photos') }}</dt>
                   <dd>{{ photoCountLabel(selectedCar.photoUrls) }}</dd>
                 </div>
               </dl>
@@ -452,7 +451,7 @@
                   (click)="editCar(selectedCar)"
                   [disabled]="busyKey() !== null && busyKey() !== 'save-car'"
                 >
-                  {{ editingCarId() === selectedCar.id ? 'Editing' : 'Edit car' }}
+                  {{ editingCarId() === selectedCar.id ? i18n.t('admin.action.editing') : i18n.t('admin.action.editCar') }}
                 </button>
 
                 <button
@@ -461,7 +460,7 @@
                   (click)="deleteCar(selectedCar.id)"
                   [disabled]="isBusy('delete-car-' + selectedCar.id)"
                 >
-                  {{ isBusy('delete-car-' + selectedCar.id) ? 'Deleting...' : 'Delete car' }}
+                  {{ isBusy('delete-car-' + selectedCar.id) ? i18n.t('common.deleting') : i18n.t('admin.action.deleteCar') }}
                 </button>
               </div>
             </aside>
@@ -474,47 +473,47 @@
         <article class="panel users-panel">
         <div class="panel-header">
           <div>
-            <p class="eyebrow">Users</p>
-            <h3>Manage user accounts</h3>
+            <p class="eyebrow">{{ i18n.t('admin.users.eyebrow') }}</p>
+            <h3>{{ i18n.t('admin.users.title') }}</h3>
           </div>
         </div>
 
         <form class="admin-form" (ngSubmit)="createUser()">
           <label class="field">
-            <span>Name</span>
-            <input type="text" name="userName" [(ngModel)]="userDraft.name" placeholder="Maher" />
+            <span>{{ i18n.t('login.field.name') }}</span>
+            <input type="text" name="userName" [(ngModel)]="userDraft.name" [placeholder]="i18n.t('admin.placeholder.userName')" />
           </label>
 
           <label class="field">
-            <span>Email</span>
+            <span>{{ i18n.t('login.field.email') }}</span>
             <input
               type="email"
               name="userEmail"
               [(ngModel)]="userDraft.email"
-              placeholder="maher@example.com"
+              [placeholder]="i18n.t('admin.placeholder.userEmail')"
             />
           </label>
 
           <label class="field">
-            <span>Password</span>
+            <span>{{ i18n.t('login.field.password') }}</span>
             <input
               type="password"
               name="userPassword"
               [(ngModel)]="userDraft.password"
-              placeholder="At least 6 characters"
+              [placeholder]="i18n.t('admin.placeholder.password')"
             />
           </label>
 
           <label class="field">
-            <span>Role</span>
+            <span>{{ i18n.t('admin.field.role') }}</span>
             <select name="userRole" [(ngModel)]="userDraft.role">
-              <option value="USER">User</option>
-              <option value="ADMIN">Admin</option>
+              <option value="USER">{{ i18n.t('app.role.user') }}</option>
+              <option value="ADMIN">{{ i18n.t('app.role.admin') }}</option>
             </select>
           </label>
 
           <button type="submit" [disabled]="isBusy('create-user')">
-            {{ isBusy('create-user') ? 'Saving user...' : 'Add user' }}
+            {{ isBusy('create-user') ? i18n.t('admin.action.savingUser') : i18n.t('admin.action.addUser') }}
           </button>
         </form>
 
@@ -524,7 +523,7 @@
               <div class="list-topline">
                 <div>
                   <strong>{{ user.name }}</strong>
-                  <p>{{ user.email || 'No email stored.' }}</p>
+                  <p>{{ user.email || i18n.t('admin.user.noEmail') }}</p>
                 </div>
                 <span class="pill">{{ roleLabel(user.role) }}</span>
               </div>
@@ -535,11 +534,11 @@
                 (click)="deleteUser(user.id)"
                 [disabled]="isBusy('delete-user-' + user.id)"
               >
-                {{ isBusy('delete-user-' + user.id) ? 'Deleting...' : 'Delete user' }}
+                {{ isBusy('delete-user-' + user.id) ? i18n.t('common.deleting') : i18n.t('admin.action.deleteUser') }}
               </button>
             </section>
           } @empty {
-            <p class="empty-state">No users are currently stored.</p>
+            <p class="empty-state">{{ i18n.t('admin.user.noneStored') }}</p>
           }
         </div>
         </article>

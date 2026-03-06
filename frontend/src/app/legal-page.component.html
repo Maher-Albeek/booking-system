@@ -1,45 +1,45 @@
 <main class="legal-shell">
   <section class="legal-card">
-    <p class="eyebrow">Legal</p>
+    <p class="eyebrow">{{ i18n.t('legal.eyebrow') }}</p>
     <h1>{{ title() }}</h1>
     <p class="summary">{{ summary() }}</p>
 
     @if (mode() === 'impressum') {
       <dl class="legal-grid">
         <div>
-          <dt>Company</dt>
+          <dt>{{ i18n.t('legal.impressum.company') }}</dt>
           <dd>Booking System GmbH</dd>
         </div>
         <div>
-          <dt>Address</dt>
+          <dt>{{ i18n.t('legal.impressum.address') }}</dt>
           <dd>Musterstrasse 10, 10115 Berlin</dd>
         </div>
         <div>
-          <dt>Email</dt>
+          <dt>{{ i18n.t('legal.impressum.email') }}</dt>
           <dd>legal@example.com</dd>
         </div>
         <div>
-          <dt>Phone</dt>
+          <dt>{{ i18n.t('legal.impressum.phone') }}</dt>
           <dd>+49 30 000000</dd>
         </div>
       </dl>
     } @else {
       <dl class="legal-grid">
         <div>
-          <dt>Data controller</dt>
+          <dt>{{ i18n.t('legal.data.controller') }}</dt>
           <dd>Booking System GmbH</dd>
         </div>
         <div>
-          <dt>Purpose</dt>
-          <dd>Account handling, car bookings, and payment preference storage.</dd>
+          <dt>{{ i18n.t('legal.data.purpose') }}</dt>
+          <dd>{{ i18n.t('legal.data.purposeText') }}</dd>
         </div>
         <div>
-          <dt>Stored fields</dt>
-          <dd>Name, email, address, bookings, and selected payment methods.</dd>
+          <dt>{{ i18n.t('legal.data.storedFields') }}</dt>
+          <dd>{{ i18n.t('legal.data.storedFieldsText') }}</dd>
         </div>
         <div>
-          <dt>Requests</dt>
-          <dd>Contact legal@example.com for access, correction, or deletion.</dd>
+          <dt>{{ i18n.t('legal.data.requests') }}</dt>
+          <dd>{{ i18n.t('legal.data.requestsText') }}</dd>
         </div>
       </dl>
     }

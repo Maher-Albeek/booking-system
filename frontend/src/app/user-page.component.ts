@@ -7,6 +7,7 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { finalize, forkJoin, of } from 'rxjs';
 
 import { AuthStateService, AuthUser } from './auth-state.service';
+import { I18nService } from './i18n.service';
 
 const PAYMENT_METHOD_OPTIONS = [
   'PayPal',
@@ -20,35 +21,35 @@ type PaymentMethod = (typeof PAYMENT_METHOD_OPTIONS)[number];
 
 const PAYMENT_METHOD_META: Record<
   PaymentMethod,
-  { iconClass: string; hint: string; accent: string; foreground: string }
+  { iconClass: string; hintKey: string; accent: string; foreground: string }
 > = {
   PayPal: {
     iconClass: 'fa-brands fa-paypal',
-    hint: 'Wallet checkout',
+    hintKey: 'payment.hint.walletCheckout',
     accent: '#1d4ed8',
     foreground: '#eff6ff'
   },
   'Master Card': {
     iconClass: 'fa-brands fa-cc-mastercard',
-    hint: 'Credit card',
+    hintKey: 'payment.hint.creditCard',
     accent: '#ea580c',
     foreground: '#fff7ed'
   },
   Visa: {
     iconClass: 'fa-brands fa-cc-visa',
-    hint: 'Card payment',
+    hintKey: 'payment.hint.cardPayment',
     accent: '#2563eb',
     foreground: '#eff6ff'
   },
   Klarna: {
     iconClass: 'fa-solid fa-money-bill-wave',
-    hint: 'Pay later',
+    hintKey: 'payment.hint.payLater',
     accent: '#f472b6',
     foreground: '#500724'
   },
   'Giro Card': {
     iconClass: 'fa-solid fa-credit-card',
-    hint: 'Debit card',
+    hintKey: 'payment.hint.debitCard',
     accent: '#16a34a',
     foreground: '#f0fdf4'
   }
@@ -158,9 +159,10 @@ export class UserPageComponent {
   private readonly route = inject(ActivatedRoute);
 
   protected readonly auth = inject(AuthStateService);
+  protected readonly i18n = inject(I18nService);
   protected readonly pageMode: 'offers' | 'bookings' =
     this.route.snapshot.data['userPageMode'] === 'bookings' ? 'bookings' : 'offers';
-  protected readonly title = 'Book Your Next Car';
+  protected readonly title = computed(() => this.i18n.t('user.title.bookYourNextCar'));
   protected readonly supportedPaymentMethods = PAYMENT_METHOD_OPTIONS;
   protected readonly paymentMethodMeta = PAYMENT_METHOD_META;
   protected readonly loading = signal(true);
@@ -199,30 +201,30 @@ export class UserPageComponent {
 
   protected readonly stats = computed(() => [
     {
-      label: 'Available Cars',
+      label: this.i18n.t('user.stats.availableCars'),
       value: this.cars().filter((car) => car.active).length,
-      note: `${this.cars().length} cars loaded`
+      note: this.i18n.t('user.stats.carsLoaded', { count: this.cars().length })
     },
     {
-      label: 'Confirmed Trips',
+      label: this.i18n.t('user.stats.confirmedTrips'),
       value: this.bookings().filter((booking) => booking.status === 'CONFIRMED').length,
-      note: 'Live reservations'
+      note: this.i18n.t('user.stats.liveReservations')
     },
     {
-      label: 'Booking Access',
+      label: this.i18n.t('user.stats.bookingAccess'),
       value: this.auth.isAuthenticated()
-        ? 'Enabled'
-        : 'Login',
-      note: this.auth.isAuthenticated() ? 'Ready to reserve' : 'Required to reserve'
+        ? this.i18n.t('user.stats.enabled')
+        : this.i18n.t('app.link.login'),
+      note: this.auth.isAuthenticated() ? this.i18n.t('user.stats.readyToReserve') : this.i18n.t('user.stats.requiredToReserve')
     },
     {
-      label: this.auth.isAuthenticated() ? 'Profile Ready' : 'Guest Mode',
+      label: this.auth.isAuthenticated() ? this.i18n.t('user.stats.profileReady') : this.i18n.t('user.stats.guestMode'),
       value: this.auth.isAuthenticated()
         ? `${this.accountCompleteness().completed}/${this.accountCompleteness().total}`
-        : 'Browse',
+        : this.i18n.t('user.stats.browse'),
       note: this.auth.isAuthenticated()
-        ? 'Booking profile fields saved'
-        : 'Registration available'
+        ? this.i18n.t('user.stats.profileFieldsSaved')
+        : this.i18n.t('user.stats.registrationAvailable')
     }
   ]);
 
@@ -498,7 +500,7 @@ export class UserPageComponent {
     }
 
     if (!file.type.startsWith('image/')) {
-      this.error.set('Only image files can be used as an avatar.');
+      this.error.set(this.i18n.t('account.error.avatarImageOnly'));
       return;
     }
 
@@ -512,7 +514,7 @@ export class UserPageComponent {
         avatarUrl
       };
     } catch {
-      this.error.set('The selected image could not be loaded.');
+      this.error.set(this.i18n.t('account.error.avatarLoadFailed'));
     } finally {
       this.avatarUploading.set(false);
     }
@@ -544,7 +546,7 @@ export class UserPageComponent {
     const authenticatedUser = this.auth.user();
 
     if (!authenticatedUser) {
-      this.error.set('Login before updating your account.');
+      this.error.set(this.i18n.t('account.error.loginBeforeUpdate'));
       return;
     }
 
@@ -573,17 +575,17 @@ export class UserPageComponent {
         next: (user) => {
           const normalizedUser = this.normalizeUser(user);
           this.applyProfileUser(normalizedUser);
-          this.success.set('Your account information has been updated.');
+          this.success.set(this.i18n.t('account.success.updated'));
         },
         error: (error: HttpErrorResponse) => {
-          this.error.set(this.readApiError(error, 'Account information could not be saved.'));
+          this.error.set(this.readApiError(error, this.i18n.t('account.error.saveFailed')));
         }
       });
   }
 
   protected createBooking(): void {
     if (!this.auth.isAuthenticated()) {
-      this.error.set('Login or register before creating a booking.');
+      this.error.set(this.i18n.t('user.error.loginBeforeBooking'));
       return;
     }
 
@@ -610,14 +612,14 @@ export class UserPageComponent {
       !paymentMethod ||
       !serviceName
     ) {
-      this.error.set('Choose a car, set start and end date-time, and complete all required booking details.');
+      this.error.set(this.i18n.t('user.error.completeBookingDetails'));
       return;
     }
 
     const startDate = new Date(startDateTime);
     const endDate = new Date(endDateTime);
     if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime()) || startDate >= endDate) {
-      this.error.set('Start date-time must be before end date-time.');
+      this.error.set(this.i18n.t('user.error.invalidDateRange'));
       return;
     }
 
@@ -655,22 +657,25 @@ export class UserPageComponent {
           this.bookingEndDateTime.set('');
           this.serviceName.set('');
           this.reservationModalOpen.set(false);
-          const pricingNote =
-            estimatedTotalPrice === null
-              ? ''
-              : ` Total ${this.formatCurrency(estimatedTotalPrice)}${estimatedDays ? ` for ${estimatedDays} day${estimatedDays === 1 ? '' : 's'}` : ''}.`;
-          this.success.set(`Booking confirmed for ${selectedCar.name}.${pricingNote}`);
+          let pricingNote = '';
+          if (estimatedTotalPrice !== null && estimatedDays) {
+            pricingNote = ` ${this.i18n.t('user.success.totalPrice', {
+              total: this.formatCurrency(estimatedTotalPrice),
+              days: estimatedDays
+            })}`;
+          }
+          this.success.set(this.i18n.t('user.success.bookingConfirmed', { car: selectedCar.name }) + pricingNote);
           this.loadData();
         },
         error: (error: HttpErrorResponse) => {
-          this.error.set(this.readApiError(error, 'Booking could not be created.'));
+          this.error.set(this.readApiError(error, this.i18n.t('user.error.bookingCreateFailed')));
         }
       });
   }
 
   protected cancelBooking(bookingId: number): void {
     if (!this.auth.isAuthenticated()) {
-      this.error.set('Login before managing bookings.');
+      this.error.set(this.i18n.t('user.error.loginBeforeManage'));
       return;
     }
 
@@ -686,17 +691,17 @@ export class UserPageComponent {
       )
       .subscribe({
         next: () => {
-          this.success.set('Booking cancelled.');
+          this.success.set(this.i18n.t('user.success.bookingCancelled'));
           this.loadData();
         },
         error: (error: HttpErrorResponse) => {
-          this.error.set(this.readApiError(error, 'Booking could not be cancelled.'));
+          this.error.set(this.readApiError(error, this.i18n.t('user.error.bookingCancelFailed')));
         }
       });
   }
 
   protected resourceLabel(resourceId: number): string {
-    return this.cars().find((car) => car.id === resourceId)?.name ?? `Car #${resourceId}`;
+    return this.cars().find((car) => car.id === resourceId)?.name ?? this.i18n.t('user.label.carNumber', { id: resourceId });
   }
 
   protected bookingPeriodLabel(booking: Booking): string {
@@ -704,15 +709,15 @@ export class UserPageComponent {
       return this.formatPeriod(booking.startDateTime, booking.endDateTime);
     }
 
-    return 'Not recorded';
+    return this.i18n.t('common.notRecorded');
   }
 
   protected formatDate(value: string | null | undefined): string {
     if (!value) {
-      return 'Not recorded';
+      return this.i18n.t('common.notRecorded');
     }
 
-    return new Intl.DateTimeFormat('en-GB', {
+    return new Intl.DateTimeFormat(this.i18n.locale(), {
       dateStyle: 'medium',
       timeStyle: 'short'
     }).format(new Date(value));
@@ -720,16 +725,16 @@ export class UserPageComponent {
 
   protected formatCalendarDate(value: string | null | undefined): string {
     if (!value) {
-      return 'Not recorded';
+      return this.i18n.t('common.notRecorded');
     }
 
-    return new Intl.DateTimeFormat('de-DE', {
+    return new Intl.DateTimeFormat(this.i18n.locale(), {
       dateStyle: 'medium'
     }).format(new Date(value));
   }
 
   protected formatDay(value: string): string {
-    return new Intl.DateTimeFormat('en-GB', {
+    return new Intl.DateTimeFormat(this.i18n.locale(), {
       weekday: 'short',
       day: 'numeric',
       month: 'short'
@@ -737,7 +742,7 @@ export class UserPageComponent {
   }
 
   protected formatTime(value: string): string {
-    return new Intl.DateTimeFormat('en-GB', {
+    return new Intl.DateTimeFormat(this.i18n.locale(), {
       hour: '2-digit',
       minute: '2-digit'
     }).format(new Date(value));
@@ -795,23 +800,23 @@ export class UserPageComponent {
 
   protected bookingContactName(booking: Booking): string {
     const name = [booking.firstName, booking.lastName].filter(Boolean).join(' ').trim();
-    return name || booking.customerName || 'Unnamed customer';
+    return name || booking.customerName || this.i18n.t('user.label.unnamedCustomer');
   }
 
   protected bookingTotalPriceLabel(booking: Booking): string {
     const car = this.cars().find((entry) => entry.id === booking.resourceId);
 
     if (!car || typeof car.dailyPrice !== 'number' || !booking.startDateTime || !booking.endDateTime) {
-      return 'Not available';
+      return this.i18n.t('common.notAvailable');
     }
 
     const days = this.calculateRentalDays(booking.startDateTime, booking.endDateTime);
     if (days === null) {
-      return 'Not available';
+      return this.i18n.t('common.notAvailable');
     }
 
     const total = Number((car.dailyPrice * days).toFixed(2));
-    return `${this.formatCurrency(total)} (${days} day${days === 1 ? '' : 's'})`;
+    return this.i18n.t('user.label.totalWithDays', { total: this.formatCurrency(total), days });
   }
 
   private loadData(): void {
@@ -863,7 +868,7 @@ export class UserPageComponent {
           this.error.set(
             this.readApiError(
               error,
-              'Frontend is running, but the booking API did not respond. Start the Spring Boot server and reload.'
+              this.i18n.t('user.error.apiUnavailable')
             )
           );
         }
@@ -1122,7 +1127,7 @@ export class UserPageComponent {
   }
 
   protected formatCurrency(value: number): string {
-    return new Intl.NumberFormat('de-DE', {
+    return new Intl.NumberFormat(this.i18n.locale(), {
       style: 'currency',
       currency: 'EUR'
     }).format(value);
@@ -1212,10 +1217,10 @@ export class UserPageComponent {
           return;
         }
 
-        reject(new Error('Avatar could not be read.'));
+        reject(new Error(this.i18n.t('account.error.avatarReadFailed')));
       };
 
-      reader.onerror = () => reject(reader.error ?? new Error('Avatar could not be read.'));
+      reader.onerror = () => reject(reader.error ?? new Error(this.i18n.t('account.error.avatarReadFailed')));
       reader.readAsDataURL(file);
     });
   }

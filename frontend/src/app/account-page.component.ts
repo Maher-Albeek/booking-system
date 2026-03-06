@@ -7,6 +7,7 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 
 import { AuthStateService } from './auth-state.service';
+import { I18nService } from './i18n.service';
 
 const PAYMENT_METHOD_OPTIONS = [
   'PayPal',
@@ -20,35 +21,35 @@ type PaymentMethod = (typeof PAYMENT_METHOD_OPTIONS)[number];
 
 const PAYMENT_METHOD_META: Record<
   PaymentMethod,
-  { iconClass: string; hint: string; accent: string; foreground: string }
+  { iconClass: string; hintKey: string; accent: string; foreground: string }
 > = {
   PayPal: {
     iconClass: 'fa-brands fa-paypal',
-    hint: 'Wallet checkout',
+    hintKey: 'payment.hint.walletCheckout',
     accent: '#1d4ed8',
     foreground: '#eff6ff'
   },
   'Master Card': {
     iconClass: 'fa-brands fa-cc-mastercard',
-    hint: 'Credit card',
+    hintKey: 'payment.hint.creditCard',
     accent: '#ea580c',
     foreground: '#fff7ed'
   },
   Visa: {
     iconClass: 'fa-brands fa-cc-visa',
-    hint: 'Card payment',
+    hintKey: 'payment.hint.cardPayment',
     accent: '#2563eb',
     foreground: '#eff6ff'
   },
   Klarna: {
     iconClass: 'fa-solid fa-money-bill-wave',
-    hint: 'Pay later',
+    hintKey: 'payment.hint.payLater',
     accent: '#f472b6',
     foreground: '#500724'
   },
   'Giro Card': {
     iconClass: 'fa-solid fa-credit-card',
-    hint: 'Debit card',
+    hintKey: 'payment.hint.debitCard',
     accent: '#16a34a',
     foreground: '#f0fdf4'
   }
@@ -96,6 +97,7 @@ export class AccountPageComponent {
   private readonly route = inject(ActivatedRoute);
 
   protected readonly auth = inject(AuthStateService);
+  protected readonly i18n = inject(I18nService);
   protected readonly pageMode: 'profile' | 'payment' =
     this.route.snapshot.data['accountPageMode'] === 'payment' ? 'payment' : 'profile';
   protected readonly supportedPaymentMethods = PAYMENT_METHOD_OPTIONS;
@@ -163,7 +165,7 @@ export class AccountPageComponent {
     }
 
     if (!file.type.startsWith('image/')) {
-      this.error.set('Only image files can be used as an avatar.');
+      this.error.set(this.i18n.t('account.error.avatarImageOnly'));
       return;
     }
 
@@ -177,7 +179,7 @@ export class AccountPageComponent {
         avatarUrl
       };
     } catch {
-      this.error.set('The selected image could not be loaded.');
+      this.error.set(this.i18n.t('account.error.avatarLoadFailed'));
     } finally {
       this.avatarUploading.set(false);
     }
@@ -209,7 +211,7 @@ export class AccountPageComponent {
     const authenticatedUser = this.auth.user();
 
     if (!authenticatedUser) {
-      this.error.set('Login before updating your account.');
+      this.error.set(this.i18n.t('account.error.loginBeforeUpdate'));
       return;
     }
 
@@ -244,10 +246,10 @@ export class AccountPageComponent {
             role: user.role === 'ADMIN' ? 'ADMIN' : 'USER',
             paymentMethods: this.normalizePaymentMethods(user.paymentMethods)
           });
-          this.success.set('Your account information has been updated.');
+          this.success.set(this.i18n.t('account.success.updated'));
         },
         error: (error: HttpErrorResponse) => {
-          this.error.set(this.readApiError(error, 'Account information could not be saved.'));
+          this.error.set(this.readApiError(error, this.i18n.t('account.error.saveFailed')));
         }
       });
   }
@@ -282,7 +284,7 @@ export class AccountPageComponent {
           });
         },
         error: (error: HttpErrorResponse) => {
-          this.error.set(this.readApiError(error, 'Profile data could not be loaded.'));
+          this.error.set(this.readApiError(error, this.i18n.t('account.error.loadFailed')));
         }
       });
   }
@@ -358,10 +360,10 @@ export class AccountPageComponent {
           return;
         }
 
-        reject(new Error('Avatar could not be read.'));
+        reject(new Error(this.i18n.t('account.error.avatarReadFailed')));
       };
 
-      reader.onerror = () => reject(reader.error ?? new Error('Avatar could not be read.'));
+      reader.onerror = () => reject(reader.error ?? new Error(this.i18n.t('account.error.avatarReadFailed')));
       reader.readAsDataURL(file);
     });
   }

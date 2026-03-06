@@ -1,13 +1,13 @@
 <main class="account-shell">
   <section class="hero">
     <div>
-      <p class="eyebrow">Account</p>
-      <h2>{{ pageMode === 'payment' ? 'Manage payment methods' : 'Manage your profile' }}</h2>
+      <p class="eyebrow">{{ i18n.t('account.eyebrow') }}</p>
+      <h2>{{ pageMode === 'payment' ? i18n.t('account.title.payment') : i18n.t('account.title.profile') }}</h2>
       <p>
         {{
           pageMode === 'payment'
-            ? 'This page is dedicated to payment method preferences.'
-            : 'This page is dedicated to personal profile details.'
+            ? i18n.t('account.description.payment')
+            : i18n.t('account.description.profile')
         }}
       </p>
     </div>
@@ -15,28 +15,28 @@
     <button type="button" class="submit-button compact-button" (click)="reload()" [disabled]="loading() || saving()">
       <span class="button-content">
         <i class="button-icon fa-solid fa-rotate-right" aria-hidden="true"></i>
-        <span>{{ loading() ? 'Refreshing...' : 'Refresh profile' }}</span>
+        <span>{{ loading() ? i18n.t('common.refreshing') : i18n.t('account.action.refreshProfile') }}</span>
       </span>
     </button>
   </section>
 
   @if (!auth.isAuthenticated()) {
     <section class="banner info">
-      <strong>Login required</strong>
-      <span>Please sign in before editing your account profile.</span>
-      <a routerLink="/login" class="cta-link">Login</a>
+      <strong>{{ i18n.t('account.banner.loginRequired') }}</strong>
+      <span>{{ i18n.t('account.banner.loginRequiredText') }}</span>
+      <a routerLink="/login" class="cta-link">{{ i18n.t('app.link.login') }}</a>
     </section>
   } @else {
     @if (error()) {
       <section class="banner error">
-        <strong>Account API issue</strong>
+        <strong>{{ i18n.t('account.banner.apiIssue') }}</strong>
         <span>{{ error() }}</span>
       </section>
     }
 
     @if (success()) {
       <section class="banner success">
-        <strong>Updated</strong>
+        <strong>{{ i18n.t('common.updated') }}</strong>
         <span>{{ success() }}</span>
       </section>
     }
@@ -44,11 +44,11 @@
     <section class="panel account-panel">
       <div class="panel-header">
         <div>
-          <p class="eyebrow">{{ pageMode === 'payment' ? 'Payment' : 'Profile' }}</p>
-          <h3>{{ pageMode === 'payment' ? 'Saved payment methods' : 'Personal profile details' }}</h3>
+          <p class="eyebrow">{{ pageMode === 'payment' ? i18n.t('account.section.payment') : i18n.t('account.section.profile') }}</p>
+          <h3>{{ pageMode === 'payment' ? i18n.t('account.subtitle.payment') : i18n.t('account.subtitle.profile') }}</h3>
         </div>
         <span class="profile-pill">
-          {{ accountCompleteness().completed }}/{{ accountCompleteness().total }} fields saved
+          {{ accountCompleteness().completed }}/{{ accountCompleteness().total }} {{ i18n.t('account.fieldsSaved') }}
         </span>
       </div>
 
@@ -56,7 +56,7 @@
         <section class="avatar-panel">
           <div class="avatar-preview">
             @if (accountDraft.avatarUrl) {
-              <img [src]="accountDraft.avatarUrl" alt="User avatar" />
+              <img [src]="accountDraft.avatarUrl" [alt]="i18n.t('app.session.avatar')" />
             } @else {
               <span>{{ avatarInitials() }}</span>
             }
@@ -67,7 +67,7 @@
               <input type="file" accept="image/*" (change)="onAvatarInputChange($event)" />
               <span class="button-content">
                 <i class="button-icon fa-solid fa-cloud-arrow-up" aria-hidden="true"></i>
-                <span>{{ avatarUploading() ? 'Loading avatar...' : 'Upload avatar' }}</span>
+                <span>{{ avatarUploading() ? i18n.t('account.action.loadingAvatar') : i18n.t('account.action.uploadAvatar') }}</span>
               </span>
             </label>
             <button
@@ -78,7 +78,7 @@
             >
               <span class="button-content">
                 <i class="button-icon fa-solid fa-trash-can" aria-hidden="true"></i>
-                <span>Remove avatar</span>
+                <span>{{ i18n.t('account.action.removeAvatar') }}</span>
               </span>
             </button>
           </div>
@@ -88,7 +88,7 @@
           @if (pageMode === 'profile') {
             <div class="account-fields">
               <label class="field">
-                <span>First name</span>
+                <span>{{ i18n.t('account.field.firstName') }}</span>
                 <input
                   type="text"
                   name="accountFirstName"
@@ -99,7 +99,7 @@
               </label>
 
               <label class="field">
-                <span>Last name</span>
+                <span>{{ i18n.t('account.field.lastName') }}</span>
                 <input
                   type="text"
                   name="accountLastName"
@@ -110,7 +110,7 @@
               </label>
 
               <label class="field">
-                <span>Birth date</span>
+                <span>{{ i18n.t('account.field.birthDate') }}</span>
                 <input
                   type="date"
                   name="accountBirthDate"
@@ -121,7 +121,7 @@
               </label>
 
               <label class="field">
-                <span>Street</span>
+                <span>{{ i18n.t('account.field.street') }}</span>
                 <input
                   type="text"
                   name="accountAddressStreet"
@@ -132,7 +132,7 @@
               </label>
 
               <label class="field">
-                <span>House number</span>
+                <span>{{ i18n.t('account.field.houseNumber') }}</span>
                 <input
                   type="text"
                   name="accountAddressHouseNumber"
@@ -143,7 +143,7 @@
               </label>
 
               <label class="field">
-                <span>Postal code</span>
+                <span>{{ i18n.t('account.field.postalCode') }}</span>
                 <input
                   type="text"
                   name="accountAddressPostalCode"
@@ -154,7 +154,7 @@
               </label>
 
               <label class="field">
-                <span>City</span>
+                <span>{{ i18n.t('account.field.city') }}</span>
                 <input
                   type="text"
                   name="accountAddressCity"
@@ -165,7 +165,7 @@
               </label>
 
               <label class="field">
-                <span>Country</span>
+                <span>{{ i18n.t('account.field.country') }}</span>
                 <input
                   type="text"
                   name="accountAddressCountry"
@@ -180,8 +180,8 @@
           @if (pageMode === 'payment') {
             <section class="payment-methods">
               <div class="payment-header">
-                <span>Payment methods</span>
-                <strong>Save one or more preferred methods</strong>
+                <span>{{ i18n.t('account.field.paymentMethods') }}</span>
+                <strong>{{ i18n.t('account.payment.savePreferred') }}</strong>
               </div>
 
               <div class="payment-grid">
@@ -202,7 +202,7 @@
                     </span>
                     <span class="payment-copy">
                       <strong>{{ method }}</strong>
-                      <small>{{ paymentMethodMeta[method].hint }}</small>
+                      <small>{{ i18n.t(paymentMethodMeta[method].hintKey) }}</small>
                     </span>
                   </label>
                 }
@@ -214,7 +214,7 @@
             <button type="submit" class="submit-button compact-button" [disabled]="saving() || avatarUploading()">
               <span class="button-content">
                 <i class="button-icon fa-solid fa-floppy-disk" aria-hidden="true"></i>
-                <span>{{ saving() ? 'Saving account...' : 'Save account' }}</span>
+                <span>{{ saving() ? i18n.t('account.action.savingAccount') : i18n.t('account.action.saveAccount') }}</span>
               </span>
             </button>
           </div>
@@ -223,3 +223,4 @@
     </section>
   }
 </main>
+
