@@ -62,6 +62,12 @@ h1 {
   color: #ffd8d2;
 }
 
+.login-banner.success {
+  background: rgba(96, 186, 132, 0.14);
+  border: 1px solid rgba(96, 186, 132, 0.36);
+  color: #d7ffdf;
+}
+
 .mode-switch {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   padding: 6px;
@@ -134,6 +140,18 @@ button {
     box-shadow 160ms ease,
     opacity 160ms ease;
   box-shadow: 0 16px 34px rgba(210, 106, 59, 0.28);
+}
+
+.login-actions {
+  display: grid;
+  gap: 10px;
+}
+
+.secondary-action {
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.04);
+  color: #f7f2ea;
+  box-shadow: none;
 }
 
 button:hover:not(:disabled) {

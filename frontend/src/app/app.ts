@@ -33,7 +33,9 @@ export class App {
   protected readonly identifier = signal('');
   protected readonly password = signal('');
   protected readonly submitting = signal(false);
+  protected readonly resettingPassword = signal(false);
   protected readonly error = signal<string | null>(null);
+  protected readonly resetMessage = signal<string | null>(null);
   protected readonly registerName = signal('');
   protected readonly registerEmail = signal('');
   protected readonly registerPassword = signal('');
@@ -110,12 +112,14 @@ export class App {
   protected closeAuthModal(): void {
     this.authModalOpen.set(false);
     this.error.set(null);
+    this.resetMessage.set(null);
     this.registerError.set(null);
   }
 
   protected setAuthMode(mode: 'login' | 'register'): void {
     this.authMode.set(mode);
     this.error.set(null);
+    this.resetMessage.set(null);
     this.registerError.set(null);
   }
 
@@ -130,6 +134,7 @@ export class App {
 
     this.submitting.set(true);
     this.error.set(null);
+    this.resetMessage.set(null);
 
     this.auth
       .login(identifier, password)
@@ -141,6 +146,38 @@ export class App {
         },
         error: (error: HttpErrorResponse) => {
           this.error.set(this.readApiError(error, this.i18n.t('login.error.loginFailed')));
+        }
+      });
+  }
+
+  protected submitPasswordReset(): void {
+    const identifier = this.identifier().trim();
+    const newPassword = this.password().trim();
+
+    if (!identifier || !newPassword) {
+      this.error.set(this.i18n.t('login.error.credentialsRequired'));
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      this.error.set(this.i18n.t('login.error.passwordLength'));
+      return;
+    }
+
+    this.resettingPassword.set(true);
+    this.error.set(null);
+    this.resetMessage.set(null);
+
+    this.auth
+      .resetPassword(identifier, newPassword)
+      .pipe(finalize(() => this.resettingPassword.set(false)))
+      .subscribe({
+        next: () => {
+          this.password.set('');
+          this.resetMessage.set(this.i18n.t('login.success.passwordReset'));
+        },
+        error: (error: HttpErrorResponse) => {
+          this.error.set(this.readApiError(error, this.i18n.t('login.error.resetFailed')));
         }
       });
   }
@@ -162,6 +199,7 @@ export class App {
 
     this.registerSubmitting.set(true);
     this.registerError.set(null);
+    this.resetMessage.set(null);
 
     this.auth
       .register(name, email, password)

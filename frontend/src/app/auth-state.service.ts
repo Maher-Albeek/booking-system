@@ -49,6 +49,13 @@ export class AuthStateService {
     );
   }
 
+  resetPassword(identifier: string, newPassword: string): Observable<void> {
+    return this.http.post<void>('/api/auth/reset-password', {
+      identifier: identifier.trim(),
+      newPassword: newPassword.trim()
+    });
+  }
+
   logout(): void {
     this.user.set(null);
 

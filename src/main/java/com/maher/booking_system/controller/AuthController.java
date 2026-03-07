@@ -2,6 +2,7 @@ package com.maher.booking_system.controller;
 
 import com.maher.booking_system.dto.AuthLoginRequest;
 import com.maher.booking_system.dto.AuthRegisterRequest;
+import com.maher.booking_system.dto.AuthResetPasswordRequest;
 import com.maher.booking_system.dto.UserResponse;
 import com.maher.booking_system.service.UsersService;
 import jakarta.validation.Valid;
@@ -33,5 +34,11 @@ public class AuthController {
     public @NonNull UserResponse register(@Valid @RequestBody @NonNull AuthRegisterRequest request) {
         AuthRegisterRequest safeRequest = Objects.requireNonNull(request, "request must not be null");
         return usersService.registerUser(safeRequest.name(), safeRequest.email(), safeRequest.password());
+    }
+
+    @PostMapping("/reset-password")
+    public void resetPassword(@Valid @RequestBody @NonNull AuthResetPasswordRequest request) {
+        AuthResetPasswordRequest safeRequest = Objects.requireNonNull(request, "request must not be null");
+        usersService.resetPassword(safeRequest.identifier(), safeRequest.newPassword());
     }
 }

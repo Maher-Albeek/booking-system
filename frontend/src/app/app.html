@@ -130,6 +130,13 @@
         </div>
 
         @if (authMode() === 'login') {
+          @if (resetMessage()) {
+            <section class="login-banner success">
+              <strong>{{ i18n.t('common.updated') }}</strong>
+              <span>{{ resetMessage() }}</span>
+            </section>
+          }
+
           @if (error()) {
             <section class="login-banner error">
               <strong>{{ i18n.t('login.banner.authIssue') }}</strong>
@@ -162,9 +169,23 @@
               />
             </label>
 
-            <button type="submit" [disabled]="submitting()">
-              {{ submitting() ? i18n.t('login.action.signingIn') : i18n.t('login.mode.login') }}
-            </button>
+            <div class="login-actions">
+              <button type="submit" [disabled]="submitting() || resettingPassword()">
+                {{ submitting() ? i18n.t('login.action.signingIn') : i18n.t('login.mode.login') }}
+              </button>
+              <button
+                type="button"
+                class="secondary-action"
+                [disabled]="submitting() || resettingPassword()"
+                (click)="submitPasswordReset()"
+              >
+                {{
+                  resettingPassword()
+                    ? i18n.t('login.action.resettingPassword')
+                    : i18n.t('login.action.resetPassword')
+                }}
+              </button>
+            </div>
           </form>
         } @else {
           @if (registerError()) {

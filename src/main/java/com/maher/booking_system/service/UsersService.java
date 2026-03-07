@@ -6,12 +6,15 @@ import com.maher.booking_system.exception.BadRequestException;
 import com.maher.booking_system.exception.NotFoundException;
 import com.maher.booking_system.model.Users;
 import com.maher.booking_system.repository.UsersRepository;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
@@ -19,6 +22,8 @@ import java.util.Objects;
 
 @Service
 public class UsersService {
+    private static final String BASE64_PASSWORD_PREFIX = "b64:";
+    private static final BCryptPasswordEncoder PASSWORD_ENCODER = new BCryptPasswordEncoder();
     private final UsersRepository usersRepository;
 
     public UsersService(UsersRepository usersRepository){
@@ -60,18 +65,45 @@ public class UsersService {
 
     public @NonNull UserResponse authenticate(String identifier, String password) {
         String safeIdentifier = identifier == null ? "" : identifier.trim();
-        String safePassword = password == null ? "" : password.trim();
+        String safePassword = normalizeIncomingPassword(password);
 
         if (safeIdentifier.isBlank() || safePassword.isBlank()) {
             throw new IllegalArgumentException("Email or username and password are required");
         }
 
-        return usersRepository.findAll().stream()
+        Users authenticatedUser = usersRepository.findAll().stream()
                 .filter(user -> matchesIdentifier(user, safeIdentifier))
-                .filter(user -> safePassword.equals(user.getPassword()))
+                .filter(user -> matchesPassword(user, safePassword))
                 .findFirst()
-                .map(this::toUserResponse)
                 .orElseThrow(() -> new IllegalArgumentException("Invalid email, username, or password"));
+
+        if (!isHashedPassword(authenticatedUser.getPassword())) {
+            authenticatedUser.setPassword(PASSWORD_ENCODER.encode(safePassword));
+            usersRepository.save(authenticatedUser);
+        }
+
+        return toUserResponse(authenticatedUser);
+    }
+
+    public void resetPassword(String identifier, String newPassword) {
+        String safeIdentifier = identifier == null ? "" : identifier.trim();
+        String normalizedNewPassword = normalizeIncomingPassword(newPassword);
+
+        if (safeIdentifier.isBlank()) {
+            throw new IllegalArgumentException("Email or username is required");
+        }
+
+        if (normalizedNewPassword.length() < 6) {
+            throw new IllegalArgumentException("Password must be at least 6 characters long");
+        }
+
+        Users user = usersRepository.findAll().stream()
+                .filter(existingUser -> matchesIdentifier(existingUser, safeIdentifier))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Invalid email or username"));
+
+        user.setPassword(PASSWORD_ENCODER.encode(normalizedNewPassword));
+        usersRepository.save(user);
     }
 
     public void deleteUser(@NonNull Long id) {
@@ -120,7 +152,7 @@ public class UsersService {
 
         String normalizedName = safeUser.getName() == null ? "" : safeUser.getName().trim();
         String normalizedEmail = safeUser.getEmail() == null ? "" : safeUser.getEmail().trim().toLowerCase(Locale.ROOT);
-        String normalizedPassword = safeUser.getPassword() == null ? "" : safeUser.getPassword().trim();
+        String normalizedPassword = normalizeIncomingPassword(safeUser.getPassword());
 
         if(normalizedName.isBlank() || normalizedEmail.isBlank()) {
             throw new IllegalArgumentException("Name and email cannot be null");
@@ -135,7 +167,7 @@ public class UsersService {
 
         safeUser.setName(normalizedName);
         safeUser.setEmail(normalizedEmail);
-        safeUser.setPassword(normalizedPassword);
+        safeUser.setPassword(PASSWORD_ENCODER.encode(normalizedPassword));
         safeUser.setRole(forceUserRole ? "USER" : normalizeRole(safeUser.getRole()));
         safeUser.setFirstName(normalizeOptional(safeUser.getFirstName()));
         safeUser.setLastName(normalizeOptional(safeUser.getLastName()));
@@ -165,6 +197,46 @@ public class UsersService {
 
     private boolean matchesIdentifier(Users user, String identifier) {
         return identifier.equalsIgnoreCase(user.getEmail()) || identifier.equalsIgnoreCase(user.getName());
+    }
+
+    private boolean matchesPassword(Users user, String candidatePassword) {
+        String storedPassword = user.getPassword() == null ? "" : user.getPassword();
+        if (storedPassword.isBlank()) {
+            return false;
+        }
+
+        if (isHashedPassword(storedPassword)) {
+            return PASSWORD_ENCODER.matches(candidatePassword, storedPassword);
+        }
+
+        return candidatePassword.equals(storedPassword.trim());
+    }
+
+    private boolean isHashedPassword(String password) {
+        return password != null
+                && (password.startsWith("$2a$") || password.startsWith("$2b$") || password.startsWith("$2y$"));
+    }
+
+    private String normalizeIncomingPassword(String password) {
+        String safePassword = password == null ? "" : password.trim();
+        if (safePassword.isBlank()) {
+            return safePassword;
+        }
+
+        if (!safePassword.startsWith(BASE64_PASSWORD_PREFIX)) {
+            return safePassword;
+        }
+
+        String payload = safePassword.substring(BASE64_PASSWORD_PREFIX.length()).trim();
+        if (payload.isBlank()) {
+            throw new IllegalArgumentException("Password is invalid");
+        }
+
+        try {
+            return new String(Base64.getDecoder().decode(payload), StandardCharsets.UTF_8).trim();
+        } catch (IllegalArgumentException ex) {
+            throw new IllegalArgumentException("Password is invalid");
+        }
     }
 
     private boolean emailExists(String email) {
