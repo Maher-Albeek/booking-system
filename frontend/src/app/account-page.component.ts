@@ -104,9 +104,12 @@ export class AccountPageComponent {
   protected readonly paymentMethodMeta = PAYMENT_METHOD_META;
   protected readonly loading = signal(true);
   protected readonly saving = signal(false);
+  protected readonly passwordSaving = signal(false);
   protected readonly avatarUploading = signal(false);
   protected readonly error = signal<string | null>(null);
   protected readonly success = signal<string | null>(null);
+  protected readonly newPassword = signal('');
+  protected readonly confirmPassword = signal('');
   protected accountDraft: AccountDraft = this.emptyDraft();
 
   protected readonly accountCompleteness = computed(() => {
@@ -250,6 +253,61 @@ export class AccountPageComponent {
         },
         error: (error: HttpErrorResponse) => {
           this.error.set(this.readApiError(error, this.i18n.t('account.error.saveFailed')));
+        }
+      });
+  }
+
+  protected changePassword(): void {
+    const authenticatedUser = this.auth.user();
+
+    if (!authenticatedUser) {
+      this.error.set(this.i18n.t('account.error.loginBeforeUpdate'));
+      return;
+    }
+
+    const newPassword = this.newPassword().trim();
+    const confirmPassword = this.confirmPassword().trim();
+
+    if (!newPassword || !confirmPassword) {
+      this.error.set(this.i18n.t('account.error.passwordRequired'));
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      this.error.set(this.i18n.t('login.error.passwordLength'));
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      this.error.set(this.i18n.t('account.error.passwordMismatch'));
+      return;
+    }
+
+    const identifier = (authenticatedUser.email ?? '').trim() || authenticatedUser.name.trim();
+
+    if (!identifier) {
+      this.error.set(this.i18n.t('account.error.loginBeforeUpdate'));
+      return;
+    }
+
+    this.passwordSaving.set(true);
+    this.error.set(null);
+    this.success.set(null);
+
+    this.auth
+      .resetPassword(identifier, newPassword)
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        finalize(() => this.passwordSaving.set(false))
+      )
+      .subscribe({
+        next: () => {
+          this.newPassword.set('');
+          this.confirmPassword.set('');
+          this.success.set(this.i18n.t('account.success.passwordChanged'));
+        },
+        error: (error: HttpErrorResponse) => {
+          this.error.set(this.readApiError(error, this.i18n.t('account.error.passwordChangeFailed')));
         }
       });
   }

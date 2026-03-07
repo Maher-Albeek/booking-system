@@ -175,6 +175,57 @@
                 />
               </label>
             </div>
+
+            <section class="password-section">
+              <div class="password-header">
+                <span>{{ i18n.t('account.section.security') }}</span>
+                <strong>{{ i18n.t('account.subtitle.password') }}</strong>
+              </div>
+
+              <div class="password-fields">
+                <label class="field">
+                  <span>{{ i18n.t('account.field.newPassword') }}</span>
+                  <input
+                    type="password"
+                    name="accountNewPassword"
+                    [ngModel]="newPassword()"
+                    (ngModelChange)="newPassword.set($event)"
+                    [placeholder]="i18n.t('login.placeholder.passwordMin')"
+                    autocomplete="new-password"
+                  />
+                </label>
+
+                <label class="field">
+                  <span>{{ i18n.t('account.field.confirmPassword') }}</span>
+                  <input
+                    type="password"
+                    name="accountConfirmPassword"
+                    [ngModel]="confirmPassword()"
+                    (ngModelChange)="confirmPassword.set($event)"
+                    [placeholder]="i18n.t('login.placeholder.passwordMin')"
+                    autocomplete="new-password"
+                  />
+                </label>
+              </div>
+
+              <div class="password-actions">
+                <button
+                  type="button"
+                  class="ghost-button compact-button"
+                  (click)="changePassword()"
+                  [disabled]="passwordSaving() || saving() || avatarUploading()"
+                >
+                  <span class="button-content">
+                    <i class="button-icon fa-solid fa-key" aria-hidden="true"></i>
+                    <span>{{
+                      passwordSaving()
+                        ? i18n.t('account.action.changingPassword')
+                        : i18n.t('account.action.changePassword')
+                    }}</span>
+                  </span>
+                </button>
+              </div>
+            </section>
           }
 
           @if (pageMode === 'payment') {
