@@ -3,7 +3,7 @@ import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, RouterLink, RouterLinkActive } from '@angular/router';
 import { finalize } from 'rxjs';
 
 import { AuthStateService } from './auth-state.service';
@@ -87,7 +87,7 @@ type AccountDraft = {
 
 @Component({
   selector: 'app-account-page',
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, RouterLinkActive],
   templateUrl: './account-page.component.html',
   styleUrl: './account-page.component.scss'
 })
@@ -149,6 +149,36 @@ export class AccountPageComponent {
 
   constructor() {
     this.loadProfile();
+  }
+
+  protected displayName(): string {
+    const fullName = `${this.accountDraft.firstName} ${this.accountDraft.lastName}`.trim();
+    return fullName || this.auth.user()?.name || 'User';
+  }
+
+  protected locationLine(): string {
+    return [this.accountDraft.addressCity, this.accountDraft.addressCountry]
+      .map((value) => value.trim())
+      .filter(Boolean)
+      .join(', ');
+  }
+
+  protected streetLine(): string {
+    return [this.accountDraft.addressStreet, this.accountDraft.addressHouseNumber]
+      .map((value) => value.trim())
+      .filter(Boolean)
+      .join(' ');
+  }
+
+  protected postalCityCountryLine(): string {
+    return [
+      this.accountDraft.addressPostalCode,
+      this.accountDraft.addressCity,
+      this.accountDraft.addressCountry
+    ]
+      .map((value) => value.trim())
+      .filter(Boolean)
+      .join(', ');
   }
 
   protected reload(): void {

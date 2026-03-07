@@ -31,5 +31,5 @@
   "addressCountry" : null,
   "birthDate" : null,
   "avatarUrl" : null,
-  "paymentMethods" : [ ]
+  "paymentMethods" : [ "PayPal" ]
 } ]
