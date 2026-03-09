@@ -13,8 +13,8 @@ const PAYMENT_METHOD_OPTIONS = [
   'PayPal',
   'Master Card',
   'Visa',
-  'Klarna',
-  'Giro Card'
+  'Apple Pay',
+  'Google Pay'
 ] as const;
 
 type PaymentMethod = (typeof PAYMENT_METHOD_OPTIONS)[number];
@@ -41,17 +41,17 @@ const PAYMENT_METHOD_META: Record<
     accent: '#2563eb',
     foreground: '#eff6ff'
   },
-  Klarna: {
-    iconClass: 'fa-solid fa-money-bill-wave',
-    hintKey: 'payment.hint.payLater',
-    accent: '#f472b6',
-    foreground: '#500724'
+  'Apple Pay': {
+    iconClass: 'fa-brands fa-apple-pay',
+    hintKey: 'payment.hint.applePay',
+    accent: '#111827',
+    foreground: '#f9fafb'
   },
-  'Giro Card': {
-    iconClass: 'fa-solid fa-credit-card',
-    hintKey: 'payment.hint.debitCard',
-    accent: '#16a34a',
-    foreground: '#f0fdf4'
+  'Google Pay': {
+    iconClass: 'fa-brands fa-google-pay',
+    hintKey: 'payment.hint.googlePay',
+    accent: '#0f766e',
+    foreground: '#ecfeff'
   }
 };
 

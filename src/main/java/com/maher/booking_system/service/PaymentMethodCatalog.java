@@ -16,8 +16,8 @@ public final class PaymentMethodCatalog {
         register("paypal", "PayPal");
         register("master card", "Master Card");
         register("visa", "Visa");
-        register("klarna", "Klarna");
-        register("giro card", "Giro Card");
+        register("apple pay", "Apple Pay");
+        register("google pay", "Google Pay");
     }
 
     private PaymentMethodCatalog() {

@@ -13,8 +13,8 @@ const PAYMENT_METHOD_OPTIONS = [
   'PayPal',
   'Master Card',
   'Visa',
-  'Klarna',
-  'Giro Card'
+  'Apple Pay',
+  'Google Pay'
 ] as const;
 
 type PaymentMethod = (typeof PAYMENT_METHOD_OPTIONS)[number];
@@ -41,17 +41,17 @@ const PAYMENT_METHOD_META: Record<
     accent: '#2563eb',
     foreground: '#eff6ff'
   },
-  Klarna: {
-    iconClass: 'fa-solid fa-money-bill-wave',
-    hintKey: 'payment.hint.payLater',
-    accent: '#f472b6',
-    foreground: '#500724'
+  'Apple Pay': {
+    iconClass: 'fa-brands fa-apple-pay',
+    hintKey: 'payment.hint.applePay',
+    accent: '#111827',
+    foreground: '#f9fafb'
   },
-  'Giro Card': {
-    iconClass: 'fa-solid fa-credit-card',
-    hintKey: 'payment.hint.debitCard',
-    accent: '#16a34a',
-    foreground: '#f0fdf4'
+  'Google Pay': {
+    iconClass: 'fa-brands fa-google-pay',
+    hintKey: 'payment.hint.googlePay',
+    accent: '#0f766e',
+    foreground: '#ecfeff'
   }
 };
 
@@ -213,6 +213,12 @@ export class UserPageComponent {
   protected readonly bookingAddress = signal('');
   protected readonly bookingBirthDate = signal('');
   protected readonly bookingPaymentMethod = signal<PaymentMethod | ''>('');
+  protected readonly bookingPaypalEmail = signal('');
+  protected readonly bookingCardHolderName = signal('');
+  protected readonly bookingCardNumber = signal('');
+  protected readonly bookingCardExpiry = signal('');
+  protected readonly bookingCardCvv = signal('');
+  protected readonly bookingWalletEmail = signal('');
   protected readonly serviceName = signal('');
   protected readonly searchLocationInput = signal('');
   protected readonly searchStartDateInput = signal('');
@@ -428,6 +434,33 @@ export class UserPageComponent {
     });
   });
 
+  protected readonly bookingPaymentDetailsMissing = computed(() => {
+    const paymentMethod = this.bookingPaymentMethod();
+
+    if (!paymentMethod) {
+      return true;
+    }
+
+    if (paymentMethod === 'PayPal') {
+      return !this.isValidEmail(this.bookingPaypalEmail().trim());
+    }
+
+    if (paymentMethod === 'Master Card' || paymentMethod === 'Visa') {
+      return (
+        !this.bookingCardHolderName().trim() ||
+        !this.isValidCardNumber(this.bookingCardNumber()) ||
+        !this.isValidCardExpiry(this.bookingCardExpiry()) ||
+        !this.isValidCardCvv(this.bookingCardCvv())
+      );
+    }
+
+    if (paymentMethod === 'Apple Pay' || paymentMethod === 'Google Pay') {
+      return !this.isValidEmail(this.bookingWalletEmail().trim());
+    }
+
+    return false;
+  });
+
   protected readonly bookingDisabled = computed(
     () =>
       this.loading() ||
@@ -442,6 +475,7 @@ export class UserPageComponent {
       !this.bookingAddress().trim() ||
       !this.bookingBirthDate().trim() ||
       !this.bookingPaymentMethod() ||
+      this.bookingPaymentDetailsMissing() ||
       !this.serviceName().trim()
   );
 
@@ -467,6 +501,7 @@ export class UserPageComponent {
     this.carDetailsId.set(null);
     this.bookingStartDateTime.set('');
     this.bookingEndDateTime.set('');
+    this.resetBookingPaymentDetails();
     this.syncBookingFieldsFromUser(this.selectedUser(), this.selectedUser(), true);
     this.error.set(null);
     this.success.set(null);
@@ -509,6 +544,11 @@ export class UserPageComponent {
 
     this.selectedUserId.set(nextUser?.id ?? null);
     this.syncBookingFieldsFromUser(nextUser, previousUser);
+  }
+
+  protected selectBookingPaymentMethod(method: PaymentMethod): void {
+    this.bookingPaymentMethod.set(method);
+    this.error.set(null);
   }
 
   protected async onAvatarInputChange(event: Event): Promise<void> {
@@ -640,6 +680,11 @@ export class UserPageComponent {
       return;
     }
 
+    if (this.bookingPaymentDetailsMissing()) {
+      this.error.set(this.i18n.t('user.error.completePaymentDetails'));
+      return;
+    }
+
     const startDate = new Date(startDateTime);
     const endDate = new Date(endDateTime);
     if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime()) || startDate >= endDate) {
@@ -680,6 +725,7 @@ export class UserPageComponent {
           this.bookingStartDateTime.set('');
           this.bookingEndDateTime.set('');
           this.serviceName.set('');
+          this.resetBookingPaymentDetails();
           this.reservationModalOpen.set(false);
           let pricingNote = '';
           if (estimatedTotalPrice !== null && estimatedDays) {
@@ -1189,6 +1235,15 @@ export class UserPageComponent {
     return `${this.formatDay(start)} | ${this.formatTime(start)} - ${this.formatTime(end)}`;
   }
 
+  private resetBookingPaymentDetails(): void {
+    this.bookingPaypalEmail.set('');
+    this.bookingCardHolderName.set('');
+    this.bookingCardNumber.set('');
+    this.bookingCardExpiry.set('');
+    this.bookingCardCvv.set('');
+    this.bookingWalletEmail.set('');
+  }
+
   protected formatPrice(value: number | null | undefined, priceUnit: string | null | undefined): string {
     if (typeof value !== 'number' || Number.isNaN(value)) {
       return this.i18n.t('common.notSet');
@@ -1241,6 +1296,74 @@ export class UserPageComponent {
 
   private normalizePriceUnit(value: string | null | undefined): string {
     return this.normalizeText(value) ?? '€';
+  }
+
+  private isValidEmail(value: string): boolean {
+    if (!value) {
+      return false;
+    }
+
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+  }
+
+  private isValidCardNumber(value: string): boolean {
+    const digits = this.toDigits(value);
+
+    if (digits.length < 13 || digits.length > 19) {
+      return false;
+    }
+
+    return this.passesLuhn(digits);
+  }
+
+  private isValidCardExpiry(value: string): boolean {
+    const trimmedValue = value.trim();
+    const match = trimmedValue.match(/^(\d{2})\s*\/\s*(\d{2}|\d{4})$/);
+
+    if (!match) {
+      return false;
+    }
+
+    const month = Number(match[1]);
+    const yearPart = match[2];
+    const fullYear = yearPart.length === 2 ? 2000 + Number(yearPart) : Number(yearPart);
+
+    if (!Number.isInteger(month) || !Number.isInteger(fullYear) || month < 1 || month > 12) {
+      return false;
+    }
+
+    const now = new Date();
+    const expiryDate = new Date(fullYear, month, 0, 23, 59, 59, 999);
+    return expiryDate.getTime() >= now.getTime();
+  }
+
+  private isValidCardCvv(value: string): boolean {
+    return /^\d{3,4}$/.test(this.toDigits(value));
+  }
+
+  private toDigits(value: string): string {
+    return value.replace(/\D/g, '');
+  }
+
+  private passesLuhn(value: string): boolean {
+    let sum = 0;
+    let shouldDouble = false;
+
+    for (let index = value.length - 1; index >= 0; index -= 1) {
+      let digit = Number(value[index]);
+
+      if (shouldDouble) {
+        digit *= 2;
+        if (digit > 9) {
+          digit -= 9;
+        }
+      }
+
+      sum += digit;
+      shouldDouble = !shouldDouble;
+    }
+
+    return sum % 10 === 0;
   }
 
   private normalizePositiveInt(value: unknown): number | null {
