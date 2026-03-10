@@ -20,7 +20,7 @@
   "id" : 2,
   "name" : "ad",
   "email" : "roomgan@gmail.com",
-  "password" : "123123",
+  "password" : "$2a$10$p2/YhEnxOLUi5IoiaOo1Eub58upus44XrSg/uOCiT6Zl1h0auozu.",
   "role" : "USER",
   "firstName" : null,
   "lastName" : null,
@@ -32,6 +32,6 @@
   "addressCountry" : null,
   "birthDate" : null,
   "avatarUrl" : null,
-  "paymentMethods" : [ "PayPal" ],
+  "paymentMethods" : [ ],
   "paymentDetails" : { }
 } ]

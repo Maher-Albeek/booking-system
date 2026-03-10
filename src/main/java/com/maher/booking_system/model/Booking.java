@@ -1,6 +1,7 @@
 package com.maher.booking_system.model;
 
 import com.maher.booking_system.model.enums.BookingStatus;
+import com.maher.booking_system.model.enums.PaymentStatus;
 
 import java.time.LocalDateTime;
 
@@ -21,6 +22,10 @@ public class Booking {
     private String address;
     private String birthDate;
     private String paymentMethod;
+    private PaymentStatus paymentStatus;
+    private Long payableAmountCents;
+    private String payableCurrency;
+    private String paymentProvider;
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -66,4 +71,16 @@ public class Booking {
 
     public String getPaymentMethod() { return paymentMethod; }
     public void setPaymentMethod(String paymentMethod) { this.paymentMethod = paymentMethod; }
+
+    public PaymentStatus getPaymentStatus() { return paymentStatus; }
+    public void setPaymentStatus(PaymentStatus paymentStatus) { this.paymentStatus = paymentStatus; }
+
+    public Long getPayableAmountCents() { return payableAmountCents; }
+    public void setPayableAmountCents(Long payableAmountCents) { this.payableAmountCents = payableAmountCents; }
+
+    public String getPayableCurrency() { return payableCurrency; }
+    public void setPayableCurrency(String payableCurrency) { this.payableCurrency = payableCurrency; }
+
+    public String getPaymentProvider() { return paymentProvider; }
+    public void setPaymentProvider(String paymentProvider) { this.paymentProvider = paymentProvider; }
 }

@@ -7,6 +7,7 @@ import com.maher.booking_system.exception.NotFoundException;
 import com.maher.booking_system.model.Booking;
 import com.maher.booking_system.model.TimeSlot;
 import com.maher.booking_system.model.enums.BookingStatus;
+import com.maher.booking_system.model.enums.PaymentStatus;
 import com.maher.booking_system.repository.BookingRepository;
 import com.maher.booking_system.repository.TimeSlotRepository;
 import org.springframework.lang.NonNull;
@@ -94,6 +95,8 @@ public class BookingService {
         booking.setAddress(normalizeRequiredText(safeRequest.getAddress(), "address"));
         booking.setBirthDate(normalizeBirthDate(safeRequest.getBirthDate()));
         booking.setPaymentMethod(PaymentMethodCatalog.normalizeRequired(safeRequest.getPaymentMethod(), "paymentMethod"));
+        booking.setPaymentStatus(PaymentStatus.SUCCEEDED);
+        booking.setPaymentProvider("manual");
         booking.setCustomerName(buildCustomerName(booking.getFirstName(), booking.getLastName()));
         booking.setServiceName(normalizeRequiredText(safeRequest.getServiceName(), "serviceName"));
         booking.setStatus(CONFIRMED_STATUS);

@@ -299,8 +299,7 @@ export class AccountPageComponent {
         addressCountry: this.accountDraft.addressCountry.trim(),
         birthDate: this.accountDraft.birthDate.trim(),
         avatarUrl: this.accountDraft.avatarUrl.trim(),
-        paymentMethods: this.accountDraft.paymentMethods,
-        paymentDetails: this.normalizedPaymentDetailsForSave()
+        paymentMethods: this.accountDraft.paymentMethods
       })
       .pipe(
         takeUntilDestroyed(this.destroyRef),

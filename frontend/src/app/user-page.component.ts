@@ -119,6 +119,10 @@ type Booking = {
   address: string | null;
   birthDate: string | null;
   paymentMethod: string | null;
+  paymentStatus: string | null;
+  payableAmountCents: number | null;
+  payableCurrency: string | null;
+  paymentProvider: string | null;
 };
 
 type BookingRequest = {
@@ -132,6 +136,20 @@ type BookingRequest = {
   address: string;
   birthDate: string;
   paymentMethod: PaymentMethod;
+};
+
+type CreateCheckoutSessionRequest = {
+  booking: BookingRequest;
+  successUrl: string;
+  cancelUrl: string;
+  savePaymentMethod: boolean;
+};
+
+type CreateCheckoutSessionResponse = {
+  bookingId: number;
+  paymentStatus: string;
+  checkoutSessionId: string;
+  checkoutUrl: string | null;
 };
 
 type CarSummary = Resource & {
@@ -438,34 +456,7 @@ export class UserPageComponent {
   });
 
   protected readonly bookingPaymentDetailsMissing = computed(() => {
-    const paymentMethod = this.bookingPaymentMethod();
-
-    if (!paymentMethod) {
-      return true;
-    }
-
-    if (this.selectedUserHasStoredPaymentDetails(paymentMethod)) {
-      return false;
-    }
-
-    if (paymentMethod === 'PayPal') {
-      return !this.isValidEmail(this.bookingPaypalEmail().trim());
-    }
-
-    if (paymentMethod === 'Master Card' || paymentMethod === 'Visa') {
-      return (
-        !this.bookingCardHolderName().trim() ||
-        !this.isValidCardNumber(this.bookingCardNumber()) ||
-        !this.isValidCardExpiry(this.bookingCardExpiry()) ||
-        !this.isValidCardCvv(this.bookingCardCvv())
-      );
-    }
-
-    if (paymentMethod === 'Apple Pay' || paymentMethod === 'Google Pay') {
-      return !this.isValidEmail(this.bookingWalletEmail().trim());
-    }
-
-    return false;
+    return !this.bookingPaymentMethod();
   });
 
   protected readonly bookingDisabled = computed(
@@ -482,17 +473,11 @@ export class UserPageComponent {
       !this.bookingAddress().trim() ||
       !this.bookingBirthDate().trim() ||
       !this.bookingPaymentMethod() ||
-      this.bookingPaymentDetailsMissing() ||
       !this.serviceName().trim()
   );
 
   protected readonly bookingNeedsPaymentDetailsInput = computed(() => {
-    const paymentMethod = this.bookingPaymentMethod();
-    if (!paymentMethod) {
-      return false;
-    }
-
-    return !this.selectedUserHasStoredPaymentDetails(paymentMethod);
+    return false;
   });
 
   constructor() {
@@ -726,12 +711,6 @@ export class UserPageComponent {
       return;
     }
 
-    if (this.bookingPaymentDetailsMissing()) {
-      this.error.set(this.i18n.t('user.error.completePaymentDetails'));
-      this.paymentDetailsModalOpen.set(true);
-      return;
-    }
-
     const startDate = new Date(startDateTime);
     const endDate = new Date(endDateTime);
     if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime()) || startDate >= endDate) {
@@ -761,14 +740,33 @@ export class UserPageComponent {
     this.error.set(null);
     this.success.set(null);
 
+    const checkoutPayload: CreateCheckoutSessionRequest = {
+      booking: payload,
+      successUrl: `${window.location.origin}/bookings`,
+      cancelUrl: `${window.location.origin}/offers`,
+      savePaymentMethod: true
+    };
+    const idempotencyKey =
+      typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+        ? crypto.randomUUID()
+        : `${Date.now()}-${selectedUser.id}-${selectedCar.id}`;
+
     this.http
-      .post<Booking>('/api/bookings', payload)
+      .post<CreateCheckoutSessionResponse>('/api/payments/checkout-session', checkoutPayload, {
+        headers: {
+          'Idempotency-Key': idempotencyKey
+        }
+      })
       .pipe(
         takeUntilDestroyed(this.destroyRef),
         finalize(() => this.submitting.set(false))
       )
       .subscribe({
-        next: () => {
+        next: (response) => {
+          if (response.checkoutUrl) {
+            window.location.href = response.checkoutUrl;
+            return;
+          }
           this.bookingStartDateTime.set('');
           this.bookingEndDateTime.set('');
           this.serviceName.set('');
@@ -1332,13 +1330,7 @@ export class UserPageComponent {
   }
 
   private updatePaymentDetailsModalState(): void {
-    const paymentMethod = this.bookingPaymentMethod();
-    if (!paymentMethod) {
-      this.paymentDetailsModalOpen.set(false);
-      return;
-    }
-
-    this.paymentDetailsModalOpen.set(!this.selectedUserHasStoredPaymentDetails(paymentMethod));
+    this.paymentDetailsModalOpen.set(false);
   }
 
   private decodeCardDetails(rawValue: string | undefined): {

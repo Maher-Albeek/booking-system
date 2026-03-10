@@ -19,6 +19,10 @@ public class BookingResponse {
     private String address;
     private String birthDate;
     private String paymentMethod;
+    private String paymentStatus;
+    private Long payableAmountCents;
+    private String payableCurrency;
+    private String paymentProvider;
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -64,4 +68,16 @@ public class BookingResponse {
 
     public String getPaymentMethod() { return paymentMethod; }
     public void setPaymentMethod(String paymentMethod) { this.paymentMethod = paymentMethod; }
+
+    public String getPaymentStatus() { return paymentStatus; }
+    public void setPaymentStatus(String paymentStatus) { this.paymentStatus = paymentStatus; }
+
+    public Long getPayableAmountCents() { return payableAmountCents; }
+    public void setPayableAmountCents(Long payableAmountCents) { this.payableAmountCents = payableAmountCents; }
+
+    public String getPayableCurrency() { return payableCurrency; }
+    public void setPayableCurrency(String payableCurrency) { this.payableCurrency = payableCurrency; }
+
+    public String getPaymentProvider() { return paymentProvider; }
+    public void setPaymentProvider(String paymentProvider) { this.paymentProvider = paymentProvider; }
 }

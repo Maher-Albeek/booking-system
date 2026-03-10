@@ -25,6 +25,10 @@ public final class BookingMapper {
         response.setAddress(booking.getAddress());
         response.setBirthDate(booking.getBirthDate());
         response.setPaymentMethod(booking.getPaymentMethod());
+        response.setPaymentStatus(booking.getPaymentStatus() == null ? null : booking.getPaymentStatus().name());
+        response.setPayableAmountCents(booking.getPayableAmountCents());
+        response.setPayableCurrency(booking.getPayableCurrency());
+        response.setPaymentProvider(booking.getPaymentProvider());
         return response;
     }
 }
