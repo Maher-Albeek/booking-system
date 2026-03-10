@@ -199,7 +199,7 @@
         <p class="empty-state">{{ i18n.t('user.fleet.enterFilters') }}</p>
       } @else {
         <div class="car-showcase-grid">
-          @for (car of filteredCarSummaries(); track car.id) {
+          @for (car of visibleFilteredCarSummaries(); track car.id) {
             <article
               class="car-showcase-card"
               [class.inactive]="!car.active"
@@ -242,6 +242,17 @@
             <p class="empty-state">{{ i18n.t('user.fleet.noMatchFilters') }}</p>
           }
         </div>
+
+        @if (canShowMoreCars()) {
+          <div class="search-actions">
+            <button type="button" class="submit-button compact-button" (click)="showMoreCars()">
+              <span class="button-content">
+                <i class="button-icon fa-solid fa-plus" aria-hidden="true"></i>
+                <span>{{ i18n.t('user.fleet.seeMore') }}</span>
+              </span>
+            </button>
+          </div>
+        }
       }
 
       @if (selectedCarDetails(); as selectedCarDetails) {

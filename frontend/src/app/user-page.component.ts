@@ -16,6 +16,7 @@ const PAYMENT_METHOD_OPTIONS = [
   'Apple Pay',
   'Google Pay'
 ] as const;
+const CAR_PAGE_SIZE = 9;
 
 type PaymentMethod = (typeof PAYMENT_METHOD_OPTIONS)[number];
 
@@ -247,6 +248,7 @@ export class UserPageComponent {
   protected readonly searchLocation = signal('');
   protected readonly searchStartDate = signal('');
   protected readonly searchEndDate = signal('');
+  protected readonly visibleCarCount = signal(CAR_PAGE_SIZE);
 
   protected accountDraft: AccountDraft = this.emptyAccountDraft();
 
@@ -341,6 +343,12 @@ export class UserPageComponent {
       return matchesLocation && matchesDateRange;
     });
   });
+  protected readonly visibleFilteredCarSummaries = computed<CarSummary[]>(() =>
+    this.filteredCarSummaries().slice(0, this.visibleCarCount())
+  );
+  protected readonly canShowMoreCars = computed(
+    () => this.filteredCarSummaries().length > this.visibleFilteredCarSummaries().length
+  );
 
   protected readonly selectedCar = computed(
     () => this.cars().find((car) => car.id === this.selectedCarId()) ?? null
@@ -894,6 +902,11 @@ export class UserPageComponent {
     this.searchLocation.set('');
     this.searchStartDate.set('');
     this.searchEndDate.set('');
+    this.visibleCarCount.set(CAR_PAGE_SIZE);
+  }
+
+  protected showMoreCars(): void {
+    this.visibleCarCount.update((count) => count + CAR_PAGE_SIZE);
   }
 
   private syncSearchFiltersFromInput(): void {
@@ -906,6 +919,7 @@ export class UserPageComponent {
       this.searchLocation.set('');
       this.searchStartDate.set('');
       this.searchEndDate.set('');
+      this.visibleCarCount.set(CAR_PAGE_SIZE);
       if (this.carDetailsId() !== null) {
         this.carDetailsId.set(null);
       }
@@ -915,6 +929,7 @@ export class UserPageComponent {
     this.searchLocation.set(location);
     this.searchStartDate.set(start);
     this.searchEndDate.set(end);
+    this.visibleCarCount.set(CAR_PAGE_SIZE);
   }
 
   protected bookingContactName(booking: Booking): string {
