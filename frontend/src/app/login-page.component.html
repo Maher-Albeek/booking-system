@@ -1,143 +1,124 @@
 <section class="login-shell">
-  <article class="login-card">
-    <div class="login-copy">
-      <p class="eyebrow">{{ i18n.t('app.brand') }}</p>
-      <h1>{{ mode() === 'login' ? i18n.t('login.title.signIn') : i18n.t('login.title.register') }}</h1>
-      <p>
-        {{ i18n.t('login.description') }}
-      </p>
-    </div>
-
-    <div class="mode-switch" [attr.aria-label]="i18n.t('login.mode.aria')">
-      <button
-        type="button"
-        class="mode-button"
-        [class.active]="mode() === 'login'"
-        (click)="setMode('login')"
-      >
-        {{ i18n.t('login.mode.login') }}
-      </button>
-      <button
-        type="button"
-        class="mode-button"
-        [class.active]="mode() === 'register'"
-        (click)="setMode('register')"
-      >
-        {{ i18n.t('login.mode.register') }}
-      </button>
-    </div>
-
-    @if (mode() === 'login') {
-      @if (resetMessage()) {
-        <section class="login-banner success">
-          <strong>{{ i18n.t('common.updated') }}</strong>
-          <span>{{ resetMessage() }}</span>
-        </section>
-      }
-
-      @if (error()) {
-        <section class="login-banner error">
-          <strong>{{ i18n.t('login.banner.authIssue') }}</strong>
-          <span>{{ error() }}</span>
-        </section>
-      }
-
-      <form class="login-form" (ngSubmit)="submit()">
-        <label class="field">
-          <span>{{ i18n.t('login.field.identifier') }}</span>
-          <input
-            type="text"
-            name="identifier"
-            [ngModel]="identifier()"
-            (ngModelChange)="identifier.set($event)"
-            [placeholder]="i18n.t('login.placeholder.email')"
-            autocomplete="username"
-          />
-        </label>
-
-        <label class="field">
-          <span>{{ i18n.t('login.field.password') }}</span>
-          <input
-            type="password"
-            name="password"
-            [ngModel]="password()"
-            (ngModelChange)="password.set($event)"
-            [placeholder]="i18n.t('login.placeholder.password')"
-            autocomplete="current-password"
-          />
-        </label>
-
-        <div class="login-actions">
-          <button type="submit" [disabled]="submitting() || resettingPassword()">
-            {{ submitting() ? i18n.t('login.action.signingIn') : i18n.t('login.mode.login') }}
-          </button>
-          <button
-            type="button"
-            class="secondary-action"
-            [disabled]="submitting() || resettingPassword()"
-            (click)="submitPasswordReset()"
-          >
-            {{
-              resettingPassword()
-                ? i18n.t('login.action.resettingPassword')
-                : i18n.t('login.action.resetPassword')
-            }}
-          </button>
-        </div>
-      </form>
-    } @else {
-      @if (registerError()) {
-        <section class="login-banner error">
-          <strong>{{ i18n.t('login.banner.registrationIssue') }}</strong>
-          <span>{{ registerError() }}</span>
-        </section>
-      }
-
-      <form class="login-form" (ngSubmit)="submitRegistration()">
-        <label class="field">
-          <span>{{ i18n.t('login.field.name') }}</span>
-          <input
-            type="text"
-            name="registerName"
-            [ngModel]="registerName()"
-            (ngModelChange)="registerName.set($event)"
-            [placeholder]="i18n.t('login.placeholder.name')"
-            autocomplete="name"
-          />
-        </label>
-
-        <label class="field">
-          <span>{{ i18n.t('login.field.email') }}</span>
-          <input
-            type="email"
-            name="registerEmail"
-            [ngModel]="registerEmail()"
-            (ngModelChange)="registerEmail.set($event)"
-            [placeholder]="i18n.t('login.placeholder.email')"
-            autocomplete="email"
-          />
-        </label>
-
-        <label class="field">
-          <span>{{ i18n.t('login.field.password') }}</span>
-          <input
-            type="password"
-            name="registerPassword"
-            [ngModel]="registerPassword()"
-            (ngModelChange)="registerPassword.set($event)"
-            [placeholder]="i18n.t('login.placeholder.passwordMin')"
-            autocomplete="new-password"
-          />
-        </label>
-
-        <button type="submit" [disabled]="registerSubmitting()">
-          {{ registerSubmitting() ? i18n.t('login.action.creatingAccount') : i18n.t('login.action.registerAsUser') }}
+  <article class="auth-container">
+    <div class="login-box">
+      <div class="mode-switch" [attr.aria-label]="i18n.t('login.mode.aria')">
+        <button type="button" class="mode-button" [class.active]="mode() === 'login'" (click)="setMode('login')">
+          {{ i18n.t('login.mode.login') }}
         </button>
-      </form>
-    }
+        <button type="button" class="mode-button" [class.active]="mode() === 'register'" (click)="setMode('register')">
+          {{ i18n.t('login.mode.register') }}
+        </button>
+      </div>
 
-    <p class="login-link">
-      <a routerLink="/offers">{{ i18n.t('login.action.continueGuest') }}</a>
-    </p>
+      <div class="form-block">
+        <div class="logo" aria-hidden="true"></div>
+        <span class="header">{{ mode() === 'login' ? 'Welcome Back!' : 'Create Account' }}</span>
+
+        @if (mode() === 'login' && resetMessage()) {
+          <section class="login-banner success">
+            <strong>{{ i18n.t('common.updated') }}</strong>
+            <span>{{ resetMessage() }}</span>
+          </section>
+        }
+
+        @if (mode() === 'login' && error()) {
+          <section class="login-banner error">
+            <strong>{{ i18n.t('login.banner.authIssue') }}</strong>
+            <span>{{ error() }}</span>
+          </section>
+        }
+
+        @if (mode() === 'register' && registerError()) {
+          <section class="login-banner error">
+            <strong>{{ i18n.t('login.banner.registrationIssue') }}</strong>
+            <span>{{ registerError() }}</span>
+          </section>
+        }
+
+        @if (mode() === 'login') {
+          <form class="form" (ngSubmit)="submit()">
+            <input
+              type="text"
+              class="input"
+              name="identifier"
+              [ngModel]="identifier()"
+              (ngModelChange)="identifier.set($event)"
+              [placeholder]="i18n.t('login.placeholder.email')"
+              autocomplete="username"
+            />
+            <input
+              type="password"
+              class="input"
+              name="password"
+              [ngModel]="password()"
+              (ngModelChange)="password.set($event)"
+              [placeholder]="i18n.t('login.placeholder.password')"
+              autocomplete="current-password"
+            />
+            <button type="submit" class="button sign-in" [disabled]="submitting() || resettingPassword()">
+              {{ submitting() ? i18n.t('login.action.signingIn') : i18n.t('login.mode.login') }}
+            </button>
+            <button type="button" class="button google-sign-in" [disabled]="submitting() || resettingPassword()" (click)="startGoogleAuth()">
+              <svg class="icon" viewBox="-3 0 262 262" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid">
+                <path d="M255.878 133.451c0-10.734-.871-18.567-2.756-26.69H130.55v48.448h71.947c-1.45 12.04-9.283 30.172-26.69 42.356l-.244 1.622 38.755 30.023 2.685.268c24.659-22.774 38.875-56.282 38.875-96.027" fill="#4285F4"></path>
+                <path d="M130.55 261.1c35.248 0 64.839-11.605 86.453-31.622l-41.196-31.913c-11.024 7.688-25.82 13.055-45.257 13.055-34.523 0-63.824-22.773-74.269-54.25l-1.531.13-40.298 31.187-.527 1.465C35.393 231.798 79.49 261.1 130.55 261.1" fill="#34A853"></path>
+                <path d="M56.281 156.37c-2.756-8.123-4.351-16.827-4.351-25.82 0-8.994 1.595-17.697 4.206-25.82l-.073-1.73L15.26 71.312l-1.335.635C5.077 89.644 0 109.517 0 130.55s5.077 40.905 13.925 58.602l42.356-32.782" fill="#FBBC05"></path>
+                <path d="M130.55 50.479c24.514 0 41.05 10.589 50.479 19.438l36.844-35.974C195.245 12.91 165.798 0 130.55 0 79.49 0 35.393 29.301 13.925 71.947l42.211 32.783c10.59-31.477 39.891-54.251 74.414-54.251" fill="#EB4335"></path>
+              </svg>
+              <span>Sign in with Google</span>
+            </button>
+            <button type="button" class="button secondary-action" [disabled]="submitting() || resettingPassword()" (click)="submitPasswordReset()">
+              {{ resettingPassword() ? i18n.t('login.action.resettingPassword') : i18n.t('login.action.resetPassword') }}
+            </button>
+          </form>
+        } @else {
+          <form class="form" (ngSubmit)="submitRegistration()">
+            <input
+              type="text"
+              class="input"
+              name="registerName"
+              [ngModel]="registerName()"
+              (ngModelChange)="registerName.set($event)"
+              [placeholder]="i18n.t('login.placeholder.name')"
+              autocomplete="name"
+            />
+            <input
+              type="email"
+              class="input"
+              name="registerEmail"
+              [ngModel]="registerEmail()"
+              (ngModelChange)="registerEmail.set($event)"
+              [placeholder]="i18n.t('login.placeholder.email')"
+              autocomplete="email"
+            />
+            <input
+              type="password"
+              class="input"
+              name="registerPassword"
+              [ngModel]="registerPassword()"
+              (ngModelChange)="registerPassword.set($event)"
+              [placeholder]="i18n.t('login.placeholder.passwordMin')"
+              autocomplete="new-password"
+            />
+            <button type="submit" class="button sign-in" [disabled]="registerSubmitting()">
+              {{ registerSubmitting() ? i18n.t('login.action.creatingAccount') : i18n.t('login.action.registerAsUser') }}
+            </button>
+            <button type="button" class="button google-sign-in" [disabled]="registerSubmitting()" (click)="startGoogleAuth()">
+              <svg class="icon" viewBox="-3 0 262 262" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid">
+                <path d="M255.878 133.451c0-10.734-.871-18.567-2.756-26.69H130.55v48.448h71.947c-1.45 12.04-9.283 30.172-26.69 42.356l-.244 1.622 38.755 30.023 2.685.268c24.659-22.774 38.875-56.282 38.875-96.027" fill="#4285F4"></path>
+                <path d="M130.55 261.1c35.248 0 64.839-11.605 86.453-31.622l-41.196-31.913c-11.024 7.688-25.82 13.055-45.257 13.055-34.523 0-63.824-22.773-74.269-54.25l-1.531.13-40.298 31.187-.527 1.465C35.393 231.798 79.49 261.1 130.55 261.1" fill="#34A853"></path>
+                <path d="M56.281 156.37c-2.756-8.123-4.351-16.827-4.351-25.82 0-8.994 1.595-17.697 4.206-25.82l-.073-1.73L15.26 71.312l-1.335.635C5.077 89.644 0 109.517 0 130.55s5.077 40.905 13.925 58.602l42.356-32.782" fill="#FBBC05"></path>
+                <path d="M130.55 50.479c24.514 0 41.05 10.589 50.479 19.438l36.844-35.974C195.245 12.91 165.798 0 130.55 0 79.49 0 35.393 29.301 13.925 71.947l42.211 32.783c10.59-31.477 39.891-54.251 74.414-54.251" fill="#EB4335"></path>
+              </svg>
+              <span>Sign in with Google</span>
+            </button>
+          </form>
+        }
+
+        <p class="footer">
+          <a routerLink="/offers" class="link">{{ i18n.t('login.action.continueGuest') }}</a>
+        </p>
+      </div>
+    </div>
   </article>
 </section>

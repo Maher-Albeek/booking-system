@@ -132,6 +132,10 @@ export class LoginPageComponent {
       });
   }
 
+  protected startGoogleAuth(): void {
+    window.location.href = '/api/auth/oauth2/authorization/google';
+  }
+
   private readApiError(error: HttpErrorResponse, fallback: string): string {
     if (typeof error.error === 'string' && error.error.trim()) {
       return error.error;

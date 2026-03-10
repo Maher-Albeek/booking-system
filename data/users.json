@@ -2,7 +2,7 @@
   "id" : 1,
   "name" : "maher",
   "email" : "malbeek92@gmail.com",
-  "password" : "123",
+  "password" : "$2a$10$qZVfbctZJjk96CHBalqFOu/YC.bVDepjeUx8bDUr2FVaLwuzVLlfW",
   "role" : "ADMIN",
   "firstName" : null,
   "lastName" : null,
@@ -14,7 +14,8 @@
   "addressCountry" : null,
   "birthDate" : null,
   "avatarUrl" : null,
-  "paymentMethods" : [ ]
+  "paymentMethods" : [ "PayPal" ],
+  "paymentDetails" : { }
 }, {
   "id" : 2,
   "name" : "ad",
@@ -31,5 +32,6 @@
   "addressCountry" : null,
   "birthDate" : null,
   "avatarUrl" : null,
-  "paymentMethods" : [ "PayPal" ]
+  "paymentMethods" : [ "PayPal" ],
+  "paymentDetails" : { }
 } ]

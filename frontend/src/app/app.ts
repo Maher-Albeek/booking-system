@@ -215,6 +215,10 @@ export class App {
       });
   }
 
+  protected startGoogleAuth(): void {
+    window.location.href = '/api/auth/oauth2/authorization/google';
+  }
+
   protected logout(): void {
     this.auth.logout();
     this.closeMenu();
