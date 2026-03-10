@@ -96,10 +96,12 @@ type User = {
   birthDate: string | null;
   avatarUrl: string | null;
   paymentMethods: PaymentMethod[];
+  paymentDetails: Partial<Record<PaymentMethod, string>>;
 };
 
 type UserResponse = Omit<User, 'paymentMethods'> & {
   paymentMethods?: string[] | null;
+  paymentDetails?: Record<string, string> | null;
 };
 
 type Booking = {
@@ -196,6 +198,7 @@ export class UserPageComponent {
   protected readonly error = signal<string | null>(null);
   protected readonly success = signal<string | null>(null);
   protected readonly reservationModalOpen = signal(false);
+  protected readonly paymentDetailsModalOpen = signal(false);
   protected readonly carDetailsId = signal<number | null>(null);
 
   protected readonly cars = signal<Resource[]>([]);
@@ -441,6 +444,10 @@ export class UserPageComponent {
       return true;
     }
 
+    if (this.selectedUserHasStoredPaymentDetails(paymentMethod)) {
+      return false;
+    }
+
     if (paymentMethod === 'PayPal') {
       return !this.isValidEmail(this.bookingPaypalEmail().trim());
     }
@@ -479,6 +486,15 @@ export class UserPageComponent {
       !this.serviceName().trim()
   );
 
+  protected readonly bookingNeedsPaymentDetailsInput = computed(() => {
+    const paymentMethod = this.bookingPaymentMethod();
+    if (!paymentMethod) {
+      return false;
+    }
+
+    return !this.selectedUserHasStoredPaymentDetails(paymentMethod);
+  });
+
   constructor() {
     effect(() => {
       this.syncSearchFiltersFromInput();
@@ -505,11 +521,13 @@ export class UserPageComponent {
     this.syncBookingFieldsFromUser(this.selectedUser(), this.selectedUser(), true);
     this.error.set(null);
     this.success.set(null);
+    this.updatePaymentDetailsModalState();
     this.reservationModalOpen.set(true);
   }
 
   protected closeReservationModal(): void {
     this.reservationModalOpen.set(false);
+    this.paymentDetailsModalOpen.set(false);
   }
 
   protected closeReservationModalOnBackdrop(event: MouseEvent): void {
@@ -549,6 +567,34 @@ export class UserPageComponent {
   protected selectBookingPaymentMethod(method: PaymentMethod): void {
     this.bookingPaymentMethod.set(method);
     this.error.set(null);
+    this.updatePaymentDetailsModalState();
+  }
+
+  protected closePaymentDetailsModal(): void {
+    this.paymentDetailsModalOpen.set(false);
+  }
+
+  protected selectedUserHasStoredPaymentDetails(method: PaymentMethod): boolean {
+    const value = this.selectedUser()?.paymentDetails?.[method];
+    if (typeof value !== 'string' || !value.trim()) {
+      return false;
+    }
+
+    if (method === 'Master Card' || method === 'Visa') {
+      const details = this.decodeCardDetails(value);
+      return (
+        !!details.name.trim() &&
+        this.isValidCardNumber(details.number) &&
+        this.isValidCardExpiry(details.expiry) &&
+        this.isValidCardCvv(details.cvv)
+      );
+    }
+
+    if (method === 'PayPal' || method === 'Apple Pay' || method === 'Google Pay') {
+      return this.isValidEmail(value.trim());
+    }
+
+    return false;
   }
 
   protected async onAvatarInputChange(event: Event): Promise<void> {
@@ -682,6 +728,7 @@ export class UserPageComponent {
 
     if (this.bookingPaymentDetailsMissing()) {
       this.error.set(this.i18n.t('user.error.completePaymentDetails'));
+      this.paymentDetailsModalOpen.set(true);
       return;
     }
 
@@ -1034,6 +1081,8 @@ export class UserPageComponent {
     ) {
       this.bookingPaymentMethod.set(nextPaymentMethod);
     }
+
+    this.updatePaymentDetailsModalState();
   }
 
   private emptyAccountDraft(): AccountDraft {
@@ -1144,7 +1193,8 @@ export class UserPageComponent {
       addressCountry: user.addressCountry ?? null,
       birthDate: user.birthDate ?? null,
       avatarUrl: user.avatarUrl ?? null,
-      paymentMethods: this.normalizePaymentMethods(user.paymentMethods)
+      paymentMethods: this.normalizePaymentMethods(user.paymentMethods),
+      paymentDetails: this.normalizePaymentDetails(user.paymentDetails, user.paymentMethods)
     };
   }
 
@@ -1167,7 +1217,8 @@ export class UserPageComponent {
       addressCountry: user.addressCountry,
       birthDate: user.birthDate,
       avatarUrl: user.avatarUrl,
-      paymentMethods: this.normalizePaymentMethods(user.paymentMethods)
+      paymentMethods: this.normalizePaymentMethods(user.paymentMethods),
+      paymentDetails: this.normalizePaymentDetails(user.paymentDetails, user.paymentMethods)
     };
   }
 
@@ -1187,12 +1238,47 @@ export class UserPageComponent {
       birthDate: user.birthDate,
       avatarUrl: user.avatarUrl,
       paymentMethods: [...user.paymentMethods],
-      paymentDetails: {}
+      paymentDetails: this.normalizedPaymentDetailsForAuth(user.paymentDetails)
     };
   }
 
   private normalizePaymentMethods(values: string[] | null | undefined): PaymentMethod[] {
     return this.supportedPaymentMethods.filter((method) => values?.includes(method));
+  }
+
+  private normalizePaymentDetails(
+    details: Record<string, string> | null | undefined,
+    methods: string[] | null | undefined
+  ): Partial<Record<PaymentMethod, string>> {
+    const selectedMethods = new Set(this.normalizePaymentMethods(methods));
+    const normalized: Partial<Record<PaymentMethod, string>> = {};
+
+    for (const method of this.supportedPaymentMethods) {
+      if (!selectedMethods.has(method)) {
+        continue;
+      }
+
+      const value = details?.[method];
+      if (typeof value === 'string' && value.trim()) {
+        normalized[method] = value.trim();
+      }
+    }
+
+    return normalized;
+  }
+
+  private normalizedPaymentDetailsForAuth(
+    details: Partial<Record<PaymentMethod, string>>
+  ): Record<string, string> {
+    const mapped: Record<string, string> = {};
+    for (const method of this.supportedPaymentMethods) {
+      const value = details[method]?.trim();
+      if (value) {
+        mapped[method] = value;
+      }
+    }
+
+    return mapped;
   }
 
   private hasCompleteAddress(user: User | null): boolean {
@@ -1243,6 +1329,50 @@ export class UserPageComponent {
     this.bookingCardExpiry.set('');
     this.bookingCardCvv.set('');
     this.bookingWalletEmail.set('');
+  }
+
+  private updatePaymentDetailsModalState(): void {
+    const paymentMethod = this.bookingPaymentMethod();
+    if (!paymentMethod) {
+      this.paymentDetailsModalOpen.set(false);
+      return;
+    }
+
+    this.paymentDetailsModalOpen.set(!this.selectedUserHasStoredPaymentDetails(paymentMethod));
+  }
+
+  private decodeCardDetails(rawValue: string | undefined): {
+    name: string;
+    number: string;
+    expiry: string;
+    cvv: string;
+  } {
+    if (!rawValue?.trim()) {
+      return { name: '', number: '', expiry: '', cvv: '' };
+    }
+
+    try {
+      const parsed = JSON.parse(rawValue) as Partial<{
+        name: string;
+        number: string;
+        expiry: string;
+        cvv: string;
+      }>;
+
+      return {
+        name: typeof parsed.name === 'string' ? parsed.name : '',
+        number: typeof parsed.number === 'string' ? parsed.number : '',
+        expiry: typeof parsed.expiry === 'string' ? parsed.expiry : '',
+        cvv: typeof parsed.cvv === 'string' ? parsed.cvv : ''
+      };
+    } catch {
+      return {
+        name: '',
+        number: rawValue,
+        expiry: '',
+        cvv: ''
+      };
+    }
   }
 
   protected formatPrice(value: number | null | undefined, priceUnit: string | null | undefined): string {

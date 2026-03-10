@@ -644,7 +644,7 @@
                         </span>
                       </button>
 
-                      @if (bookingPaymentMethod() === method && method === 'PayPal') {
+                      @if (bookingPaymentMethod() === method && bookingNeedsPaymentDetailsInput() && method === 'PayPal') {
                         <div class="payment-detail-card">
                           <label class="field field-wide payment-detail-field">
                             <span class="payment-detail-label">{{ i18n.t('user.modal.paypalEmail') }}</span>
@@ -661,7 +661,7 @@
                         </div>
                       }
 
-                      @if (bookingPaymentMethod() === method && method === 'Master Card') {
+                      @if (bookingPaymentMethod() === method && bookingNeedsPaymentDetailsInput() && method === 'Master Card') {
                         <div class="mastercard-form">
                           <div class="mastercard-form-header">
                             <input
@@ -734,7 +734,7 @@
                         </div>
                       }
 
-                      @if (bookingPaymentMethod() === method && method === 'Visa') {
+                      @if (bookingPaymentMethod() === method && bookingNeedsPaymentDetailsInput() && method === 'Visa') {
                         <div class="payment-detail-card">
                           <label class="field field-wide payment-detail-field">
                             <span class="payment-detail-label">{{ i18n.t('user.modal.cardHolderName') }}</span>
@@ -798,7 +798,7 @@
                         </div>
                       }
 
-                      @if (bookingPaymentMethod() === method && (method === 'Apple Pay' || method === 'Google Pay')) {
+                      @if (bookingPaymentMethod() === method && bookingNeedsPaymentDetailsInput() && (method === 'Apple Pay' || method === 'Google Pay')) {
                         <div class="payment-detail-card">
                           <label class="field field-wide payment-detail-field">
                             <span class="payment-detail-label">{{ i18n.t('user.modal.walletEmail') }}</span>
@@ -818,7 +818,7 @@
                   }
                 </div>
 
-                @if (bookingPaymentMethod() && bookingPaymentDetailsMissing()) {
+                @if (bookingNeedsPaymentDetailsInput() && bookingPaymentDetailsMissing()) {
                   <p class="form-note">{{ i18n.t('user.modal.paymentDetailsRequired') }}</p>
                 }
               </section>
@@ -891,6 +891,137 @@
             </p>
           }
         </form>
+      </article>
+    </section>
+  }
+
+  @if (pageMode === 'offers' && reservationModalOpen() && paymentDetailsModalOpen() && bookingPaymentMethod()) {
+    <section class="modal-backdrop" (click)="closePaymentDetailsModal()">
+      <article
+        class="modal-card payment-details-modal"
+        role="dialog"
+        aria-modal="true"
+        (click)="$event.stopPropagation()"
+      >
+        <div class="modal-header">
+          <div>
+            <p class="eyebrow">{{ i18n.t('user.modal.paymentOptions') }}</p>
+            <h3>{{ bookingPaymentMethod() }}</h3>
+          </div>
+          <button type="button" class="modal-close compact-button" (click)="closePaymentDetailsModal()">
+            <span class="button-content">
+              <i class="button-icon fa-solid fa-xmark" aria-hidden="true"></i>
+              <span>{{ i18n.t('common.close') }}</span>
+            </span>
+          </button>
+        </div>
+
+        @if (bookingPaymentMethod() === 'PayPal') {
+          <label class="field field-wide payment-detail-field">
+            <span class="payment-detail-label">{{ i18n.t('user.modal.paypalEmail') }}</span>
+            <input
+              class="payment-detail-input"
+              type="email"
+              name="bookingPaypalEmailModal"
+              [ngModel]="bookingPaypalEmail()"
+              (ngModelChange)="bookingPaypalEmail.set($event)"
+              [placeholder]="i18n.t('user.modal.paypalEmailPlaceholder')"
+              autocomplete="email"
+            />
+          </label>
+        }
+
+        @if (bookingPaymentMethod() === 'Master Card' || bookingPaymentMethod() === 'Visa') {
+          <div class="payment-detail-card">
+            <label class="field field-wide payment-detail-field">
+              <span class="payment-detail-label">{{ i18n.t('user.modal.cardHolderName') }}</span>
+              <input
+                class="payment-detail-input"
+                type="text"
+                name="bookingCardHolderNameModal"
+                [ngModel]="bookingCardHolderName()"
+                (ngModelChange)="bookingCardHolderName.set($event)"
+                [placeholder]="i18n.t('user.modal.cardHolderName')"
+                autocomplete="cc-name"
+              />
+            </label>
+
+            <label class="field field-wide payment-detail-field">
+              <span class="payment-detail-label">{{ i18n.t('user.modal.cardNumber') }}</span>
+              <input
+                class="payment-detail-input"
+                type="text"
+                name="bookingCardNumberModal"
+                [ngModel]="bookingCardNumber()"
+                (ngModelChange)="bookingCardNumber.set($event)"
+                [placeholder]="i18n.t('user.modal.cardNumberPlaceholder')"
+                autocomplete="cc-number"
+                inputmode="numeric"
+                maxlength="23"
+              />
+            </label>
+
+            <div class="payment-detail-row">
+              <label class="field payment-detail-field">
+                <span class="payment-detail-label">{{ i18n.t('user.modal.cardExpiry') }}</span>
+                <input
+                  class="payment-detail-input"
+                  type="text"
+                  name="bookingCardExpiryModal"
+                  [ngModel]="bookingCardExpiry()"
+                  (ngModelChange)="bookingCardExpiry.set($event)"
+                  placeholder="MM/YY"
+                  autocomplete="cc-exp"
+                  inputmode="numeric"
+                  maxlength="7"
+                />
+              </label>
+
+              <label class="field payment-detail-field">
+                <span class="payment-detail-label">{{ i18n.t('user.modal.cardCvv') }}</span>
+                <input
+                  class="payment-detail-input"
+                  type="password"
+                  name="bookingCardCvvModal"
+                  [ngModel]="bookingCardCvv()"
+                  (ngModelChange)="bookingCardCvv.set($event)"
+                  [placeholder]="i18n.t('user.modal.cardCvvPlaceholder')"
+                  autocomplete="cc-csc"
+                  inputmode="numeric"
+                  maxlength="4"
+                />
+              </label>
+            </div>
+          </div>
+        }
+
+        @if (bookingPaymentMethod() === 'Apple Pay' || bookingPaymentMethod() === 'Google Pay') {
+          <label class="field field-wide payment-detail-field">
+            <span class="payment-detail-label">{{ i18n.t('user.modal.walletEmail') }}</span>
+            <input
+              class="payment-detail-input"
+              type="email"
+              name="bookingWalletEmailModal"
+              [ngModel]="bookingWalletEmail()"
+              (ngModelChange)="bookingWalletEmail.set($event)"
+              [placeholder]="i18n.t('user.modal.paypalEmailPlaceholder')"
+              autocomplete="email"
+            />
+          </label>
+        }
+
+        @if (bookingPaymentDetailsMissing()) {
+          <p class="form-note">{{ i18n.t('user.modal.paymentDetailsRequired') }}</p>
+        }
+
+        <div class="modal-actions">
+          <button type="button" class="submit-button compact-button" (click)="closePaymentDetailsModal()">
+            <span class="button-content">
+              <i class="button-icon fa-solid fa-circle-check" aria-hidden="true"></i>
+              <span>{{ i18n.t('common.close') }}</span>
+            </span>
+          </button>
+        </div>
       </article>
     </section>
   }
