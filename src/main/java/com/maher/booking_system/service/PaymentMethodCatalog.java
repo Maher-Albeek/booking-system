@@ -7,6 +7,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 
 public final class PaymentMethodCatalog {
 
@@ -48,6 +49,29 @@ public final class PaymentMethodCatalog {
             }
         }
         return List.copyOf(normalizedValues);
+    }
+
+    public static Map<String, String> normalizeDetails(Map<String, String> details, List<String> selectedMethods) {
+        if (details == null || details.isEmpty() || selectedMethods == null || selectedMethods.isEmpty()) {
+            return Map.of();
+        }
+
+        Set<String> normalizedMethods = Set.copyOf(selectedMethods);
+        LinkedHashMap<String, String> normalizedDetails = new LinkedHashMap<>();
+
+        for (Map.Entry<String, String> entry : details.entrySet()) {
+            String normalizedMethod = normalizeOptional(entry.getKey());
+            if (normalizedMethod == null || !normalizedMethods.contains(normalizedMethod)) {
+                continue;
+            }
+
+            String value = entry.getValue() == null ? "" : entry.getValue().trim();
+            if (!value.isEmpty()) {
+                normalizedDetails.put(normalizedMethod, value);
+            }
+        }
+
+        return Map.copyOf(normalizedDetails);
     }
 
     private static String normalizeOptional(String value) {

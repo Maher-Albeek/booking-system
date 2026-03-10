@@ -141,8 +141,12 @@ public class UsersService {
         existingUser.setBirthDate(normalizeBirthDate(safeRequest.birthDate()));
         existingUser.setAvatarUrl(normalizeAvatarUrl(safeRequest.avatarUrl()));
         List<String> normalizedPaymentMethods = PaymentMethodCatalog.normalizeList(safeRequest.paymentMethods());
+        Map<String, String> normalizedPaymentDetails = PaymentMethodCatalog.normalizeDetails(
+                safeRequest.paymentDetails(),
+                normalizedPaymentMethods
+        );
         existingUser.setPaymentMethods(normalizedPaymentMethods);
-        existingUser.setPaymentDetails(Map.of());
+        existingUser.setPaymentDetails(normalizedPaymentDetails);
 
         String displayName = buildDisplayName(existingUser.getFirstName(), existingUser.getLastName());
         if (displayName != null) {
@@ -196,8 +200,12 @@ public class UsersService {
         safeUser.setBirthDate(normalizeBirthDate(safeUser.getBirthDate()));
         safeUser.setAvatarUrl(normalizeAvatarUrl(safeUser.getAvatarUrl()));
         List<String> normalizedPaymentMethods = PaymentMethodCatalog.normalizeList(safeUser.getPaymentMethods());
+        Map<String, String> normalizedPaymentDetails = PaymentMethodCatalog.normalizeDetails(
+                safeUser.getPaymentDetails(),
+                normalizedPaymentMethods
+        );
         safeUser.setPaymentMethods(normalizedPaymentMethods);
-        safeUser.setPaymentDetails(Map.of());
+        safeUser.setPaymentDetails(normalizedPaymentDetails);
 
         return toUserResponse(usersRepository.save(safeUser));
     }
@@ -350,7 +358,7 @@ public class UsersService {
                 user.getBirthDate(),
                 user.getAvatarUrl(),
                 List.copyOf(user.getPaymentMethods()),
-                Map.of()
+                Map.copyOf(user.getPaymentDetails())
         );
     }
 }
