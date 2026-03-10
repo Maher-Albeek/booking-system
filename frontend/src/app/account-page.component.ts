@@ -18,6 +18,7 @@ const PAYMENT_METHOD_OPTIONS = [
 ] as const;
 
 type PaymentMethod = (typeof PAYMENT_METHOD_OPTIONS)[number];
+type CardDetailField = 'name' | 'number' | 'expiry' | 'cvv';
 
 const PAYMENT_METHOD_META: Record<
   PaymentMethod,
@@ -261,6 +262,20 @@ export class AccountPageComponent {
     };
   }
 
+  protected paymentCardDetailFieldValue(method: PaymentMethod, field: CardDetailField): string {
+    const details = this.decodeCardDetails(this.accountDraft.paymentDetails[method]);
+    return details[field];
+  }
+
+  protected setPaymentCardDetailField(method: PaymentMethod, field: CardDetailField, value: string): void {
+    const currentDetails = this.decodeCardDetails(this.accountDraft.paymentDetails[method]);
+    const nextDetails: Record<CardDetailField, string> = {
+      ...currentDetails,
+      [field]: value
+    };
+    this.setPaymentDetail(method, this.encodeCardDetails(nextDetails));
+  }
+
   protected saveAccount(): void {
     const authenticatedUser = this.auth.user();
 
@@ -481,6 +496,38 @@ export class AccountPageComponent {
     }
 
     return details;
+  }
+
+  private decodeCardDetails(rawValue: string | undefined): Record<CardDetailField, string> {
+    if (!rawValue?.trim()) {
+      return { name: '', number: '', expiry: '', cvv: '' };
+    }
+
+    try {
+      const parsed = JSON.parse(rawValue) as Partial<Record<CardDetailField, string>>;
+      return {
+        name: typeof parsed.name === 'string' ? parsed.name : '',
+        number: typeof parsed.number === 'string' ? parsed.number : '',
+        expiry: typeof parsed.expiry === 'string' ? parsed.expiry : '',
+        cvv: typeof parsed.cvv === 'string' ? parsed.cvv : ''
+      };
+    } catch {
+      return {
+        name: '',
+        number: rawValue,
+        expiry: '',
+        cvv: ''
+      };
+    }
+  }
+
+  private encodeCardDetails(details: Record<CardDetailField, string>): string {
+    return JSON.stringify({
+      name: details.name,
+      number: details.number,
+      expiry: details.expiry,
+      cvv: details.cvv
+    });
   }
 
   private readApiError(error: HttpErrorResponse, fallback: string): string {

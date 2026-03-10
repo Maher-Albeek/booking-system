@@ -490,7 +490,119 @@ input::placeholder {
   cursor: wait;
 }
 
+.mastercard-form {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 16px;
+  background: #1f2937;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.28);
+}
+
+.mastercard-form-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.mastercard-logo {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 56px;
+  height: 40px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
+  background: #1f2937;
+}
+
+.mastercard-form-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+input.mastercard-input {
+  width: 100%;
+  height: 40px;
+  margin: 0;
+  border: none;
+  border-radius: 10px;
+  outline: none;
+  padding: 0 10px;
+  background: #1f2937;
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 600;
+  caret-color: #f97316;
+}
+
+input.mastercard-input::placeholder {
+  color: rgba(255, 255, 255, 0.55);
+}
+
+input.mastercard-input:focus {
+  box-shadow: 0 0 0 2px rgba(249, 115, 22, 0.26);
+}
+
+.payment-detail-card {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  border-radius: 16px;
+  background: linear-gradient(180deg, rgba(31, 41, 55, 0.96), rgba(17, 24, 39, 0.94));
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22);
+}
+
+.payment-detail-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.payment-detail-field {
+  gap: 6px;
+}
+
+.payment-detail-label {
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+input.payment-detail-input {
+  width: 100%;
+  margin: 0;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.05);
+  color: #f7f2ea;
+  outline: none;
+}
+
+input.payment-detail-input::placeholder {
+  color: rgba(247, 242, 234, 0.48);
+}
+
+input.payment-detail-input:focus {
+  border-color: rgba(248, 196, 107, 0.56);
+  box-shadow: 0 0 0 2px rgba(248, 196, 107, 0.16);
+}
+
 @media (max-width: 720px) {
+  .mastercard-form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .payment-detail-row {
+    grid-template-columns: 1fr;
+  }
+
   .app-shell {
     padding: 0 12px 12px;
   }

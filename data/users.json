@@ -14,7 +14,7 @@
   "addressCountry" : null,
   "birthDate" : null,
   "avatarUrl" : null,
-  "paymentMethods" : [ "PayPal" ],
+  "paymentMethods" : [ ],
   "paymentDetails" : { }
 }, {
   "id" : 2,
