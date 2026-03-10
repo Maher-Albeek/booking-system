@@ -1,4 +1,28 @@
 {
-  "impressumFields" : [ ],
-  "datenschutzFields" : [ ]
+  "impressumFields" : [ {
+    "label" : "Company",
+    "value" : "Booking System GmbH"
+  }, {
+    "label" : "Address",
+    "value" : "Musterstrasse 10, 10115 Berlin"
+  }, {
+    "label" : "Email",
+    "value" : "legal@example.com"
+  }, {
+    "label" : "Phone",
+    "value" : "+49 30 000000"
+  } ],
+  "datenschutzFields" : [ {
+    "label" : "Data controller",
+    "value" : "Booking System GmbH"
+  }, {
+    "label" : "Purpose",
+    "value" : "Account handling, car bookings, and payment preference storage."
+  }, {
+    "label" : "Stored fields",
+    "value" : "Name, email, address, bookings, and selected payment methods."
+  }, {
+    "label" : "Requests",
+    "value" : "Contact legal@example.com for access, correction, or deletion."
+  } ]
 }

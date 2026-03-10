@@ -262,6 +262,51 @@ code {
   gap: 16px;
 }
 
+.legal-columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.legal-column {
+  display: grid;
+  gap: 14px;
+  align-content: start;
+  padding: 16px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.legal-preview {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.legal-preview h5 {
+  margin: 0;
+  font-size: 0.95rem;
+  color: rgba(247, 242, 234, 0.86);
+}
+
+.legal-preview-item {
+  display: grid;
+  gap: 4px;
+}
+
+.legal-preview-item strong {
+  font-size: 0.86rem;
+}
+
+.legal-preview-item p {
+  margin: 0;
+  color: rgba(247, 242, 234, 0.78);
+}
+
 .offer-fields-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -715,6 +760,7 @@ dd {
 
   .stats,
   .admin-layout,
+  .legal-columns,
   .offer-fields-grid,
   .offer-position-grid {
     grid-template-columns: 1fr;

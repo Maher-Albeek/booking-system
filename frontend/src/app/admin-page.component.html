@@ -428,9 +428,11 @@
             </div>
           </div>
 
-          <div class="offers-layout">
-            <div class="offer-editor">
-              <h4>Impressum fields</h4>
+          <div class="legal-columns">
+            <section class="legal-column">
+              <h4>Impressum</h4>
+              <p class="panel-lead">Edit fields for the Impressum page.</p>
+
               @for (field of legalFields('impressum'); track $index; let index = $index) {
                 <div class="offer-fields-grid">
                   <label class="field">
@@ -455,9 +457,27 @@
                     Remove
                   </button>
                 </div>
+              } @empty {
+                <p class="empty-state">No Impressum fields yet.</p>
               }
 
-              <h4>Datenschutz fields</h4>
+              <div class="legal-preview">
+                <h5>Displayed on Impressum page</h5>
+                @for (field of legalPublishedContent().impressumFields; track $index) {
+                  <div class="legal-preview-item">
+                    <strong>{{ field.label || 'Label' }}</strong>
+                    <p>{{ field.value || 'Value' }}</p>
+                  </div>
+                } @empty {
+                  <p class="empty-state">Nothing published yet.</p>
+                }
+              </div>
+            </section>
+
+            <section class="legal-column">
+              <h4>Datenschutz</h4>
+              <p class="panel-lead">Edit fields for the Datenschutz page.</p>
+
               @for (field of legalFields('datenschutz'); track $index; let index = $index) {
                 <div class="offer-fields-grid">
                   <label class="field">
@@ -482,8 +502,22 @@
                     Remove
                   </button>
                 </div>
+              } @empty {
+                <p class="empty-state">No Datenschutz fields yet.</p>
               }
-            </div>
+
+              <div class="legal-preview">
+                <h5>Displayed on Datenschutz page</h5>
+                @for (field of legalPublishedContent().datenschutzFields; track $index) {
+                  <div class="legal-preview-item">
+                    <strong>{{ field.label || 'Label' }}</strong>
+                    <p>{{ field.value || 'Value' }}</p>
+                  </div>
+                } @empty {
+                  <p class="empty-state">Nothing published yet.</p>
+                }
+              </div>
+            </section>
           </div>
         </article>
       }
