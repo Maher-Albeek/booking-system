@@ -132,6 +132,42 @@
             Draft sections: {{ offerDraftSections().length }} |
             Published sections: {{ offerPublishedSections().length }}
           </p>
+          <div class="offer-fields-grid">
+            <div class="field field-wide">
+              <span>Hero background image (offers page)</span>
+              <div
+                class="photo-dropzone"
+                [class.drag-active]="isOfferHeroDragActive()"
+                (dragover)="onOfferHeroDragOver($event)"
+                (dragleave)="onOfferHeroDragLeave($event)"
+                (drop)="onOfferHeroDrop($event)"
+              >
+                <input
+                  #offerHeroPhotoInput
+                  type="file"
+                  accept="image/*"
+                  class="visually-hidden"
+                  (change)="onOfferHeroInputChange($event)"
+                />
+                <strong>Drag and drop one image</strong>
+                <p>Uploaded image will be used as hero background on the offers page.</p>
+                <button type="button" class="ghost-button inline-action" (click)="offerHeroPhotoInput.click()">
+                  Choose image
+                </button>
+              </div>
+
+              @if (offerDraftSettings().heroBackgroundImageUrl) {
+                <div class="draft-photo-grid hero-draft-photo-grid">
+                  <article class="draft-photo-card">
+                    <img [src]="offerDraftSettings().heroBackgroundImageUrl" alt="Offer hero background preview" />
+                    <button type="button" class="draft-photo-remove" (click)="removeOfferHeroImage()">
+                      {{ i18n.t('common.remove') }}
+                    </button>
+                  </article>
+                </div>
+              }
+            </div>
+          </div>
 
           <div class="offers-layout">
             <aside class="offer-list">

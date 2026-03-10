@@ -689,6 +689,8 @@ const DE_TRANSLATIONS: Record<string, string> = {
   'login.placeholder.passwordMin': 'Minimum 6 characters',
   'login.title.register': 'Benutzerkonto erstellen',
   'login.title.signIn': 'Zum Fortfahren anmelden',
+  'login.success.passwordReset': 'Password has been reset. You can now sign in with the new password.',
+  'login.action.signinWithGoogle': 'Mit Google anmelden',
   'payment.hint.cardPayment': 'Card payment',
   'payment.hint.creditCard': 'Credit card',
   'payment.hint.debitCard': 'Debit card',
@@ -939,6 +941,8 @@ const DE_TRANSLATION_OVERRIDES: Record<string, string> = {
   'common.inactive': 'Inaktiv',
   'login.field.email': 'E-Mail',
   'login.field.password': 'Passwort',
+  'login.action.signinWithGoogle': 'Mit Google anmelden',
+  'login.success.passwordReset': 'Passwort wurde zurückgesetzt. Sie können sich nun mit dem neuen Passwort anmelden.',
   'common.remove': 'Entfernen'
 };
 
@@ -1206,6 +1210,8 @@ const AR_TRANSLATIONS: Record<string, string> = {
   'login.placeholder.passwordMin': 'الحد الأدنى 6 أحرف',
   'login.title.register': 'أنشئ حسابك',
   'login.title.signIn': 'سجل الدخول للمتابعة',
+  'login.action.signinWithGoogle': 'سجل الدخول مع Google',
+  'login.success.passwordReset': 'تم إعادة تعيين كلمة المرور. يمكنك الآن تسجيل الدخول باستخدام كلمة المرور الجديدة.',
   'payment.hint.cardPayment': 'الدفع بالبطاقة',
   'payment.hint.creditCard': 'كريدت كارد',
   'payment.hint.debitCard': 'ديبيت كارد',

@@ -4,7 +4,7 @@ import { Component, DestroyRef, computed, effect, inject, signal } from '@angula
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { finalize, forkJoin, of } from 'rxjs';
+import { catchError, finalize, forkJoin, of } from 'rxjs';
 
 import { AuthStateService, AuthUser } from './auth-state.service';
 import { I18nService } from './i18n.service';
@@ -178,6 +178,10 @@ type OfferSection = {
   descriptionYPercent: number;
 };
 
+type OfferPageSettings = {
+  heroBackgroundImageUrl: string;
+};
+
 type AccountDraft = {
   firstName: string;
   lastName: string;
@@ -225,6 +229,15 @@ export class UserPageComponent {
   protected readonly bookings = signal<Booking[]>([]);
   protected readonly profileUser = signal<User | null>(null);
   protected readonly publishedOfferSections = signal<OfferSection[]>([]);
+  protected readonly heroBackgroundImageUrl = signal('');
+  protected readonly heroBackgroundStyle = computed(() => {
+    const url = this.heroBackgroundImageUrl().trim();
+    if (!url) {
+      return '';
+    }
+    const escapedUrl = url.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+    return `linear-gradient(rgba(6, 12, 24, 0.62), rgba(6, 12, 24, 0.62)), url("${escapedUrl}") center / cover no-repeat`;
+  });
 
   protected readonly selectedCarId = signal<number | null>(null);
   protected readonly selectedUserId = signal<number | null>(null);
@@ -974,14 +987,17 @@ export class UserPageComponent {
       users: usersRequest,
       bookings: bookingsRequest,
       profile: profileRequest,
-      offers: this.http.get<OfferSection[]>('/api/offers/published')
+      offers: this.http.get<OfferSection[]>('/api/offers/published'),
+      offerSettings: this.http
+        .get<OfferPageSettings>('/api/offers/settings/published')
+        .pipe(catchError(() => of({ heroBackgroundImageUrl: '' } as OfferPageSettings)))
     })
       .pipe(
         takeUntilDestroyed(this.destroyRef),
         finalize(() => this.loading.set(false))
       )
       .subscribe({
-        next: ({ cars, users, bookings, profile, offers }) => {
+        next: ({ cars, users, bookings, profile, offers, offerSettings }) => {
           const normalizedCars = cars.map((car) => this.normalizeResource(car));
           const normalizedUsers = users.map((user) => this.normalizeUser(user));
           const normalizedProfile = profile ? this.normalizeUser(profile) : null;
@@ -993,6 +1009,7 @@ export class UserPageComponent {
           this.users.set(normalizedUsers);
           this.bookings.set(bookings);
           this.publishedOfferSections.set(normalizedOffers);
+          this.heroBackgroundImageUrl.set((offerSettings?.heroBackgroundImageUrl ?? '').trim());
 
           if (normalizedProfile) {
             this.applyProfileUser(normalizedProfile);

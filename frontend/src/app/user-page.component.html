@@ -1,5 +1,9 @@
 <main class="client-shell">
-  <section class="hero" [class.hero-with-search]="pageMode === 'offers'">
+  <section
+    class="hero"
+    [class.hero-with-search]="pageMode === 'offers'"
+    [style.background]="pageMode === 'offers' ? heroBackgroundStyle() : null"
+  >
     @if (pageMode === 'offers') {
       <header class="home-search-header">
         <div class="search-header-copy">

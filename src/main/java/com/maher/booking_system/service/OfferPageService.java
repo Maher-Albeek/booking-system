@@ -1,7 +1,10 @@
 package com.maher.booking_system.service;
 
 import com.maher.booking_system.model.OfferSection;
+import com.maher.booking_system.model.OfferPageSettings;
 import com.maher.booking_system.repository.OfferDraftRepository;
+import com.maher.booking_system.repository.OfferPageSettingsDraftRepository;
+import com.maher.booking_system.repository.OfferPageSettingsPublishedRepository;
 import com.maher.booking_system.repository.OfferPublishedRepository;
 import org.springframework.stereotype.Service;
 
@@ -18,10 +21,19 @@ public class OfferPageService {
 
     private final OfferDraftRepository draftRepository;
     private final OfferPublishedRepository publishedRepository;
+    private final OfferPageSettingsDraftRepository settingsDraftRepository;
+    private final OfferPageSettingsPublishedRepository settingsPublishedRepository;
 
-    public OfferPageService(OfferDraftRepository draftRepository, OfferPublishedRepository publishedRepository) {
+    public OfferPageService(
+            OfferDraftRepository draftRepository,
+            OfferPublishedRepository publishedRepository,
+            OfferPageSettingsDraftRepository settingsDraftRepository,
+            OfferPageSettingsPublishedRepository settingsPublishedRepository
+    ) {
         this.draftRepository = draftRepository;
         this.publishedRepository = publishedRepository;
+        this.settingsDraftRepository = settingsDraftRepository;
+        this.settingsPublishedRepository = settingsPublishedRepository;
     }
 
     public List<OfferSection> getDraftSections() {
@@ -42,6 +54,27 @@ public class OfferPageService {
         List<OfferSection> normalizedDraft = normalizeSections(draftRepository.findAll());
         draftRepository.replaceAll(normalizedDraft);
         publishedRepository.replaceAll(normalizedDraft);
+        return normalizedDraft;
+    }
+
+    public OfferPageSettings getDraftSettings() {
+        return normalizeSettings(settingsDraftRepository.read());
+    }
+
+    public OfferPageSettings saveDraftSettings(OfferPageSettings settings) {
+        OfferPageSettings normalized = normalizeSettings(settings);
+        settingsDraftRepository.write(normalized);
+        return normalized;
+    }
+
+    public OfferPageSettings getPublishedSettings() {
+        return normalizeSettings(settingsPublishedRepository.read());
+    }
+
+    public OfferPageSettings publishDraftSettings() {
+        OfferPageSettings normalizedDraft = normalizeSettings(settingsDraftRepository.read());
+        settingsDraftRepository.write(normalizedDraft);
+        settingsPublishedRepository.write(normalizedDraft);
         return normalizedDraft;
     }
 
@@ -102,6 +135,16 @@ public class OfferPageService {
             return "";
         }
         return value.trim();
+    }
+
+    private OfferPageSettings normalizeSettings(OfferPageSettings settings) {
+        OfferPageSettings normalized = new OfferPageSettings();
+        if (settings == null) {
+            normalized.setHeroBackgroundImageUrl("");
+            return normalized;
+        }
+        normalized.setHeroBackgroundImageUrl(normalizeText(settings.getHeroBackgroundImageUrl()));
+        return normalized;
     }
 
     private String normalizeColor(String value, String fallback) {

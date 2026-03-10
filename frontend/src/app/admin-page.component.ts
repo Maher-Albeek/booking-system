@@ -4,7 +4,7 @@ import { Component, DestroyRef, computed, effect, inject, signal } from '@angula
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { finalize, forkJoin, Observable, switchMap } from 'rxjs';
+import { catchError, finalize, forkJoin, Observable, of, switchMap } from 'rxjs';
 
 import { AuthStateService } from './auth-state.service';
 import { I18nService } from './i18n.service';
@@ -75,6 +75,10 @@ type OfferSection = {
   descriptionYPercent: number;
 };
 
+type OfferPageSettings = {
+  heroBackgroundImageUrl: string;
+};
+
 type OfferDragState = {
   pointerId: number;
   sectionId: number;
@@ -116,6 +120,7 @@ export class AdminPageComponent {
   protected readonly error = signal<string | null>(null);
   protected readonly success = signal<string | null>(null);
   protected readonly isPhotoDragActive = signal(false);
+  protected readonly isOfferHeroDragActive = signal(false);
   protected readonly editingCarId = signal<number | null>(null);
   protected readonly selectedCarId = signal<number | null>(null);
   protected readonly selectedOfferSectionId = signal<number | null>(null);
@@ -126,6 +131,8 @@ export class AdminPageComponent {
   protected readonly bookings = signal<Booking[]>([]);
   protected readonly offerDraftSections = signal<OfferSection[]>([]);
   protected readonly offerPublishedSections = signal<OfferSection[]>([]);
+  protected readonly offerDraftSettings = signal<OfferPageSettings>({ heroBackgroundImageUrl: '' });
+  protected readonly offerPublishedSettings = signal<OfferPageSettings>({ heroBackgroundImageUrl: '' });
   protected readonly legalDraftContent = signal<LegalContent>({ impressumFields: [], datenschutzFields: [] });
   protected readonly legalPublishedContent = signal<LegalContent>({ impressumFields: [], datenschutzFields: [] });
 
@@ -325,7 +332,14 @@ export class AdminPageComponent {
   protected saveOfferDraft(): void {
     this.runRequest(
       'save-offer-draft',
-      this.http.put<OfferSection[]>('/api/offers/draft', this.offerDraftSections()),
+      this.http
+        .put<OfferSection[]>('/api/offers/draft', this.offerDraftSections())
+        .pipe(
+          switchMap(() =>
+            this.http.put<OfferPageSettings>('/api/offers/settings/draft', this.offerDraftSettings())
+          ),
+          catchError(() => of(this.offerDraftSettings()))
+        ),
       'Offer draft saved successfully.'
     );
   }
@@ -335,9 +349,53 @@ export class AdminPageComponent {
       'publish-offer-draft',
       this.http
         .put<OfferSection[]>('/api/offers/draft', this.offerDraftSections())
-        .pipe(switchMap(() => this.http.post<OfferSection[]>('/api/offers/publish', {}))),
+        .pipe(
+          switchMap(() =>
+            this.http.put<OfferPageSettings>('/api/offers/settings/draft', this.offerDraftSettings())
+          ),
+          catchError(() => of(this.offerDraftSettings())),
+          switchMap(() => this.http.post<OfferSection[]>('/api/offers/publish', {})),
+          switchMap(() => this.http.post<OfferPageSettings>('/api/offers/settings/publish', {})),
+          catchError(() => of(this.offerDraftSettings()))
+        ),
       'Offer page is now published.'
     );
+  }
+
+  protected updateOfferHeroBackgroundImageUrl(value: string): void {
+    this.offerDraftSettings.set({
+      heroBackgroundImageUrl: (value ?? '').trim()
+    });
+  }
+
+  protected onOfferHeroDragOver(event: DragEvent): void {
+    event.preventDefault();
+    this.isOfferHeroDragActive.set(true);
+  }
+
+  protected onOfferHeroDragLeave(event: DragEvent): void {
+    event.preventDefault();
+    this.isOfferHeroDragActive.set(false);
+  }
+
+  protected async onOfferHeroDrop(event: DragEvent): Promise<void> {
+    event.preventDefault();
+    this.isOfferHeroDragActive.set(false);
+    const files = Array.from(event.dataTransfer?.files ?? []);
+    await this.setOfferHeroImageFromFiles(files);
+  }
+
+  protected async onOfferHeroInputChange(event: Event): Promise<void> {
+    const input = event.target as HTMLInputElement | null;
+    const files = Array.from(input?.files ?? []);
+    await this.setOfferHeroImageFromFiles(files);
+    if (input) {
+      input.value = '';
+    }
+  }
+
+  protected removeOfferHeroImage(): void {
+    this.updateOfferHeroBackgroundImageUrl('');
   }
 
   protected startOfferElementDrag(event: PointerEvent, section: OfferSection, target: 'title' | 'description'): void {
@@ -708,6 +766,12 @@ export class AdminPageComponent {
       bookings: this.http.get<Booking[]>('/api/bookings'),
       offerDraft: this.http.get<OfferSection[]>('/api/offers/draft'),
       offerPublished: this.http.get<OfferSection[]>('/api/offers/published'),
+      offerDraftSettings: this.http
+        .get<OfferPageSettings>('/api/offers/settings/draft')
+        .pipe(catchError(() => of({ heroBackgroundImageUrl: '' } as OfferPageSettings))),
+      offerPublishedSettings: this.http
+        .get<OfferPageSettings>('/api/offers/settings/published')
+        .pipe(catchError(() => of({ heroBackgroundImageUrl: '' } as OfferPageSettings))),
       legalDraft: this.http.get<LegalContent>('/api/legal/draft'),
       legalPublished: this.http.get<LegalContent>('/api/legal/published')
     })
@@ -716,7 +780,17 @@ export class AdminPageComponent {
         finalize(() => this.loading.set(false))
       )
       .subscribe({
-        next: ({ resources, users, bookings, offerDraft, offerPublished, legalDraft, legalPublished }) => {
+        next: ({
+          resources,
+          users,
+          bookings,
+          offerDraft,
+          offerPublished,
+          offerDraftSettings,
+          offerPublishedSettings,
+          legalDraft,
+          legalPublished
+        }) => {
           this.resources.set(resources.map((resource) => this.normalizeResource(resource)));
           this.users.set(users);
           this.bookings.set(bookings);
@@ -730,6 +804,8 @@ export class AdminPageComponent {
               offerPublished.map((section, index) => this.normalizeOfferSection(section, index))
             )
           );
+          this.offerDraftSettings.set(this.normalizeOfferPageSettings(offerDraftSettings));
+          this.offerPublishedSettings.set(this.normalizeOfferPageSettings(offerPublishedSettings));
           this.legalDraftContent.set(this.normalizeLegalContent(legalDraft));
           this.legalPublishedContent.set(this.normalizeLegalContent(legalPublished));
           this.syncDraftDefaults();
@@ -997,6 +1073,12 @@ export class AdminPageComponent {
     }));
   }
 
+  private normalizeOfferPageSettings(settings: Partial<OfferPageSettings> | null | undefined): OfferPageSettings {
+    return {
+      heroBackgroundImageUrl: (settings?.heroBackgroundImageUrl ?? '').trim()
+    };
+  }
+
   private normalizeText(value: string | null | undefined): string | null {
     const normalizedValue = (value ?? '').trim();
     return normalizedValue || null;
@@ -1043,18 +1125,46 @@ export class AdminPageComponent {
     }
   }
 
-  private async convertImageToAvifDataUrl(file: File): Promise<string> {
+  private async setOfferHeroImageFromFiles(files: File[]): Promise<void> {
+    const imageFile = files.find((file) => file.type.startsWith('image/'));
+    if (!imageFile) {
+      if (files.length) {
+        this.error.set(this.i18n.t('admin.error.photoImageOnly'));
+      }
+      return;
+    }
+
+    this.error.set(null);
+    try {
+      const encodedImage = await this.convertImageToAvifDataUrl(imageFile, 1920, 1080, 0.78);
+      this.updateOfferHeroBackgroundImageUrl(encodedImage);
+    } catch (error) {
+      this.error.set(
+        error instanceof Error ? error.message : this.i18n.t('admin.error.photoConvertFailed')
+      );
+    }
+  }
+
+  private async convertImageToAvifDataUrl(
+    file: File,
+    maxWidth = Number.POSITIVE_INFINITY,
+    maxHeight = Number.POSITIVE_INFINITY,
+    quality = 0.82
+  ): Promise<string> {
     const image = await this.loadImage(file);
     const canvas = document.createElement('canvas');
-    canvas.width = image.width;
-    canvas.height = image.height;
+    const widthScale = Number.isFinite(maxWidth) ? maxWidth / image.width : 1;
+    const heightScale = Number.isFinite(maxHeight) ? maxHeight / image.height : 1;
+    const scale = Math.min(1, widthScale, heightScale);
+    canvas.width = Math.max(1, Math.round(image.width * scale));
+    canvas.height = Math.max(1, Math.round(image.height * scale));
 
     const context = canvas.getContext('2d');
     if (!context) {
       throw new Error(this.i18n.t('admin.error.canvasUnavailable'));
     }
 
-    context.drawImage(image, 0, 0);
+    context.drawImage(image, 0, 0, canvas.width, canvas.height);
 
     const avifBlob = await new Promise<Blob>((resolve, reject) => {
       canvas.toBlob(
@@ -1067,7 +1177,7 @@ export class AdminPageComponent {
           reject(new Error(this.i18n.t('admin.error.browserAvifFailed')));
         },
         'image/avif',
-        0.82
+        quality
       );
     });
 

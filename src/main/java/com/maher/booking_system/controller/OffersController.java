@@ -1,6 +1,7 @@
 package com.maher.booking_system.controller;
 
 import com.maher.booking_system.model.OfferSection;
+import com.maher.booking_system.model.OfferPageSettings;
 import com.maher.booking_system.service.OfferPageService;
 import org.springframework.lang.NonNull;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -40,5 +41,25 @@ public class OffersController {
     @PostMapping("/publish")
     public @NonNull List<OfferSection> publishDraftSections() {
         return offerPageService.publishDraftSections();
+    }
+
+    @GetMapping("/settings/draft")
+    public OfferPageSettings getDraftSettings() {
+        return offerPageService.getDraftSettings();
+    }
+
+    @PutMapping("/settings/draft")
+    public OfferPageSettings saveDraftSettings(@RequestBody(required = false) OfferPageSettings settings) {
+        return offerPageService.saveDraftSettings(settings);
+    }
+
+    @GetMapping("/settings/published")
+    public OfferPageSettings getPublishedSettings() {
+        return offerPageService.getPublishedSettings();
+    }
+
+    @PostMapping("/settings/publish")
+    public OfferPageSettings publishDraftSettings() {
+        return offerPageService.publishDraftSettings();
     }
 }
