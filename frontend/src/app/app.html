@@ -1,3 +1,5 @@
+<app-grainient></app-grainient>
+
 <main class="app-shell" [class.menu-open]="menuOpen()">
   <header class="app-chrome">
     <div class="top-accent" aria-hidden="true"></div>
@@ -96,7 +98,7 @@
 
       @if (!auth.isAuthenticated()) {
         <button type="button" class="menu-auth" (click)="openAuthModal('login')">
-          {{ i18n.t('app.link.login') }} | {{ i18n.t('login.mode.register') }}
+          {{ i18n.t('app.link.login') }} / {{ i18n.t('login.mode.register') }}
         </button>
       }
     </nav>

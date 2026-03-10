@@ -7,6 +7,7 @@ import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } fro
 import { filter, finalize } from 'rxjs';
 
 import { AuthStateService } from './auth-state.service';
+import { GrainientComponent } from './grainient.component';
 import { LANGUAGE_OPTIONS, I18nService, LanguageCode } from './i18n.service';
 
 type HeaderLink = {
@@ -16,7 +17,7 @@ type HeaderLink = {
 
 @Component({
   selector: 'app-root',
-  imports: [CommonModule, FormsModule, RouterLink, RouterLinkActive, RouterOutlet],
+  imports: [CommonModule, FormsModule, RouterLink, RouterLinkActive, RouterOutlet, GrainientComponent],
   templateUrl: './app.html',
   styleUrl: './app.scss'
 })
