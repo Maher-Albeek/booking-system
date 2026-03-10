@@ -19,12 +19,6 @@
     </div>
 
     <div class="hero-actions">
-      <button type="button" (click)="reload()" [disabled]="loading() || submitting() || accountSaving()">
-        <span class="button-content">
-          <i class="button-icon fa-solid fa-rotate-right" aria-hidden="true"></i>
-          <span>{{ loading() ? i18n.t('common.refreshing') : pageMode === 'offers' ? i18n.t('user.action.refreshAvailability') : i18n.t('user.action.refreshBookings') }}</span>
-        </span>
-      </button>
       @if (auth.isAuthenticated()) {
         <div class="hero-shortcuts">
           @if (pageMode === 'offers') {

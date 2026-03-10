@@ -1,18 +1,19 @@
 :host {
   display: block;
   color: #f7f2ea;
+  --page-gutter: 150px;
 }
 
 .app-shell {
   min-height: 100vh;
-  padding: 0 24px 24px;
+  padding: 0 var(--page-gutter) 24px;
 }
 
 .app-chrome {
   position: fixed;
   top: 0;
-  left: 24px;
-  right: 24px;
+  left: var(--page-gutter);
+  right: var(--page-gutter);
   z-index: 30;
   margin-bottom: 0;
   border: 0;
@@ -37,6 +38,7 @@
   gap: 16px;
   min-height: 62px;
   padding: 0 16px;
+  transition: opacity 0.3s ease;
 }
 
 .header-left,
@@ -120,15 +122,9 @@
   background: rgba(255, 255, 255, 0.04);
 }
 
-.language-icon {
-  width: 15px;
-  height: 15px;
-  fill: rgba(247, 242, 234, 0.9);
-}
 
 .language-select {
   min-height: 30px;
-  min-width: 56px;
   border: 0;
   background: transparent;
   color: #f7f2ea;
@@ -291,48 +287,146 @@
 }
 
 .menu-panel {
-  display: grid;
+  position: fixed;
+  top: 0;
+  left: var(--page-gutter);
+  right: var(--page-gutter);
+  z-index: 34;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
   gap: 8px;
-  padding: 10px 12px 14px;
-  border-top: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(6, 10, 16, 0.96);
+  min-height: 62px;
+  padding: 0 72px 0 132px;
+  background: transparent;
+  transform: translateX(-28px);
+  transform-origin: left center;
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    transform 0.25s ease,
+    opacity 0.25s ease,
+    visibility 0.25s ease;
+  pointer-events: none;
+  overflow-x: auto;
+}
+
+.menu-panel.open {
+  transform: translateX(0);
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+.menu-panel.open .route-link,
+.menu-panel.open .menu-auth {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.menu-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 33;
+  border: 0;
+  background:
+    radial-gradient(42% 34% at 10% 8%, rgba(125, 188, 255, 0.24), transparent 72%),
+    radial-gradient(36% 26% at 24% 14%, rgba(255, 255, 255, 0.12), transparent 78%);
+  cursor: pointer;
 }
 
 .route-link,
 .menu-auth {
   display: inline-flex;
   align-items: center;
-  justify-content: flex-start;
-  width: 100%;
-  min-height: 40px;
+  justify-content: center;
+  width: auto;
+  min-height: 38px;
   padding: 0 12px;
-  border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.02);
+  border-radius: 999px;
+  border: 0;
+  background: transparent;
   color: #f7f2ea;
   text-decoration: none;
   font: inherit;
   font-weight: 600;
+  font-size: 0.95rem;
+  opacity: 0;
+  transform: translateX(-10px);
+  transition:
+    opacity 0.25s ease,
+    transform 0.25s ease,
+    color 0.18s ease;
+  white-space: nowrap;
+  position: relative;
 }
 
 .route-link.active {
-  border-color: rgba(172, 196, 229, 0.46);
-  background: rgba(172, 196, 229, 0.16);
-  color: #c8d8ee;
+  color: #ffffff;
+  opacity: 0.95;
 }
 
 .menu-auth {
   cursor: pointer;
 }
 
+.route-link:hover,
+.menu-auth:hover {
+  opacity: 1;
+  transform: translateX(0);
+  color: #ffffff;
+  background: transparent;
+}
+
+.route-link::after,
+.menu-auth::after {
+  content: '';
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: 5px;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.55);
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 0.2s ease;
+}
+
+.route-link:hover::after,
+.menu-auth:hover::after {
+  transform: scaleX(1);
+}
+
+.menu-panel .route-link + .route-link::before,
+.menu-panel .route-link + .menu-auth::before,
+.menu-panel .menu-auth + .route-link::before,
+.menu-panel .menu-auth + .menu-auth::before {
+  content: '|';
+  color: rgba(247, 242, 234, 0.72);
+  position: absolute;
+  left: -6px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
 .menu-auth.danger {
-  border-color: rgba(232, 103, 103, 0.45);
-  background: rgba(232, 103, 103, 0.16);
+  background: transparent;
   color: #ffd5d5;
+}
+
+.menu-auth.danger:hover {
+  background: transparent;
 }
 
 .page-shell {
   padding-top: 0;
+  transition: filter 0.5s ease, opacity 0.5s ease;
+}
+
+.app-shell.menu-open .page-shell {
+  filter: blur(8px);
+  opacity: 0.75;
 }
 
 .auth-modal-backdrop {
@@ -671,6 +765,10 @@ input.payment-detail-input:focus {
 }
 
 @media (max-width: 720px) {
+  :host {
+    --page-gutter: 12px;
+  }
+
   .mastercard-form-row {
     grid-template-columns: 1fr;
   }
@@ -680,12 +778,19 @@ input.payment-detail-input:focus {
   }
 
   .app-shell {
-    padding: 0 12px 12px;
+    padding: 0 var(--page-gutter) 12px;
   }
 
   .app-chrome {
-    left: 12px;
-    right: 12px;
+    left: var(--page-gutter);
+    right: var(--page-gutter);
+  }
+
+  .menu-panel {
+    left: var(--page-gutter);
+    right: var(--page-gutter);
+    min-height: 58px;
+    padding: 0 8px 0 106px;
   }
 
   .header-main {
