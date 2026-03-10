@@ -32,6 +32,6 @@
   "addressCountry" : null,
   "birthDate" : null,
   "avatarUrl" : null,
-  "paymentMethods" : [ ],
+  "paymentMethods" : [ "Visa" ],
   "paymentDetails" : { }
 } ]

@@ -187,6 +187,79 @@
   padding-right: 8px;
 }
 
+.user-menu {
+  position: relative;
+}
+
+.user-menu-trigger {
+  cursor: pointer;
+}
+
+.user-menu-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  display: grid;
+  gap: 6px;
+  min-width: 190px;
+  padding: 10px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(8, 17, 30, 0.98);
+  box-shadow: 0 14px 26px rgba(0, 0, 0, 0.35);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(4px);
+  transition: opacity 0.16s ease, transform 0.16s ease, visibility 0.16s ease;
+  z-index: 35;
+}
+
+.user-menu:hover .user-menu-dropdown,
+.user-menu:focus-within .user-menu-dropdown {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.user-menu-dropdown a,
+.user-menu-dropdown button {
+  display: inline-flex;
+  align-items: center;
+  width: 100%;
+  min-height: 38px;
+  padding: 0 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.03);
+  color: #f7f2ea;
+  text-decoration: none;
+  font: inherit;
+  font-weight: 600;
+}
+
+.user-menu-dropdown a:hover,
+.user-menu-dropdown button:hover {
+  border-color: rgba(172, 196, 229, 0.46);
+  background: rgba(172, 196, 229, 0.16);
+  color: #c8d8ee;
+}
+
+.user-menu-dropdown button {
+  cursor: pointer;
+}
+
+.user-menu-dropdown .danger {
+  border-color: rgba(232, 103, 103, 0.45);
+  background: rgba(232, 103, 103, 0.14);
+  color: #ffd5d5;
+}
+
+.user-menu-dropdown .danger:hover {
+  border-color: rgba(232, 103, 103, 0.6);
+  background: rgba(232, 103, 103, 0.22);
+  color: #ffe5e5;
+}
+
 .user-name {
   max-width: 180px;
   overflow: hidden;
@@ -615,6 +688,10 @@ input.payment-detail-input:focus {
   .brand-link strong,
   .user-name {
     display: none;
+  }
+
+  .user-menu-dropdown {
+    right: -8px;
   }
 
   .auth-chip {

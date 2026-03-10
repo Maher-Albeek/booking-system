@@ -45,14 +45,6 @@ export class App {
   protected readonly navLinks = computed<HeaderLink[]>(() => {
     const links: HeaderLink[] = [{ path: '/offers', label: this.i18n.t('app.link.offers') }];
 
-    if (this.auth.isAuthenticated()) {
-      links.push(
-        { path: '/my-profile', label: this.i18n.t('app.link.myProfile') },
-        { path: '/my-bookings', label: this.i18n.t('app.link.myBookings') },
-        { path: '/payment-methods', label: this.i18n.t('app.link.paymentMethods') }
-      );
-    }
-
     if (this.auth.isAdmin()) {
       links.push(
         { path: '/admin/tools', label: this.i18n.t('app.link.adminTools') },

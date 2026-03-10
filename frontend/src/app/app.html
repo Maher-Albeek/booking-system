@@ -49,16 +49,25 @@
         </label>
 
         @if (auth.isAuthenticated()) {
-          <a class="user-chip" routerLink="/my-profile" (click)="closeMenu()">
-            <span class="avatar-circle">
-              @if (auth.user()?.avatarUrl) {
-                <img [src]="auth.user()?.avatarUrl" [alt]="i18n.t('app.session.avatar')" />
-              } @else {
-                <span>{{ userInitials() }}</span>
-              }
-            </span>
-            <span class="user-name">{{ auth.user()?.name }}</span>
-          </a>
+          <div class="user-menu">
+            <button type="button" class="user-chip user-menu-trigger" [attr.aria-label]="i18n.t('app.nav.main')">
+              <span class="avatar-circle">
+                @if (auth.user()?.avatarUrl) {
+                  <img [src]="auth.user()?.avatarUrl" [alt]="i18n.t('app.session.avatar')" />
+                } @else {
+                  <span>{{ userInitials() }}</span>
+                }
+              </span>
+              <span class="user-name">{{ auth.user()?.name }}</span>
+            </button>
+
+            <div class="user-menu-dropdown">
+              <a routerLink="/my-bookings" (click)="closeMenu()">{{ i18n.t('app.link.myBookings') }}</a>
+              <a routerLink="/my-profile" (click)="closeMenu()">{{ i18n.t('app.link.myProfile') }}</a>
+              <a routerLink="/payment-methods" (click)="closeMenu()">{{ i18n.t('app.link.paymentMethods') }}</a>
+              <button type="button" class="danger" (click)="logout()">{{ i18n.t('app.session.logout') }}</button>
+            </div>
+          </div>
         } @else {
           <button type="button" class="auth-chip" (click)="openAuthModal('login')">
             <span class="auth-icon" aria-hidden="true"></span>
@@ -85,10 +94,6 @@
         @if (!auth.isAuthenticated()) {
           <button type="button" class="menu-auth" (click)="openAuthModal('login')">
             {{ i18n.t('app.link.login') }} | {{ i18n.t('login.mode.register') }}
-          </button>
-        } @else {
-          <button type="button" class="menu-auth danger" (click)="logout()">
-            {{ i18n.t('app.session.logout') }}
           </button>
         }
       </nav>
