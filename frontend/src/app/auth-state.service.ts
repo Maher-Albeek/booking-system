@@ -19,6 +19,7 @@ export type AuthUser = {
   birthDate: string | null;
   avatarUrl: string | null;
   paymentMethods: string[];
+  paymentDetails: Record<string, string>;
 };
 
 @Injectable({ providedIn: 'root' })
@@ -140,7 +141,19 @@ export class AuthStateService {
       avatarUrl: user.avatarUrl ?? null,
       paymentMethods: Array.isArray(user.paymentMethods)
         ? user.paymentMethods.filter((value): value is string => typeof value === 'string')
-        : []
+        : [],
+      paymentDetails:
+        user.paymentDetails && typeof user.paymentDetails === 'object'
+          ? Object.fromEntries(
+              Object.entries(user.paymentDetails).filter(
+                (entry): entry is [string, string] =>
+                  typeof entry[0] === 'string' &&
+                  !!entry[0].trim() &&
+                  typeof entry[1] === 'string' &&
+                  !!entry[1].trim()
+              )
+            )
+          : {}
     };
   }
 }

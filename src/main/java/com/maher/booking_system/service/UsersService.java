@@ -16,8 +16,11 @@ import java.time.format.DateTimeParseException;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Objects;
 
 @Service
@@ -137,7 +140,9 @@ public class UsersService {
         existingUser.setAddress(buildLegacyAddress(addressStreet, addressHouseNumber, addressPostalCode, addressCity, addressCountry));
         existingUser.setBirthDate(normalizeBirthDate(safeRequest.birthDate()));
         existingUser.setAvatarUrl(normalizeAvatarUrl(safeRequest.avatarUrl()));
-        existingUser.setPaymentMethods(PaymentMethodCatalog.normalizeList(safeRequest.paymentMethods()));
+        List<String> normalizedPaymentMethods = PaymentMethodCatalog.normalizeList(safeRequest.paymentMethods());
+        existingUser.setPaymentMethods(normalizedPaymentMethods);
+        existingUser.setPaymentDetails(normalizePaymentDetails(safeRequest.paymentDetails(), normalizedPaymentMethods));
 
         String displayName = buildDisplayName(existingUser.getFirstName(), existingUser.getLastName());
         if (displayName != null) {
@@ -190,7 +195,9 @@ public class UsersService {
         safeUser.setAddress(buildLegacyAddress(addressStreet, addressHouseNumber, addressPostalCode, addressCity, addressCountry));
         safeUser.setBirthDate(normalizeBirthDate(safeUser.getBirthDate()));
         safeUser.setAvatarUrl(normalizeAvatarUrl(safeUser.getAvatarUrl()));
-        safeUser.setPaymentMethods(PaymentMethodCatalog.normalizeList(safeUser.getPaymentMethods()));
+        List<String> normalizedPaymentMethods = PaymentMethodCatalog.normalizeList(safeUser.getPaymentMethods());
+        safeUser.setPaymentMethods(normalizedPaymentMethods);
+        safeUser.setPaymentDetails(normalizePaymentDetails(safeUser.getPaymentDetails(), normalizedPaymentMethods));
 
         return toUserResponse(usersRepository.save(safeUser));
     }
@@ -342,7 +349,59 @@ public class UsersService {
                 addressCountry,
                 user.getBirthDate(),
                 user.getAvatarUrl(),
-                List.copyOf(user.getPaymentMethods())
+                List.copyOf(user.getPaymentMethods()),
+                safePaymentDetailsForResponse(user.getPaymentDetails(), user.getPaymentMethods())
         );
+    }
+
+    private Map<String, String> normalizePaymentDetails(Map<String, String> paymentDetails, List<String> allowedMethods) {
+        if (paymentDetails == null || paymentDetails.isEmpty() || allowedMethods == null || allowedMethods.isEmpty()) {
+            return Map.of();
+        }
+
+        LinkedHashSet<String> allowed = new LinkedHashSet<>(allowedMethods);
+        LinkedHashMap<String, String> normalized = new LinkedHashMap<>();
+
+        for (Map.Entry<String, String> entry : paymentDetails.entrySet()) {
+            if (entry.getKey() == null) {
+                continue;
+            }
+
+            String method = PaymentMethodCatalog.normalizeRequired(entry.getKey(), "paymentDetails.key");
+            if (!allowed.contains(method)) {
+                continue;
+            }
+
+            String detail = normalizeOptional(entry.getValue());
+            if (detail != null) {
+                normalized.put(method, detail);
+            }
+        }
+
+        return normalized;
+    }
+
+    private Map<String, String> safePaymentDetailsForResponse(Map<String, String> paymentDetails, List<String> selectedMethods) {
+        if (paymentDetails == null || paymentDetails.isEmpty()) {
+            return Map.of();
+        }
+
+        LinkedHashSet<String> selected = new LinkedHashSet<>(selectedMethods == null ? List.of() : selectedMethods);
+        LinkedHashSet<String> supported = new LinkedHashSet<>(PaymentMethodCatalog.supportedMethods());
+        LinkedHashMap<String, String> safe = new LinkedHashMap<>();
+
+        for (Map.Entry<String, String> entry : paymentDetails.entrySet()) {
+            String key = normalizeOptional(entry.getKey());
+            String value = normalizeOptional(entry.getValue());
+            if (key == null || value == null) {
+                continue;
+            }
+            if (!supported.contains(key) || !selected.contains(key)) {
+                continue;
+            }
+            safe.put(key, value);
+        }
+
+        return safe;
     }
 }

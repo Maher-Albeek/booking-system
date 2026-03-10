@@ -1,6 +1,7 @@
 package com.maher.booking_system.dto;
 
 import java.util.List;
+import java.util.Map;
 
 public record UserResponse(
         Long id,
@@ -17,6 +18,7 @@ public record UserResponse(
         String addressCountry,
         String birthDate,
         String avatarUrl,
-        List<String> paymentMethods
+        List<String> paymentMethods,
+        Map<String, String> paymentDetails
 ) {
 }

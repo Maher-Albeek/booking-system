@@ -1,6 +1,7 @@
 package com.maher.booking_system.dto;
 
 import java.util.List;
+import java.util.Map;
 
 public record UpdateUserRequest(
         String firstName,
@@ -13,6 +14,7 @@ public record UpdateUserRequest(
         String addressCountry,
         String birthDate,
         String avatarUrl,
-        List<String> paymentMethods
+        List<String> paymentMethods,
+        Map<String, String> paymentDetails
 ) {
 }

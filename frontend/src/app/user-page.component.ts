@@ -1186,7 +1186,8 @@ export class UserPageComponent {
       addressCountry: user.addressCountry,
       birthDate: user.birthDate,
       avatarUrl: user.avatarUrl,
-      paymentMethods: [...user.paymentMethods]
+      paymentMethods: [...user.paymentMethods],
+      paymentDetails: {}
     };
   }
 

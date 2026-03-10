@@ -1,7 +1,9 @@
 package com.maher.booking_system.model;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 public class Users {
     private Long id;
@@ -20,6 +22,7 @@ public class Users {
     private String birthDate;
     private String avatarUrl;
     private List<String> paymentMethods = new ArrayList<>();
+    private Map<String, String> paymentDetails = new LinkedHashMap<>();
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -75,5 +78,16 @@ public class Users {
 
     public void setPaymentMethods(List<String> paymentMethods) {
         this.paymentMethods = paymentMethods == null ? new ArrayList<>() : new ArrayList<>(paymentMethods);
+    }
+
+    public Map<String, String> getPaymentDetails() {
+        if (paymentDetails == null) {
+            paymentDetails = new LinkedHashMap<>();
+        }
+        return paymentDetails;
+    }
+
+    public void setPaymentDetails(Map<String, String> paymentDetails) {
+        this.paymentDetails = paymentDetails == null ? new LinkedHashMap<>() : new LinkedHashMap<>(paymentDetails);
     }
 }

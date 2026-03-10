@@ -70,6 +70,7 @@ type UserResponse = {
   birthDate: string | null;
   avatarUrl: string | null;
   paymentMethods?: string[] | null;
+  paymentDetails?: Record<string, string> | null;
 };
 
 type AccountDraft = {
@@ -83,6 +84,7 @@ type AccountDraft = {
   birthDate: string;
   avatarUrl: string;
   paymentMethods: PaymentMethod[];
+  paymentDetails: Partial<Record<PaymentMethod, string>>;
 };
 
 @Component({
@@ -233,10 +235,29 @@ export class AccountPageComponent {
     const nextMethods = checked
       ? [...this.accountDraft.paymentMethods, method]
       : this.accountDraft.paymentMethods.filter((entry) => entry !== method);
+    const nextDetails = { ...this.accountDraft.paymentDetails };
+    if (!checked) {
+      delete nextDetails[method];
+    }
 
     this.accountDraft = {
       ...this.accountDraft,
-      paymentMethods: this.sortPaymentMethods(nextMethods)
+      paymentMethods: this.sortPaymentMethods(nextMethods),
+      paymentDetails: nextDetails
+    };
+  }
+
+  protected paymentDetailValue(method: PaymentMethod): string {
+    return this.accountDraft.paymentDetails[method] ?? '';
+  }
+
+  protected setPaymentDetail(method: PaymentMethod, value: string): void {
+    this.accountDraft = {
+      ...this.accountDraft,
+      paymentDetails: {
+        ...this.accountDraft.paymentDetails,
+        [method]: value
+      }
     };
   }
 
@@ -263,7 +284,8 @@ export class AccountPageComponent {
         addressCountry: this.accountDraft.addressCountry.trim(),
         birthDate: this.accountDraft.birthDate.trim(),
         avatarUrl: this.accountDraft.avatarUrl.trim(),
-        paymentMethods: this.accountDraft.paymentMethods
+        paymentMethods: this.accountDraft.paymentMethods,
+        paymentDetails: this.normalizedPaymentDetailsForSave()
       })
       .pipe(
         takeUntilDestroyed(this.destroyRef),
@@ -277,7 +299,8 @@ export class AccountPageComponent {
             ...(currentUser ?? {}),
             ...user,
             role: user.role === 'ADMIN' ? 'ADMIN' : 'USER',
-            paymentMethods: this.normalizePaymentMethods(user.paymentMethods)
+            paymentMethods: this.normalizePaymentMethods(user.paymentMethods),
+            paymentDetails: this.normalizePaymentDetails(user.paymentDetails, user.paymentMethods)
           });
           this.success.set(this.i18n.t('account.success.updated'));
         },
@@ -368,7 +391,8 @@ export class AccountPageComponent {
             ...(currentUser ?? {}),
             ...user,
             role: user.role === 'ADMIN' ? 'ADMIN' : 'USER',
-            paymentMethods: this.normalizePaymentMethods(user.paymentMethods)
+            paymentMethods: this.normalizePaymentMethods(user.paymentMethods),
+            paymentDetails: this.normalizePaymentDetails(user.paymentDetails, user.paymentMethods)
           });
         },
         error: (error: HttpErrorResponse) => {
@@ -388,7 +412,8 @@ export class AccountPageComponent {
       addressCountry: user.addressCountry ?? '',
       birthDate: user.birthDate ?? '',
       avatarUrl: user.avatarUrl ?? '',
-      paymentMethods: this.normalizePaymentMethods(user.paymentMethods)
+      paymentMethods: this.normalizePaymentMethods(user.paymentMethods),
+      paymentDetails: this.normalizePaymentDetails(user.paymentDetails, user.paymentMethods)
     };
   }
 
@@ -403,7 +428,8 @@ export class AccountPageComponent {
       addressCountry: '',
       birthDate: '',
       avatarUrl: '',
-      paymentMethods: []
+      paymentMethods: [],
+      paymentDetails: {}
     };
   }
 
@@ -416,6 +442,45 @@ export class AccountPageComponent {
       (left, right) =>
         this.supportedPaymentMethods.indexOf(left) - this.supportedPaymentMethods.indexOf(right)
     );
+  }
+
+  private normalizePaymentDetails(
+    details: Record<string, string> | null | undefined,
+    methods: string[] | null | undefined
+  ): Partial<Record<PaymentMethod, string>> {
+    const selectedMethods = new Set(this.normalizePaymentMethods(methods));
+    const normalized: Partial<Record<PaymentMethod, string>> = {};
+
+    for (const method of this.supportedPaymentMethods) {
+      if (!selectedMethods.has(method)) {
+        continue;
+      }
+
+      const value = details?.[method];
+      if (typeof value === 'string' && value.trim()) {
+        normalized[method] = value.trim();
+      }
+    }
+
+    return normalized;
+  }
+
+  private normalizedPaymentDetailsForSave(): Record<string, string> {
+    const details: Record<string, string> = {};
+    const selectedMethods = new Set(this.accountDraft.paymentMethods);
+
+    for (const method of this.supportedPaymentMethods) {
+      if (!selectedMethods.has(method)) {
+        continue;
+      }
+
+      const value = this.accountDraft.paymentDetails[method]?.trim();
+      if (value) {
+        details[method] = value;
+      }
+    }
+
+    return details;
   }
 
   private readApiError(error: HttpErrorResponse, fallback: string): string {

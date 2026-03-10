@@ -306,6 +306,20 @@
                     <small>{{ i18n.t(paymentMethodMeta[method].hintKey) }}</small>
                   </span>
                 </label>
+
+                @if (isPaymentMethodSelected(method)) {
+                  <label class="field field-wide">
+                    <span>Payment information</span>
+                    <input
+                      class="account-input"
+                      type="text"
+                      [name]="'paymentInfo_' + method"
+                      [ngModel]="paymentDetailValue(method)"
+                      (ngModelChange)="setPaymentDetail(method, $event)"
+                      [placeholder]="'Add information for ' + method"
+                    />
+                  </label>
+                }
               }
             </div>
           </section>
