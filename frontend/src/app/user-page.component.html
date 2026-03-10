@@ -4,7 +4,47 @@
     [class.hero-with-search]="pageMode === 'offers'"
     [style.background]="pageMode === 'offers' ? heroBackgroundStyle() : null"
   >
-    @if (pageMode === 'offers') {
+    <div class="hero-copy">
+      @if (pageMode === 'offers') {
+        <p class="eyebrow">{{ i18n.t('user.hero.interface') }}</p>
+        <h2>{{ title() }}</h2>
+        <p>
+          {{ i18n.t('user.hero.offersDescription') }}
+        </p>
+      } @else {
+        <p class="eyebrow">{{ i18n.t('app.title.bookings') }}</p>
+        <h2>{{ i18n.t('user.hero.manageReservations') }}</h2>
+        <p>{{ i18n.t('user.hero.bookingsDescription') }}</p>
+      }
+    </div>
+
+    <div class="hero-actions">
+      <button type="button" (click)="reload()" [disabled]="loading() || submitting() || accountSaving()">
+        <span class="button-content">
+          <i class="button-icon fa-solid fa-rotate-right" aria-hidden="true"></i>
+          <span>{{ loading() ? i18n.t('common.refreshing') : pageMode === 'offers' ? i18n.t('user.action.refreshAvailability') : i18n.t('user.action.refreshBookings') }}</span>
+        </span>
+      </button>
+      @if (auth.isAuthenticated()) {
+        <div class="hero-shortcuts">
+          @if (pageMode === 'offers') {
+            <a routerLink="/my-bookings" class="shortcut-link">
+              <i class="button-icon fa-solid fa-calendar-check" aria-hidden="true"></i>
+              <span>{{ i18n.t('app.title.bookings') }}</span>
+            </a>
+          } @else {
+            <a routerLink="/offers" class="shortcut-link">
+              <i class="button-icon fa-solid fa-car-side" aria-hidden="true"></i>
+              <span>{{ i18n.t('user.action.backToOffers') }}</span>
+            </a>
+          }
+        </div>
+      }
+    </div>
+  </section>
+
+  @if (pageMode === 'offers') {
+    <section class="search-below-hero">
       <header class="home-search-header">
         <div class="search-header-copy">
           <p class="eyebrow">{{ i18n.t('user.search.findCar') }}</p>
@@ -62,46 +102,8 @@
           <p class="search-warning">{{ i18n.t('user.search.invalidRange') }}</p>
         }
       </header>
-    }
-
-    <div class="hero-copy">
-      @if (pageMode === 'offers') {
-        <p class="eyebrow">{{ i18n.t('user.hero.interface') }}</p>
-        <h2>{{ title() }}</h2>
-        <p>
-          {{ i18n.t('user.hero.offersDescription') }}
-        </p>
-      } @else {
-        <p class="eyebrow">{{ i18n.t('app.title.bookings') }}</p>
-        <h2>{{ i18n.t('user.hero.manageReservations') }}</h2>
-        <p>{{ i18n.t('user.hero.bookingsDescription') }}</p>
-      }
-    </div>
-
-    <div class="hero-actions">
-      <button type="button" (click)="reload()" [disabled]="loading() || submitting() || accountSaving()">
-        <span class="button-content">
-          <i class="button-icon fa-solid fa-rotate-right" aria-hidden="true"></i>
-          <span>{{ loading() ? i18n.t('common.refreshing') : pageMode === 'offers' ? i18n.t('user.action.refreshAvailability') : i18n.t('user.action.refreshBookings') }}</span>
-        </span>
-      </button>
-      @if (auth.isAuthenticated()) {
-        <div class="hero-shortcuts">
-          @if (pageMode === 'offers') {
-            <a routerLink="/my-bookings" class="shortcut-link">
-              <i class="button-icon fa-solid fa-calendar-check" aria-hidden="true"></i>
-              <span>{{ i18n.t('app.title.bookings') }}</span>
-            </a>
-          } @else {
-            <a routerLink="/offers" class="shortcut-link">
-              <i class="button-icon fa-solid fa-car-side" aria-hidden="true"></i>
-              <span>{{ i18n.t('user.action.backToOffers') }}</span>
-            </a>
-          }
-        </div>
-      }
-    </div>
-  </section>
+    </section>
+  }
 
   @if (error()) {
     <section class="banner error">
