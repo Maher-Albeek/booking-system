@@ -126,6 +126,15 @@ export const routes: Routes = [
     }
   },
   {
+    path: 'admin/manage-legal',
+    component: AdminPageComponent,
+    title: 'Manage legal',
+    canActivate: [adminGuard],
+    data: {
+      adminPageMode: 'legal'
+    }
+  },
+  {
     path: '**',
     redirectTo: 'offers'
   }

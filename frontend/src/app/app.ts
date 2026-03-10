@@ -58,7 +58,8 @@ export class App {
         { path: '/admin/tools', label: this.i18n.t('app.link.adminTools') },
         { path: '/admin/manage-offers', label: this.i18n.t('app.link.manageOffers') },
         { path: '/admin/manage-cars', label: this.i18n.t('app.link.manageCars') },
-        { path: '/admin/manage-users', label: this.i18n.t('app.link.manageUsers') }
+        { path: '/admin/manage-users', label: this.i18n.t('app.link.manageUsers') },
+        { path: '/admin/manage-legal', label: 'Manage Legal' }
       );
     }
 

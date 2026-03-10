@@ -87,6 +87,16 @@ type OfferDragState = {
   canvasHeight: number;
 };
 
+type LegalField = {
+  label: string;
+  value: string;
+};
+
+type LegalContent = {
+  impressumFields: LegalField[];
+  datenschutzFields: LegalField[];
+};
+
 @Component({
   selector: 'app-admin-page',
   imports: [CommonModule, FormsModule, RouterLink],
@@ -100,7 +110,7 @@ export class AdminPageComponent {
 
   protected readonly auth = inject(AuthStateService);
   protected readonly i18n = inject(I18nService);
-  protected readonly pageMode: 'tools' | 'offers' | 'cars' | 'users' = this.resolvePageMode();
+  protected readonly pageMode: 'tools' | 'offers' | 'cars' | 'users' | 'legal' = this.resolvePageMode();
   protected readonly loading = signal(true);
   protected readonly busyKey = signal<string | null>(null);
   protected readonly error = signal<string | null>(null);
@@ -116,6 +126,8 @@ export class AdminPageComponent {
   protected readonly bookings = signal<Booking[]>([]);
   protected readonly offerDraftSections = signal<OfferSection[]>([]);
   protected readonly offerPublishedSections = signal<OfferSection[]>([]);
+  protected readonly legalDraftContent = signal<LegalContent>({ impressumFields: [], datenschutzFields: [] });
+  protected readonly legalPublishedContent = signal<LegalContent>({ impressumFields: [], datenschutzFields: [] });
 
   protected carDraft = {
     name: '',
@@ -209,6 +221,10 @@ export class AdminPageComponent {
       return this.i18n.t('admin.hero.carsTitle');
     }
 
+    if (this.pageMode === 'legal') {
+      return 'Manage legal pages';
+    }
+
     return this.i18n.t('admin.hero.toolsTitle');
   });
 
@@ -225,6 +241,10 @@ export class AdminPageComponent {
       return this.i18n.t('admin.hero.carsDescription');
     }
 
+    if (this.pageMode === 'legal') {
+      return 'Edit Impressum and Datenschutz fields, then publish.';
+    }
+
     return this.i18n.t('admin.hero.toolsDescription');
   });
 
@@ -232,6 +252,7 @@ export class AdminPageComponent {
   protected readonly showOffersPanel = computed(() => this.pageMode === 'offers');
   protected readonly showCarsPanel = computed(() => this.pageMode === 'cars');
   protected readonly showUsersPanel = computed(() => this.pageMode === 'users');
+  protected readonly showLegalPanel = computed(() => this.pageMode === 'legal');
 
   constructor() {
     effect(() => {
@@ -598,13 +619,62 @@ export class AdminPageComponent {
     return `${formattedAmount} ${normalizedUnit}`;
   }
 
+  protected legalFields(page: 'impressum' | 'datenschutz'): LegalField[] {
+    return page === 'impressum'
+      ? this.legalDraftContent().impressumFields
+      : this.legalDraftContent().datenschutzFields;
+  }
+
+  protected addLegalField(page: 'impressum' | 'datenschutz'): void {
+    this.updateLegalFields(page, [...this.legalFields(page), { label: '', value: '' }]);
+  }
+
+  protected updateLegalField(
+    page: 'impressum' | 'datenschutz',
+    index: number,
+    patch: Partial<LegalField>
+  ): void {
+    const nextFields = this.legalFields(page).map((field, currentIndex) =>
+      currentIndex === index
+        ? {
+            label: (patch.label ?? field.label),
+            value: (patch.value ?? field.value)
+          }
+        : field
+    );
+    this.updateLegalFields(page, nextFields);
+  }
+
+  protected removeLegalField(page: 'impressum' | 'datenschutz', index: number): void {
+    const nextFields = this.legalFields(page).filter((_, currentIndex) => currentIndex !== index);
+    this.updateLegalFields(page, nextFields);
+  }
+
+  protected saveLegalDraft(): void {
+    this.runRequest(
+      'save-legal-draft',
+      this.http.put<LegalContent>('/api/legal/draft', this.legalDraftContent()),
+      'Legal draft saved successfully.'
+    );
+  }
+
+  protected publishLegalDraft(): void {
+    this.runRequest(
+      'publish-legal-draft',
+      this.http
+        .put<LegalContent>('/api/legal/draft', this.legalDraftContent())
+        .pipe(switchMap(() => this.http.post<LegalContent>('/api/legal/publish', {}))),
+      'Legal pages are now published.'
+    );
+  }
+
   protected primaryPhotoUrl(resource: Resource): string | null {
     return resource.photoUrls[0] ?? null;
   }
 
-  private resolvePageMode(): 'tools' | 'offers' | 'cars' | 'users' {
+  private resolvePageMode(): 'tools' | 'offers' | 'cars' | 'users' | 'legal' {
     const dataMode = this.route.snapshot.data['adminPageMode'];
-    if (dataMode === 'offers' || dataMode === 'cars' || dataMode === 'users' || dataMode === 'tools') {
+    if (dataMode === 'offers' || dataMode === 'cars' || dataMode === 'users' || dataMode === 'tools' || dataMode === 'legal') {
       return dataMode;
     }
 
@@ -621,6 +691,10 @@ export class AdminPageComponent {
       return 'users';
     }
 
+    if (path.includes('manage-legal')) {
+      return 'legal';
+    }
+
     return 'tools';
   }
 
@@ -633,14 +707,16 @@ export class AdminPageComponent {
       users: this.http.get<User[]>('/api/users'),
       bookings: this.http.get<Booking[]>('/api/bookings'),
       offerDraft: this.http.get<OfferSection[]>('/api/offers/draft'),
-      offerPublished: this.http.get<OfferSection[]>('/api/offers/published')
+      offerPublished: this.http.get<OfferSection[]>('/api/offers/published'),
+      legalDraft: this.http.get<LegalContent>('/api/legal/draft'),
+      legalPublished: this.http.get<LegalContent>('/api/legal/published')
     })
       .pipe(
         takeUntilDestroyed(this.destroyRef),
         finalize(() => this.loading.set(false))
       )
       .subscribe({
-        next: ({ resources, users, bookings, offerDraft, offerPublished }) => {
+        next: ({ resources, users, bookings, offerDraft, offerPublished, legalDraft, legalPublished }) => {
           this.resources.set(resources.map((resource) => this.normalizeResource(resource)));
           this.users.set(users);
           this.bookings.set(bookings);
@@ -654,6 +730,8 @@ export class AdminPageComponent {
               offerPublished.map((section, index) => this.normalizeOfferSection(section, index))
             )
           );
+          this.legalDraftContent.set(this.normalizeLegalContent(legalDraft));
+          this.legalPublishedContent.set(this.normalizeLegalContent(legalPublished));
           this.syncDraftDefaults();
         },
         error: (error: HttpErrorResponse) => {
@@ -893,6 +971,30 @@ export class AdminPageComponent {
     }
 
     return Number(value.toFixed(2));
+  }
+
+  private updateLegalFields(page: 'impressum' | 'datenschutz', fields: LegalField[]): void {
+    const normalizedFields = this.normalizeLegalFields(fields);
+    this.legalDraftContent.update((content) =>
+      page === 'impressum'
+        ? { ...content, impressumFields: normalizedFields }
+        : { ...content, datenschutzFields: normalizedFields }
+    );
+  }
+
+  private normalizeLegalContent(content: Partial<LegalContent> | null | undefined): LegalContent {
+    return {
+      impressumFields: this.normalizeLegalFields(content?.impressumFields),
+      datenschutzFields: this.normalizeLegalFields(content?.datenschutzFields)
+    };
+  }
+
+  private normalizeLegalFields(fields: LegalField[] | null | undefined): LegalField[] {
+    const safeFields = Array.isArray(fields) ? fields : [];
+    return safeFields.map((field) => ({
+      label: (field?.label ?? '').trim(),
+      value: (field?.value ?? '').trim()
+    }));
   }
 
   private normalizeText(value: string | null | undefined): string | null {

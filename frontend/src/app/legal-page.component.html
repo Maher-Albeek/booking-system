@@ -4,44 +4,18 @@
     <h1>{{ title() }}</h1>
     <p class="summary">{{ summary() }}</p>
 
-    @if (mode() === 'impressum') {
-      <dl class="legal-grid">
+    <dl class="legal-grid">
+      @for (field of fieldsForCurrentPage(); track $index) {
         <div>
-          <dt>{{ i18n.t('legal.impressum.company') }}</dt>
-          <dd>Booking System GmbH</dd>
+          <dt>{{ field.label }}</dt>
+          <dd>{{ field.value }}</dd>
         </div>
+      } @empty {
         <div>
-          <dt>{{ i18n.t('legal.impressum.address') }}</dt>
-          <dd>Musterstrasse 10, 10115 Berlin</dd>
+          <dt>{{ i18n.t('common.notSet') }}</dt>
+          <dd>{{ i18n.t('common.notSet') }}</dd>
         </div>
-        <div>
-          <dt>{{ i18n.t('legal.impressum.email') }}</dt>
-          <dd>legal@example.com</dd>
-        </div>
-        <div>
-          <dt>{{ i18n.t('legal.impressum.phone') }}</dt>
-          <dd>+49 30 000000</dd>
-        </div>
-      </dl>
-    } @else {
-      <dl class="legal-grid">
-        <div>
-          <dt>{{ i18n.t('legal.data.controller') }}</dt>
-          <dd>Booking System GmbH</dd>
-        </div>
-        <div>
-          <dt>{{ i18n.t('legal.data.purpose') }}</dt>
-          <dd>{{ i18n.t('legal.data.purposeText') }}</dd>
-        </div>
-        <div>
-          <dt>{{ i18n.t('legal.data.storedFields') }}</dt>
-          <dd>{{ i18n.t('legal.data.storedFieldsText') }}</dd>
-        </div>
-        <div>
-          <dt>{{ i18n.t('legal.data.requests') }}</dt>
-          <dd>{{ i18n.t('legal.data.requestsText') }}</dd>
-        </div>
-      </dl>
-    }
+      }
+    </dl>
   </section>
 </main>

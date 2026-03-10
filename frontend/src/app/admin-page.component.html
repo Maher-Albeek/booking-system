@@ -93,6 +93,15 @@
                 </div>
               </div>
             </a>
+
+            <a routerLink="/admin/manage-legal" class="list-card">
+              <div class="list-topline">
+                <div>
+                  <strong>Manage legal pages</strong>
+                  <p>Edit Impressum and Datenschutz fields.</p>
+                </div>
+              </div>
+            </a>
           </div>
         </article>
       </section>
@@ -390,6 +399,89 @@
                 </section>
               } @else {
                 <p class="empty-state">Select a section from the left or create a new one.</p>
+              }
+            </div>
+          </div>
+        </article>
+      }
+
+      @if (showLegalPanel()) {
+        <article class="panel users-panel">
+          <div class="panel-header">
+            <div>
+              <p class="eyebrow">Legal Content</p>
+              <h3>Edit and publish legal fields</h3>
+            </div>
+            <div class="offer-toolbar">
+              <button type="button" class="secondary-button" (click)="addLegalField('impressum')">
+                Add Impressum field
+              </button>
+              <button type="button" class="secondary-button" (click)="addLegalField('datenschutz')">
+                Add Datenschutz field
+              </button>
+              <button type="button" (click)="saveLegalDraft()" [disabled]="isBusy('save-legal-draft')">
+                {{ isBusy('save-legal-draft') ? 'Saving draft...' : 'Save draft' }}
+              </button>
+              <button type="button" (click)="publishLegalDraft()" [disabled]="isBusy('publish-legal-draft')">
+                {{ isBusy('publish-legal-draft') ? 'Publishing...' : 'Publish legal pages' }}
+              </button>
+            </div>
+          </div>
+
+          <div class="offers-layout">
+            <div class="offer-editor">
+              <h4>Impressum fields</h4>
+              @for (field of legalFields('impressum'); track $index; let index = $index) {
+                <div class="offer-fields-grid">
+                  <label class="field">
+                    <span>Label</span>
+                    <input
+                      type="text"
+                      [name]="'impressumLabel' + index"
+                      [ngModel]="field.label"
+                      (ngModelChange)="updateLegalField('impressum', index, { label: $event })"
+                    />
+                  </label>
+                  <label class="field field-wide">
+                    <span>Value</span>
+                    <textarea
+                      [name]="'impressumValue' + index"
+                      rows="2"
+                      [ngModel]="field.value"
+                      (ngModelChange)="updateLegalField('impressum', index, { value: $event })"
+                    ></textarea>
+                  </label>
+                  <button type="button" class="ghost-button" (click)="removeLegalField('impressum', index)">
+                    Remove
+                  </button>
+                </div>
+              }
+
+              <h4>Datenschutz fields</h4>
+              @for (field of legalFields('datenschutz'); track $index; let index = $index) {
+                <div class="offer-fields-grid">
+                  <label class="field">
+                    <span>Label</span>
+                    <input
+                      type="text"
+                      [name]="'datenschutzLabel' + index"
+                      [ngModel]="field.label"
+                      (ngModelChange)="updateLegalField('datenschutz', index, { label: $event })"
+                    />
+                  </label>
+                  <label class="field field-wide">
+                    <span>Value</span>
+                    <textarea
+                      [name]="'datenschutzValue' + index"
+                      rows="2"
+                      [ngModel]="field.value"
+                      (ngModelChange)="updateLegalField('datenschutz', index, { value: $event })"
+                    ></textarea>
+                  </label>
+                  <button type="button" class="ghost-button" (click)="removeLegalField('datenschutz', index)">
+                    Remove
+                  </button>
+                </div>
               }
             </div>
           </div>
