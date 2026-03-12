@@ -2,6 +2,7 @@
   display: block;
   color: #f7f2ea;
   --page-gutter: 150px;
+
   position: relative;
   min-height: 100vh;
 }
@@ -19,8 +20,6 @@
   left: var(--page-gutter);
   right: var(--page-gutter);
   z-index: 30;
-  margin-bottom: 0;
-  border: 0;
   border-radius: 0 0 18px 18px;
   background:
     linear-gradient(120deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.04) 45%, rgba(165, 210, 255, 0.1)),
@@ -29,10 +28,6 @@
   box-shadow:
     0 16px 34px rgba(4, 12, 24, 0.36),
     0 0 32px rgba(133, 193, 255, 0.22);
-}
-
-.top-accent {
-  display: none;
 }
 
 .header-main {
@@ -425,7 +420,7 @@
 }
 
 .page-shell {
-  padding-top: 0;
+  padding-top: var(--ho);
   transition: filter 0.5s ease, opacity 0.5s ease;
 }
 
@@ -772,6 +767,7 @@ input.payment-detail-input:focus {
 @media (max-width: 720px) {
   :host {
     --page-gutter: 12px;
+    --ho: 68px;
   }
 
   .mastercard-form-row {

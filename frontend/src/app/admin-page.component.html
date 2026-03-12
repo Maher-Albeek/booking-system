@@ -567,7 +567,11 @@
           </div>
         </div>
 
-        <form class="admin-form" (ngSubmit)="saveCar()">
+        @if (editingCarId() !== null) {
+          <div class="edit-car-backdrop" (click)="cancelCarEdit()"></div>
+        }
+
+        <form class="admin-form" [class.editing-modal]="editingCarId() !== null" (ngSubmit)="saveCar()">
           <div class="form-header">
             <div>
               <p class="eyebrow">{{ editingCarId() === null ? i18n.t('admin.cars.createCar') : i18n.t('admin.cars.editingCar') }}</p>
@@ -814,6 +818,13 @@
               <div class="car-showcase-head">
                 <strong>{{ car.name | uppercase }}</strong>
                 <p>{{ car.description || car.carType || i18n.t('admin.car.fleetVehicle') }}</p>
+                <button
+                  type="button"
+                  class="secondary-button card-edit-button"
+                  (click)="$event.stopPropagation(); editCar(car)"
+                >
+                  {{ i18n.t('admin.action.editCar') }}
+                </button>
               </div>
 
               <div class="car-chip-row">
