@@ -198,6 +198,104 @@
       </article>
     </div>
   }
+
+  @if (cookieBannerOpen()) {
+    <section class="cookie-banner" role="region" [attr.aria-label]="i18n.t('cookie.title')">
+      <div class="cookie-banner-content">
+        <h2>{{ i18n.t('cookie.title') }}</h2>
+        <p>{{ i18n.t('cookie.description') }}</p>
+        <ul class="cookie-summary-list">
+          <li>{{ i18n.t('cookie.category.necessary') }}: {{ i18n.t('cookie.necessary.text') }}</li>
+          <li>{{ i18n.t('cookie.category.preferences') }}: {{ i18n.t('cookie.preferences.text') }}</li>
+          <li>{{ i18n.t('cookie.category.analytics') }}: {{ i18n.t('cookie.analytics.text') }}</li>
+          <li>{{ i18n.t('cookie.category.marketing') }}: {{ i18n.t('cookie.marketing.text') }}</li>
+        </ul>
+        <p class="cookie-legal-note">
+          {{ i18n.t('cookie.legal.note') }}
+          <a routerLink="/datenschutz">{{ i18n.t('cookie.legal.link') }}</a>
+        </p>
+      </div>
+      <div class="cookie-actions">
+        <button type="button" class="cookie-button ghost" (click)="rejectOptionalCookies()">
+          {{ i18n.t('cookie.action.rejectOptional') }}
+        </button>
+        <button type="button" class="cookie-button secondary" (click)="openCookieSettings()">
+          {{ i18n.t('cookie.action.customize') }}
+        </button>
+        <button type="button" class="cookie-button primary" (click)="acceptAllCookies()">
+          {{ i18n.t('cookie.action.acceptAll') }}
+        </button>
+      </div>
+    </section>
+  }
+
+  @if (cookieSettingsOpen()) {
+    <div class="cookie-settings-backdrop" (click)="closeCookieSettings()">
+      <article
+        class="cookie-settings-modal"
+        role="dialog"
+        aria-modal="true"
+        [attr.aria-label]="i18n.t('cookie.settings.title')"
+        (click)="$event.stopPropagation()"
+      >
+        <h3>{{ i18n.t('cookie.settings.title') }}</h3>
+        <p>{{ i18n.t('cookie.settings.description') }}</p>
+
+        <label class="cookie-toggle-row mandatory">
+          <span>
+            <strong>{{ i18n.t('cookie.category.necessary') }}</strong>
+            <small>{{ i18n.t('cookie.necessary.text') }}</small>
+          </span>
+          <input type="checkbox" checked disabled />
+        </label>
+
+        <label class="cookie-toggle-row">
+          <span>
+            <strong>{{ i18n.t('cookie.category.preferences') }}</strong>
+            <small>{{ i18n.t('cookie.preferences.text') }}</small>
+          </span>
+          <input
+            type="checkbox"
+            [ngModel]="cookiePreferences()"
+            (ngModelChange)="cookiePreferences.set($event)"
+          />
+        </label>
+
+        <label class="cookie-toggle-row">
+          <span>
+            <strong>{{ i18n.t('cookie.category.analytics') }}</strong>
+            <small>{{ i18n.t('cookie.analytics.text') }}</small>
+          </span>
+          <input
+            type="checkbox"
+            [ngModel]="cookieAnalytics()"
+            (ngModelChange)="cookieAnalytics.set($event)"
+          />
+        </label>
+
+        <label class="cookie-toggle-row">
+          <span>
+            <strong>{{ i18n.t('cookie.category.marketing') }}</strong>
+            <small>{{ i18n.t('cookie.marketing.text') }}</small>
+          </span>
+          <input
+            type="checkbox"
+            [ngModel]="cookieMarketing()"
+            (ngModelChange)="cookieMarketing.set($event)"
+          />
+        </label>
+
+        <div class="cookie-settings-actions">
+          <button type="button" class="cookie-button ghost" (click)="closeCookieSettings()">
+            {{ i18n.t('common.cancel') }}
+          </button>
+          <button type="button" class="cookie-button primary" (click)="saveCookieSettings()">
+            {{ i18n.t('cookie.action.saveSelection') }}
+          </button>
+        </div>
+      </article>
+    </div>
+  }
 </main>
 
 <section class="toast-stack" aria-live="polite" aria-atomic="true">

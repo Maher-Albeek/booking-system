@@ -16,6 +16,16 @@ type HeaderLink = {
   label: string;
 };
 
+type CookieConsent = {
+  necessary: true;
+  preferences: boolean;
+  analytics: boolean;
+  marketing: boolean;
+  updatedAt: string;
+};
+
+const COOKIE_CONSENT_KEY = 'booking-system-cookie-consent-v1';
+
 @Component({
   selector: 'app-root',
   imports: [CommonModule, FormsModule, RouterLink, RouterLinkActive, RouterOutlet, GrainientComponent],
@@ -44,6 +54,11 @@ export class App {
   protected readonly registerPassword = signal('');
   protected readonly registerSubmitting = signal(false);
   protected readonly registerError = signal<string | null>(null);
+  protected readonly cookieBannerOpen = signal(false);
+  protected readonly cookieSettingsOpen = signal(false);
+  protected readonly cookiePreferences = signal(false);
+  protected readonly cookieAnalytics = signal(false);
+  protected readonly cookieMarketing = signal(false);
 
   protected readonly navLinks = computed<HeaderLink[]>(() => {
     const links: HeaderLink[] = [{ path: '/offers', label: this.i18n.t('app.link.offers') }];
@@ -110,6 +125,16 @@ export class App {
       .subscribe((event) => {
         this.handleRoute(event.urlAfterRedirects);
       });
+
+    const existingConsent = this.readCookieConsent();
+    if (!existingConsent) {
+      this.cookieBannerOpen.set(true);
+      return;
+    }
+
+    this.cookiePreferences.set(existingConsent.preferences);
+    this.cookieAnalytics.set(existingConsent.analytics);
+    this.cookieMarketing.set(existingConsent.marketing);
   }
 
   protected toggleMenu(): void {
@@ -257,6 +282,36 @@ export class App {
     this.setLanguage(language);
   }
 
+  protected acceptAllCookies(): void {
+    this.cookiePreferences.set(true);
+    this.cookieAnalytics.set(true);
+    this.cookieMarketing.set(true);
+    this.persistCookieConsent(true, true, true);
+  }
+
+  protected rejectOptionalCookies(): void {
+    this.cookiePreferences.set(false);
+    this.cookieAnalytics.set(false);
+    this.cookieMarketing.set(false);
+    this.persistCookieConsent(false, false, false);
+  }
+
+  protected openCookieSettings(): void {
+    this.cookieSettingsOpen.set(true);
+  }
+
+  protected closeCookieSettings(): void {
+    this.cookieSettingsOpen.set(false);
+  }
+
+  protected saveCookieSettings(): void {
+    this.persistCookieConsent(
+      this.cookiePreferences(),
+      this.cookieAnalytics(),
+      this.cookieMarketing()
+    );
+  }
+
   private handleRoute(url: string): void {
     this.closeMenu();
 
@@ -284,5 +339,58 @@ export class App {
     }
 
     return fallback;
+  }
+
+  private readCookieConsent(): CookieConsent | null {
+    try {
+      if (typeof localStorage === 'undefined') {
+        return null;
+      }
+
+      const rawValue = localStorage.getItem(COOKIE_CONSENT_KEY);
+      if (!rawValue) {
+        return null;
+      }
+
+      const parsedValue = JSON.parse(rawValue) as Partial<CookieConsent>;
+      if (parsedValue.necessary !== true) {
+        return null;
+      }
+
+      return {
+        necessary: true,
+        preferences: Boolean(parsedValue.preferences),
+        analytics: Boolean(parsedValue.analytics),
+        marketing: Boolean(parsedValue.marketing),
+        updatedAt: typeof parsedValue.updatedAt === 'string' ? parsedValue.updatedAt : ''
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  private persistCookieConsent(
+    preferences: boolean,
+    analytics: boolean,
+    marketing: boolean
+  ): void {
+    const consent: CookieConsent = {
+      necessary: true,
+      preferences,
+      analytics,
+      marketing,
+      updatedAt: new Date().toISOString()
+    };
+
+    try {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem(COOKIE_CONSENT_KEY, JSON.stringify(consent));
+      }
+    } catch {
+      // Ignore storage issues and keep consent in memory for this session.
+    }
+
+    this.cookieBannerOpen.set(false);
+    this.cookieSettingsOpen.set(false);
   }
 }
