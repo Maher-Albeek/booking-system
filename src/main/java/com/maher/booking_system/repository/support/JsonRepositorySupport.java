@@ -15,7 +15,6 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
-import java.util.function.Supplier;
 
 public abstract class JsonRepositorySupport<T> {
 
@@ -95,13 +94,6 @@ public abstract class JsonRepositorySupport<T> {
         }
     }
 
-    protected <R> R withMonitor(Supplier<R> supplier) {
-        Objects.requireNonNull(supplier, "supplier must not be null");
-        synchronized (monitor) {
-            return supplier.get();
-        }
-    }
-
     private Long nextId(List<T> entities) {
         return entities.stream()
                 .map(idGetter)
@@ -110,7 +102,7 @@ public abstract class JsonRepositorySupport<T> {
                 .orElse(0L) + 1;
     }
 
-    protected List<T> readAllUnsafe() {
+    private List<T> readAllUnsafe() {
         ensureStorageExists();
         try {
             return objectMapper.readValue(filePath.toFile(), listType);
@@ -119,7 +111,7 @@ public abstract class JsonRepositorySupport<T> {
         }
     }
 
-    protected void writeAllUnsafe(List<T> entities) {
+    private void writeAllUnsafe(List<T> entities) {
         ensureStorageExists();
         Path tempPath = filePath.resolveSibling(filePath.getFileName() + ".tmp");
         try {

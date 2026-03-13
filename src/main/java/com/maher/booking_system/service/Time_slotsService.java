@@ -2,14 +2,13 @@ package com.maher.booking_system.service;
 
 import com.maher.booking_system.exception.BadRequestException;
 import com.maher.booking_system.exception.NotFoundException;
+import com.maher.booking_system.model.enums.BookingStatus;
 import com.maher.booking_system.repository.BookingRepository;
 import com.maher.booking_system.model.TimeSlot;
 import com.maher.booking_system.repository.TimeSlotRepository;
-import java.util.EnumSet;
 import java.util.Objects;
 import org.springframework.stereotype.Service;
 import org.springframework.lang.NonNull;
-import com.maher.booking_system.model.enums.BookingStatus;
 
 @Service
 public class Time_slotsService {
@@ -33,12 +32,12 @@ public class Time_slotsService {
         TimeSlot existingTimeSlot = timeSlotRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Time slot not found with id: " + id));
 
-        boolean hasBlockingBooking = hasBlockingBooking(existingTimeSlot);
-        if (hasBlockingBooking && !Objects.equals(existingTimeSlot.getResourceId(), safeTimeSlot.getResourceId())) {
+        boolean hasConfirmedBooking = bookingRepository.existsByTimeSlotIdAndStatus(id, BookingStatus.CONFIRMED);
+        if (hasConfirmedBooking && !Objects.equals(existingTimeSlot.getResourceId(), safeTimeSlot.getResourceId())) {
             throw new BadRequestException("A booked time slot cannot be moved to another car.");
         }
 
-        if (hasBlockingBooking && safeTimeSlot.isAvailable()) {
+        if (hasConfirmedBooking && safeTimeSlot.isAvailable()) {
             throw new BadRequestException("A booked time slot cannot be marked as available.");
         }
 
@@ -58,17 +57,5 @@ public class Time_slotsService {
 
     public java.util.List<TimeSlot> getAllTimeSlots() {
         return timeSlotRepository.findAll();
-    }
-
-    private boolean hasBlockingBooking(TimeSlot slot) {
-        if (slot.getResourceId() == null || slot.getStartTime() == null || slot.getEndTime() == null) {
-            return false;
-        }
-        return bookingRepository.existsOverlapping(
-                slot.getResourceId(),
-                slot.getStartTime(),
-                slot.getEndTime(),
-                EnumSet.of(BookingStatus.PENDING, BookingStatus.ACTIVE, BookingStatus.COMPLETED)
-        );
     }
 }
