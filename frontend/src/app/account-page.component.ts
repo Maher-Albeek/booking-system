@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
-import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, computed, effect, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink, RouterLinkActive } from '@angular/router';
@@ -8,6 +8,7 @@ import { finalize } from 'rxjs';
 
 import { AuthStateService } from './auth-state.service';
 import { I18nService } from './i18n.service';
+import { NotificationService } from './notification.service';
 
 const PAYMENT_METHOD_OPTIONS = [
   'PayPal',
@@ -101,6 +102,7 @@ export class AccountPageComponent {
 
   protected readonly auth = inject(AuthStateService);
   protected readonly i18n = inject(I18nService);
+  protected readonly notifications = inject(NotificationService);
   protected readonly pageMode: 'profile' | 'payment' =
     this.route.snapshot.data['accountPageMode'] === 'payment' ? 'payment' : 'profile';
   protected readonly supportedPaymentMethods = PAYMENT_METHOD_OPTIONS;
@@ -151,6 +153,20 @@ export class AccountPageComponent {
   });
 
   constructor() {
+    effect(() => {
+      const message = this.error();
+      if (message) {
+        this.notifications.error(message);
+      }
+    });
+
+    effect(() => {
+      const message = this.success();
+      if (message) {
+        this.notifications.success(message);
+      }
+    });
+
     this.loadProfile();
   }
 

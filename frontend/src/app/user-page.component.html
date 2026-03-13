@@ -235,7 +235,7 @@
 
               <div class="car-price-line">
                 <strong>{{ formatPrice(car.dailyPrice, car.priceUnit) }} / {{ i18n.t('user.fleet.perDay') }}</strong>
-                <span>{{ formatPrice(car.dailyPrice, car.priceUnit) }} {{ i18n.t('user.fleet.totalPrice') }}</span>
+                <span>{{ formatPrice(totalCarPriceForSearch(car), car.priceUnit) }} {{ i18n.t('user.fleet.totalPrice') }}</span>
               </div>
             </article>
           } @empty {

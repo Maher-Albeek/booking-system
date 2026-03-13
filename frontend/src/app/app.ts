@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, computed, effect, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
@@ -9,6 +9,7 @@ import { filter, finalize } from 'rxjs';
 import { AuthStateService } from './auth-state.service';
 import { GrainientComponent } from './grainient.component';
 import { LANGUAGE_OPTIONS, I18nService, LanguageCode } from './i18n.service';
+import { NotificationService } from './notification.service';
 
 type HeaderLink = {
   path: string;
@@ -27,6 +28,7 @@ export class App {
 
   protected readonly auth = inject(AuthStateService);
   protected readonly i18n = inject(I18nService);
+  protected readonly notifications = inject(NotificationService);
   protected readonly languageOptions = LANGUAGE_OPTIONS;
   protected readonly menuOpen = signal(false);
   protected readonly authModalOpen = signal(false);
@@ -77,6 +79,27 @@ export class App {
   });
 
   constructor() {
+    effect(() => {
+      const message = this.error();
+      if (message) {
+        this.notifications.error(message);
+      }
+    });
+
+    effect(() => {
+      const message = this.resetMessage();
+      if (message) {
+        this.notifications.success(message);
+      }
+    });
+
+    effect(() => {
+      const message = this.registerError();
+      if (message) {
+        this.notifications.error(message);
+      }
+    });
+
     this.handleRoute(this.router.url);
 
     this.router.events

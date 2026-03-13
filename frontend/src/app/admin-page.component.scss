@@ -178,6 +178,13 @@ code {
   margin-bottom: 20px;
 }
 
+.fleet-panel .panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
 .admin-form,
 .admin-list {
   display: grid;

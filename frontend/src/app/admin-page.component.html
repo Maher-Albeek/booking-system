@@ -565,13 +565,17 @@
             <p class="eyebrow">{{ i18n.t('admin.cars.eyebrow') }}</p>
             <h3>{{ i18n.t('admin.cars.title') }}</h3>
           </div>
+          <button type="button" class="secondary-button" (click)="startCarCreate()">
+            {{ i18n.t('admin.action.addCar') }}
+          </button>
         </div>
 
-        @if (editingCarId() !== null) {
+        @if (isCarFormOpen()) {
           <div class="edit-car-backdrop" (click)="cancelCarEdit()"></div>
         }
 
-        <form class="admin-form" [class.editing-modal]="editingCarId() !== null" (ngSubmit)="saveCar()">
+        @if (isCarFormOpen()) {
+        <form #carForm class="admin-form" [class.editing-modal]="isCarFormOpen()" (ngSubmit)="saveCar()">
           <div class="form-header">
             <div>
               <p class="eyebrow">{{ editingCarId() === null ? i18n.t('admin.cars.createCar') : i18n.t('admin.cars.editingCar') }}</p>
@@ -584,11 +588,9 @@
               </p>
             </div>
 
-            @if (editingCarId() !== null) {
-              <button type="button" class="secondary-button" (click)="cancelCarEdit()">
-                {{ i18n.t('admin.action.cancelEdit') }}
-              </button>
-            }
+            <button type="button" class="secondary-button" (click)="cancelCarEdit()">
+              {{ editingCarId() === null ? i18n.t('common.close') : i18n.t('admin.action.cancelEdit') }}
+            </button>
           </div>
 
           <label class="field">
@@ -805,6 +807,7 @@
             </button>
           </div>
         </form>
+        }
 
         <div class="car-showcase-grid">
           @for (car of cars(); track car.id) {

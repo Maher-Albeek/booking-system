@@ -8,6 +8,7 @@ import { catchError, finalize, forkJoin, of } from 'rxjs';
 
 import { AuthStateService, AuthUser } from './auth-state.service';
 import { I18nService } from './i18n.service';
+import { NotificationService } from './notification.service';
 
 const PAYMENT_METHOD_OPTIONS = [
   'PayPal',
@@ -208,6 +209,7 @@ export class UserPageComponent {
 
   protected readonly auth = inject(AuthStateService);
   protected readonly i18n = inject(I18nService);
+  protected readonly notifications = inject(NotificationService);
   protected readonly pageMode: 'offers' | 'bookings' =
     this.route.snapshot.data['userPageMode'] === 'bookings' ? 'bookings' : 'offers';
   protected readonly title = computed(() => this.i18n.t('user.title.bookYourNextCar'));
@@ -359,6 +361,9 @@ export class UserPageComponent {
   protected readonly visibleFilteredCarSummaries = computed<CarSummary[]>(() =>
     this.filteredCarSummaries().slice(0, this.visibleCarCount())
   );
+  protected readonly selectedSearchDays = computed(() =>
+    this.calculateSearchDays(this.searchStartDate().trim(), this.searchEndDate().trim())
+  );
   protected readonly canShowMoreCars = computed(
     () => this.filteredCarSummaries().length > this.visibleFilteredCarSummaries().length
   );
@@ -504,6 +509,20 @@ export class UserPageComponent {
   constructor() {
     effect(() => {
       this.syncSearchFiltersFromInput();
+    });
+
+    effect(() => {
+      const message = this.error();
+      if (message) {
+        this.notifications.error(message);
+      }
+    });
+
+    effect(() => {
+      const message = this.success();
+      if (message) {
+        this.notifications.success(message);
+      }
     });
 
     this.loadData();
@@ -1426,6 +1445,53 @@ export class UserPageComponent {
 
     const dayInMs = 24 * 60 * 60 * 1000;
     return Math.max(1, Math.ceil((end.getTime() - start.getTime()) / dayInMs));
+  }
+
+  protected totalCarPriceForSearch(car: Resource): number | null {
+    if (typeof car.dailyPrice !== 'number') {
+      return null;
+    }
+
+    const days = this.selectedSearchDays();
+    if (days === null) {
+      return car.dailyPrice;
+    }
+
+    return Number((car.dailyPrice * days).toFixed(2));
+  }
+
+  private calculateSearchDays(startValue: string, endValue: string): number | null {
+    if (!startValue || !endValue) {
+      return null;
+    }
+
+    const startParts = startValue.split('-').map((part) => Number(part));
+    const endParts = endValue.split('-').map((part) => Number(part));
+    if (startParts.length !== 3 || endParts.length !== 3) {
+      return null;
+    }
+
+    const [startYear, startMonth, startDay] = startParts;
+    const [endYear, endMonth, endDay] = endParts;
+    if (
+      !Number.isInteger(startYear) ||
+      !Number.isInteger(startMonth) ||
+      !Number.isInteger(startDay) ||
+      !Number.isInteger(endYear) ||
+      !Number.isInteger(endMonth) ||
+      !Number.isInteger(endDay)
+    ) {
+      return null;
+    }
+
+    const startUtcMs = Date.UTC(startYear, startMonth - 1, startDay);
+    const endUtcMs = Date.UTC(endYear, endMonth - 1, endDay);
+    if (startUtcMs > endUtcMs) {
+      return null;
+    }
+
+    const dayInMs = 24 * 60 * 60 * 1000;
+    return Math.max(1, Math.round((endUtcMs - startUtcMs) / dayInMs));
   }
 
   private normalizeWholeNumber(value: unknown): number | null {

@@ -198,4 +198,24 @@
   "horsepower" : 150,
   "active" : true,
   "photoUrls" : [ ]
+}, {
+  "id" : 14,
+  "name" : "Nissan",
+  "description" : "",
+  "type" : "Car",
+  "location" : "Bochum",
+  "model" : "Qashkai",
+  "carType" : "SUV",
+  "color" : "Red",
+  "year" : 2023,
+  "seats" : 5,
+  "transmission" : "Automatic",
+  "fuelType" : "Benzin",
+  "dailyPrice" : 60.0,
+  "priceUnit" : "€",
+  "baggageBags" : 3,
+  "hasAirConditioning" : true,
+  "horsepower" : 150,
+  "active" : true,
+  "photoUrls" : [ "/api/resources/14/photos/photo-f7fd209c-0615-4249-900e-36dc02ee00a7.png" ]
 } ]

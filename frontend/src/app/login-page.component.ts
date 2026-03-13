@@ -1,12 +1,13 @@
 import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, inject, signal } from '@angular/core';
+import { Component, effect, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 
 import { AuthStateService } from './auth-state.service';
 import { I18nService } from './i18n.service';
+import { NotificationService } from './notification.service';
 
 @Component({
   selector: 'app-login-page',
@@ -20,6 +21,7 @@ export class LoginPageComponent {
 
   protected readonly auth = inject(AuthStateService);
   protected readonly i18n = inject(I18nService);
+  protected readonly notifications = inject(NotificationService);
   protected readonly mode = signal<'login' | 'register'>(
     this.route.snapshot.queryParamMap.get('mode') === 'register' ? 'register' : 'login'
   );
@@ -34,6 +36,29 @@ export class LoginPageComponent {
   protected readonly registerPassword = signal('');
   protected readonly registerSubmitting = signal(false);
   protected readonly registerError = signal<string | null>(null);
+
+  constructor() {
+    effect(() => {
+      const message = this.error();
+      if (message) {
+        this.notifications.error(message);
+      }
+    });
+
+    effect(() => {
+      const message = this.resetMessage();
+      if (message) {
+        this.notifications.success(message);
+      }
+    });
+
+    effect(() => {
+      const message = this.registerError();
+      if (message) {
+        this.notifications.error(message);
+      }
+    });
+  }
 
   protected setMode(mode: 'login' | 'register'): void {
     this.mode.set(mode);

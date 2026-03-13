@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
-import { Component, DestroyRef, computed, effect, inject, signal } from '@angular/core';
+import { Component, DestroyRef, ElementRef, ViewChild, computed, effect, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
@@ -8,6 +8,7 @@ import { catchError, finalize, forkJoin, Observable, of, switchMap } from 'rxjs'
 
 import { AuthStateService } from './auth-state.service';
 import { I18nService } from './i18n.service';
+import { NotificationService } from './notification.service';
 
 type Resource = {
   id: number;
@@ -108,12 +109,15 @@ type LegalContent = {
   styleUrl: './admin-page.component.scss'
 })
 export class AdminPageComponent {
+  @ViewChild('carForm') private carFormRef?: ElementRef<HTMLFormElement>;
+
   private readonly http = inject(HttpClient);
   private readonly destroyRef = inject(DestroyRef);
   private readonly route = inject(ActivatedRoute);
 
   protected readonly auth = inject(AuthStateService);
   protected readonly i18n = inject(I18nService);
+  protected readonly notifications = inject(NotificationService);
   protected readonly pageMode: 'tools' | 'offers' | 'cars' | 'users' | 'legal' = this.resolvePageMode();
   protected readonly loading = signal(true);
   protected readonly busyKey = signal<string | null>(null);
@@ -121,6 +125,7 @@ export class AdminPageComponent {
   protected readonly success = signal<string | null>(null);
   protected readonly isPhotoDragActive = signal(false);
   protected readonly isOfferHeroDragActive = signal(false);
+  protected readonly isCarFormOpen = signal(false);
   protected readonly editingCarId = signal<number | null>(null);
   protected readonly selectedCarId = signal<number | null>(null);
   protected readonly selectedOfferSectionId = signal<number | null>(null);
@@ -262,6 +267,20 @@ export class AdminPageComponent {
   protected readonly showLegalPanel = computed(() => this.pageMode === 'legal');
 
   constructor() {
+    effect(() => {
+      const message = this.error();
+      if (message) {
+        this.notifications.error(message);
+      }
+    });
+
+    effect(() => {
+      const message = this.success();
+      if (message) {
+        this.notifications.success(message);
+      }
+    });
+
     effect(() => {
       if (this.auth.isAdmin()) {
         this.loadData();
@@ -498,6 +517,8 @@ export class AdminPageComponent {
   }
 
   protected editCar(car: Resource): void {
+    this.closeCarDetails();
+    this.isCarFormOpen.set(true);
     this.editingCarId.set(car.id);
     this.error.set(null);
     this.success.set(null);
@@ -521,6 +542,17 @@ export class AdminPageComponent {
       photoUrlsText: '',
       uploadedPhotoUrls: [...car.photoUrls]
     };
+    this.revealCarForm();
+  }
+
+  protected startCarCreate(): void {
+    this.closeCarDetails();
+    this.editingCarId.set(null);
+    this.resetCarDraft();
+    this.error.set(null);
+    this.success.set(null);
+    this.isCarFormOpen.set(true);
+    this.revealCarForm();
   }
 
   protected openCarDetails(car: Resource): void {
@@ -539,6 +571,7 @@ export class AdminPageComponent {
   }
 
   protected cancelCarEdit(): void {
+    this.isCarFormOpen.set(false);
     this.editingCarId.set(null);
     this.resetCarDraft();
   }
@@ -1047,6 +1080,19 @@ export class AdminPageComponent {
     }
 
     return Number(value.toFixed(2));
+  }
+
+  private revealCarForm(): void {
+    setTimeout(() => {
+      const form = this.carFormRef?.nativeElement;
+      if (!form) {
+        return;
+      }
+
+      form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      const firstInput = form.querySelector<HTMLInputElement>('input[name="carName"]');
+      firstInput?.focus();
+    }, 0);
   }
 
   private updateLegalFields(page: 'impressum' | 'datenschutz', fields: LegalField[]): void {
