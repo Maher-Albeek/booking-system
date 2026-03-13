@@ -507,6 +507,9 @@ export class UserPageComponent {
   });
 
   constructor() {
+    let wasGuestInfoVisible = false;
+    let wasProfileInfoVisible = false;
+
     effect(() => {
       this.syncSearchFiltersFromInput();
     });
@@ -523,6 +526,27 @@ export class UserPageComponent {
       if (message) {
         this.notifications.success(message);
       }
+    });
+
+    effect(() => {
+      const isAuthenticated = this.auth.isAuthenticated();
+      const completeness = this.accountCompleteness();
+      const guestInfoVisible = !isAuthenticated;
+      const profileInfoVisible = isAuthenticated && completeness.completed < completeness.total;
+
+      if (guestInfoVisible && !wasGuestInfoVisible) {
+        this.notifications.info(this.i18n.t('user.banner.guestAccessText'));
+      }
+
+      if (profileInfoVisible && !wasProfileInfoVisible) {
+        const missingFieldsMessage = this.profileIncompleteMessage();
+        if (missingFieldsMessage) {
+          this.notifications.info(missingFieldsMessage);
+        }
+      }
+
+      wasGuestInfoVisible = guestInfoVisible;
+      wasProfileInfoVisible = profileInfoVisible;
     });
 
     this.loadData();
@@ -1354,6 +1378,61 @@ export class UserPageComponent {
     const country = user.addressCountry?.trim() ?? '';
 
     return [firstLine, secondLine, country].filter(Boolean).join(', ');
+  }
+
+  private profileIncompleteMessage(): string {
+    const missingFields = this.missingProfileFieldLabels(this.accountUser());
+    if (!missingFields.length) {
+      return '';
+    }
+
+    return `${this.i18n.t('user.banner.profileIncompleteText')} (${missingFields.join(', ')})`;
+  }
+
+  private missingProfileFieldLabels(user: User | null): string[] {
+    if (!user) {
+      return [];
+    }
+
+    const missing: string[] = [];
+
+    if (!(user.firstName ?? '').trim()) {
+      missing.push(this.i18n.t('account.field.firstName'));
+    }
+
+    if (!(user.lastName ?? '').trim()) {
+      missing.push(this.i18n.t('account.field.lastName'));
+    }
+
+    if (!(user.addressStreet ?? '').trim()) {
+      missing.push(this.i18n.t('account.field.street'));
+    }
+
+    if (!(user.addressHouseNumber ?? '').trim()) {
+      missing.push(this.i18n.t('account.field.houseNumber'));
+    }
+
+    if (!(user.addressPostalCode ?? '').trim()) {
+      missing.push(this.i18n.t('account.field.postalCode'));
+    }
+
+    if (!(user.addressCity ?? '').trim()) {
+      missing.push(this.i18n.t('account.field.city'));
+    }
+
+    if (!(user.addressCountry ?? '').trim()) {
+      missing.push(this.i18n.t('account.field.country'));
+    }
+
+    if (!(user.birthDate ?? '').trim()) {
+      missing.push(this.i18n.t('account.field.birthDate'));
+    }
+
+    if (!user.paymentMethods.length) {
+      missing.push(this.i18n.t('account.field.paymentMethods'));
+    }
+
+    return missing;
   }
 
   private buildInitials(user: User | null): string {

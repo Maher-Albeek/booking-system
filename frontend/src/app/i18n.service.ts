@@ -943,7 +943,18 @@ const DE_TRANSLATION_OVERRIDES: Record<string, string> = {
   'login.field.password': 'Passwort',
   'login.action.signinWithGoogle': 'Mit Google anmelden',
   'login.success.passwordReset': 'Passwort wurde zurückgesetzt. Sie können sich nun mit dem neuen Passwort anmelden.',
-  'common.remove': 'Entfernen'
+  'common.remove': 'Entfernen',
+  'common.save': 'Speichern',
+  'common.saving': 'Wird gespeichert...',
+  'common.status.active': 'Aktiv',
+  'common.status.inactive': 'Inaktiv',
+  'common.status.unavailable': 'Nicht verfügbar',
+  'common.transmission.automatic': 'Automatik',
+  'common.transmission.manual': 'Manuell',
+  'common.unavailable': 'Nicht verfügbar',
+  'common.yes': 'Ja',
+  
+
 };
 
 const AR_TRANSLATIONS: Record<string, string> = {
@@ -1337,6 +1348,11 @@ const AR_TRANSLATIONS: Record<string, string> = {
   'user.success.bookingConfirmed': 'تم تأكيد الحجز لـ {car}.',
   'user.success.totalPrice': 'الإجمالي {total} لمدة {days} أيام.',
   'user.title.bookYourNextCar': 'احجز سيارتك القادمة',
+  'user.title.myBookings': 'حجوزاتي',
+  'user.title.offers': 'العروض',
+  'user.title.profile': 'ملفي الشخصي',
+
+
 };
 
 const AR_TRANSLATION_OVERRIDES: Record<string, string> = {
@@ -1625,8 +1641,16 @@ const AR_TRANSLATION_OVERRIDES: Record<string, string> = {
   'admin.users.title': 'إدارة المستخدمين',
   'common.active': 'نشط',
   'common.deleting': 'جارٍ الحذف...',
-  'common.remove': 'إزالة'
-};
+  'common.remove': 'إزالة',
+  'common.save': 'حفظ',
+  'common.saving': 'جارٍ الحفظ...',
+  'common.status.active': 'نشط',
+  'common.status.inactive': 'غير نشط',
+  'common.status.unavailable': 'غير متاح',
+  'common.transmission.automatic': 'أوتوماتيك',
+  'common.transmission.manual': 'يدوي',
+  'common.yes': 'نعم'
+  };
 
 const ARABIC_CHARACTERS = /[\u0600-\u06FF]/;
 const ARABIC_MOJIBAKE = /[ØÙ]/;

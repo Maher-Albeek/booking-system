@@ -12,32 +12,26 @@ export type NotificationToast = {
 export class NotificationService {
   private readonly nextId = signal(1);
   private readonly toastsSignal = signal<NotificationToast[]>([]);
-  private readonly timers = new Map<number, ReturnType<typeof setTimeout>>();
 
   readonly toasts = this.toastsSignal.asReadonly();
 
   success(message: string): void {
-    this.push('success', message, 3500);
+    this.push('success', message);
   }
 
   error(message: string): void {
-    this.push('error', message, 5000);
+    this.push('error', message);
   }
 
   info(message: string): void {
-    this.push('info', message, 4000);
+    this.push('info', message);
   }
 
   dismiss(id: number): void {
     this.toastsSignal.update((toasts) => toasts.filter((toast) => toast.id !== id));
-    const timer = this.timers.get(id);
-    if (timer) {
-      clearTimeout(timer);
-      this.timers.delete(id);
-    }
   }
 
-  private push(type: NotificationType, message: string, durationMs: number): void {
+  private push(type: NotificationType, message: string): void {
     const trimmedMessage = message.trim();
     if (!trimmedMessage) {
       return;
@@ -47,7 +41,5 @@ export class NotificationService {
     this.nextId.update((value) => value + 1);
 
     this.toastsSignal.update((toasts) => [...toasts, { id, type, message: trimmedMessage }]);
-    const timer = setTimeout(() => this.dismiss(id), durationMs);
-    this.timers.set(id, timer);
   }
 }

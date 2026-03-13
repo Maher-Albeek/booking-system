@@ -126,20 +126,6 @@
     </section>
   }
 
-  @if (!auth.isAuthenticated()) {
-    <section class="banner info">
-      <strong>{{ i18n.t('user.banner.guestAccess') }}</strong>
-      <span>{{ i18n.t('user.banner.guestAccessText') }}</span>
-    </section>
-  } @else if (accountCompleteness().completed < accountCompleteness().total) {
-    <section class="banner info">
-      <strong>{{ i18n.t('user.banner.profileIncomplete') }}</strong>
-      <span>
-        {{ i18n.t('user.banner.profileIncompleteText') }}
-      </span>
-    </section>
-  }
-
   @if (pageMode === 'offers' && publishedOfferSections().length) {
     <section class="offer-sections">
       @for (section of publishedOfferSections(); track section.id) {

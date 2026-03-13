@@ -153,6 +153,8 @@ export class AccountPageComponent {
   });
 
   constructor() {
+    let wasLoginInfoVisible = false;
+
     effect(() => {
       const message = this.error();
       if (message) {
@@ -165,6 +167,14 @@ export class AccountPageComponent {
       if (message) {
         this.notifications.success(message);
       }
+    });
+
+    effect(() => {
+      const loginInfoVisible = !this.auth.isAuthenticated();
+      if (loginInfoVisible && !wasLoginInfoVisible) {
+        this.notifications.info(this.i18n.t('account.banner.loginRequiredText'));
+      }
+      wasLoginInfoVisible = loginInfoVisible;
     });
 
     this.loadProfile();

@@ -1,11 +1,5 @@
 <main class="account-shell">
-  @if (!auth.isAuthenticated()) {
-    <section class="banner info">
-      <strong>{{ i18n.t('account.banner.loginRequired') }}</strong>
-      <span>{{ i18n.t('account.banner.loginRequiredText') }}</span>
-      <a routerLink="/login" class="ghost-button">{{ i18n.t('app.link.login') }}</a>
-    </section>
-  } @else {
+  @if (auth.isAuthenticated()) {
     <section class="settings-card">
       <header class="settings-header">
         <div>
