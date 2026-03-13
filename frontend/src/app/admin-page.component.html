@@ -441,6 +441,131 @@
         </article>
       }
 
+      @if (showOffersPanel()) {
+        <article class="panel users-panel">
+          <div class="panel-header">
+            <div>
+              <p class="eyebrow">Commercial</p>
+              <h3>Offer campaigns and promo codes</h3>
+            </div>
+          </div>
+
+          <form class="admin-form" (ngSubmit)="saveOfferCampaign()">
+            <label class="field">
+              <span>Offer title</span>
+              <input type="text" name="offerCampaignTitle" [(ngModel)]="offerCampaignDraft.title" />
+            </label>
+            <label class="field">
+              <span>Discount type</span>
+              <select name="offerCampaignDiscountType" [(ngModel)]="offerCampaignDraft.discountType">
+                <option value="PERCENT">Percent</option>
+                <option value="FIXED_AMOUNT">Fixed amount (EUR)</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>Discount value</span>
+              <input type="number" min="0.1" step="0.1" name="offerCampaignDiscountValue" [(ngModel)]="offerCampaignDraft.discountValue" />
+            </label>
+            <label class="field">
+              <span>Start date-time</span>
+              <input type="datetime-local" name="offerCampaignStart" [(ngModel)]="offerCampaignDraft.startDateTime" />
+            </label>
+            <label class="field">
+              <span>End date-time</span>
+              <input type="datetime-local" name="offerCampaignEnd" [(ngModel)]="offerCampaignDraft.endDateTime" />
+            </label>
+            <label class="checkbox-field">
+              <input type="checkbox" name="offerCampaignEnabled" [(ngModel)]="offerCampaignDraft.enabled" />
+              <span>Enabled</span>
+            </label>
+            <button type="submit" [disabled]="isBusy('save-offer-campaign')">
+              {{ isBusy('save-offer-campaign') ? 'Saving...' : 'Save offer campaign' }}
+            </button>
+          </form>
+
+          <div class="admin-list">
+            @for (campaign of offerCampaigns(); track campaign.id) {
+              <section class="list-card">
+                <div class="list-topline">
+                  <div>
+                    <strong>{{ campaign.title }}</strong>
+                    <p>{{ campaign.discountType }} {{ campaign.discountValue }}</p>
+                  </div>
+                  <span class="pill">{{ campaign.enabled ? 'Enabled' : 'Disabled' }}</span>
+                </div>
+                <button
+                  type="button"
+                  class="ghost-button"
+                  (click)="deleteOfferCampaign(campaign.id)"
+                  [disabled]="isBusy('delete-offer-campaign-' + campaign.id)"
+                >
+                  {{ isBusy('delete-offer-campaign-' + campaign.id) ? i18n.t('common.deleting') : i18n.t('common.remove') }}
+                </button>
+              </section>
+            } @empty {
+              <p class="empty-state">No offer campaigns yet.</p>
+            }
+          </div>
+
+          <form class="admin-form" (ngSubmit)="savePromoCode()">
+            <label class="field">
+              <span>Promo code</span>
+              <input type="text" name="promoCodeValue" [(ngModel)]="promoCodeDraft.code" />
+            </label>
+            <label class="field">
+              <span>Discount type</span>
+              <select name="promoCodeDiscountType" [(ngModel)]="promoCodeDraft.discountType">
+                <option value="PERCENT">Percent</option>
+                <option value="FIXED_AMOUNT">Fixed amount (EUR)</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>Discount value</span>
+              <input type="number" min="0.1" step="0.1" name="promoCodeDiscountValue" [(ngModel)]="promoCodeDraft.discountValue" />
+            </label>
+            <label class="field">
+              <span>Expiry date-time</span>
+              <input type="datetime-local" name="promoCodeExpiry" [(ngModel)]="promoCodeDraft.expiryDateTime" />
+            </label>
+            <label class="field">
+              <span>Usage limit</span>
+              <input type="number" min="1" name="promoCodeUsageLimit" [(ngModel)]="promoCodeDraft.usageLimit" />
+            </label>
+            <label class="checkbox-field">
+              <input type="checkbox" name="promoCodeEnabled" [(ngModel)]="promoCodeDraft.enabled" />
+              <span>Enabled</span>
+            </label>
+            <button type="submit" [disabled]="isBusy('save-promo-code')">
+              {{ isBusy('save-promo-code') ? 'Saving...' : 'Save promo code' }}
+            </button>
+          </form>
+
+          <div class="admin-list">
+            @for (code of promoCodes(); track code.id) {
+              <section class="list-card">
+                <div class="list-topline">
+                  <div>
+                    <strong>{{ code.code }}</strong>
+                    <p>{{ code.discountType }} {{ code.discountValue }} | used {{ code.usedCount ?? 0 }} / {{ code.usageLimit ?? '∞' }}</p>
+                  </div>
+                  <span class="pill">{{ code.enabled ? 'Enabled' : 'Disabled' }}</span>
+                </div>
+                <button
+                  type="button"
+                  class="ghost-button"
+                  (click)="deletePromoCode(code.id)"
+                  [disabled]="isBusy('delete-promo-code-' + code.id)"
+                >
+                  {{ isBusy('delete-promo-code-' + code.id) ? i18n.t('common.deleting') : i18n.t('common.remove') }}
+                </button>
+              </section>
+            } @empty {
+              <p class="empty-state">No promo codes yet.</p>
+            }
+          </div>
+        </article>
+      }
+
       @if (showLegalPanel()) {
         <article class="panel users-panel">
           <div class="panel-header">
@@ -743,6 +868,26 @@
             />
           </label>
 
+          <label class="field">
+            <span>KM/day limit</span>
+            <input type="number" name="carKmPerDayLimit" [(ngModel)]="carDraft.kmPerDayLimit" min="0" placeholder="200" />
+          </label>
+
+          <label class="field">
+            <span>Extra KM fee (cents/km)</span>
+            <input type="number" name="carExtraKmFeePerKmCents" [(ngModel)]="carDraft.extraKmFeePerKmCents" min="0" placeholder="35" />
+          </label>
+
+          <label class="field">
+            <span>Late fee (cents/hour)</span>
+            <input type="number" name="carLateFeePerHourCents" [(ngModel)]="carDraft.lateFeePerHourCents" min="0" placeholder="1000" />
+          </label>
+
+          <label class="field">
+            <span>Deposit amount (cents)</span>
+            <input type="number" name="carDepositAmountCents" [(ngModel)]="carDraft.depositAmountCents" min="0" placeholder="50000" />
+          </label>
+
           <div class="field">
             <span>{{ i18n.t('admin.field.photos') }}</span>
             <div
@@ -799,6 +944,11 @@
           <label class="checkbox-field">
             <input type="checkbox" name="carActive" [(ngModel)]="carDraft.active" />
             <span>{{ i18n.t('admin.field.activeBookable') }}</span>
+          </label>
+
+          <label class="checkbox-field">
+            <input type="checkbox" name="carInMaintenance" [(ngModel)]="carDraft.inMaintenance" />
+            <span>In maintenance</span>
           </label>
 
           <div class="form-actions">
@@ -1010,6 +1160,7 @@
             <span>{{ i18n.t('admin.field.role') }}</span>
             <select name="userRole" [(ngModel)]="userDraft.role">
               <option value="USER">{{ i18n.t('app.role.user') }}</option>
+              <option value="EMPLOYEE">Employee</option>
               <option value="ADMIN">{{ i18n.t('app.role.admin') }}</option>
             </select>
           </label>

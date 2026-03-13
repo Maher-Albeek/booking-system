@@ -7,6 +7,11 @@ public class BookingResponse {
     private Long id;
     private Long userId;
     private Long resourceId;
+    private Long branchId;
+    private Long offerId;
+    private String promoCode;
+    private boolean airportPickup;
+    private Long airportPickupFeeCents;
     private Long timeSlotId;
     private LocalDateTime startDateTime;
     private LocalDateTime endDateTime;
@@ -32,6 +37,21 @@ public class BookingResponse {
 
     public Long getResourceId() { return resourceId; }
     public void setResourceId(Long resourceId) { this.resourceId = resourceId; }
+
+    public Long getBranchId() { return branchId; }
+    public void setBranchId(Long branchId) { this.branchId = branchId; }
+
+    public Long getOfferId() { return offerId; }
+    public void setOfferId(Long offerId) { this.offerId = offerId; }
+
+    public String getPromoCode() { return promoCode; }
+    public void setPromoCode(String promoCode) { this.promoCode = promoCode; }
+
+    public boolean isAirportPickup() { return airportPickup; }
+    public void setAirportPickup(boolean airportPickup) { this.airportPickup = airportPickup; }
+
+    public Long getAirportPickupFeeCents() { return airportPickupFeeCents; }
+    public void setAirportPickupFeeCents(Long airportPickupFeeCents) { this.airportPickupFeeCents = airportPickupFeeCents; }
 
     public Long getTimeSlotId() { return timeSlotId; }
     public void setTimeSlotId(Long timeSlotId) { this.timeSlotId = timeSlotId; }

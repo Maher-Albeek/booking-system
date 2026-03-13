@@ -10,6 +10,10 @@ public class CreateBookingRequest {
 
     @NotNull(message = "resourceId is required")
     private Long resourceId;
+    private Long branchId;
+    private Long offerId;
+    private String promoCode;
+    private boolean airportPickup;
 
     @NotBlank(message = "startDateTime is required")
     private String startDateTime;
@@ -44,6 +48,18 @@ public class CreateBookingRequest {
 
     public Long getResourceId() { return resourceId; }
     public void setResourceId(Long resourceId) { this.resourceId = resourceId; }
+
+    public Long getBranchId() { return branchId; }
+    public void setBranchId(Long branchId) { this.branchId = branchId; }
+
+    public Long getOfferId() { return offerId; }
+    public void setOfferId(Long offerId) { this.offerId = offerId; }
+
+    public String getPromoCode() { return promoCode; }
+    public void setPromoCode(String promoCode) { this.promoCode = promoCode; }
+
+    public boolean isAirportPickup() { return airportPickup; }
+    public void setAirportPickup(boolean airportPickup) { this.airportPickup = airportPickup; }
 
     public String getStartDateTime() { return startDateTime; }
     public void setStartDateTime(String startDateTime) { this.startDateTime = startDateTime; }

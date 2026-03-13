@@ -821,6 +821,33 @@
               </section>
 
               <label class="field field-wide">
+                <span>Offer campaign</span>
+                <select
+                  name="bookingOfferId"
+                  [ngModel]="bookingOfferId()"
+                  (ngModelChange)="selectOfferCampaign(parseOfferId($event))"
+                >
+                  <option [ngValue]="null">No offer</option>
+                  @for (campaign of availableCampaignsForSelectedCar(); track campaign.id) {
+                    <option [ngValue]="campaign.id">
+                      {{ campaign.title }} ({{ campaign.discountType === 'PERCENT' ? (campaign.discountValue + '%') : (campaign.discountValue + ' EUR') }})
+                    </option>
+                  }
+                </select>
+              </label>
+
+              <label class="field field-wide">
+                <span>Promo code</span>
+                <input
+                  type="text"
+                  name="bookingPromoCode"
+                  [ngModel]="bookingPromoCode()"
+                  (ngModelChange)="bookingPromoCode.set($event)"
+                  placeholder="PROMO2026"
+                />
+              </label>
+
+              <label class="field field-wide">
                 <span>{{ i18n.t('user.booking.address') }}</span>
                 <textarea
                   name="bookingAddress"
@@ -880,11 +907,11 @@
               </button>
             </div>
 
-            <p class="form-note">{{ i18n.t('user.modal.livePostNote') }} <code>POST /api/bookings</code>.</p>
+            <p class="form-note">{{ i18n.t('user.modal.livePostNote') }} <code>POST /api/payments/checkout-session</code>.</p>
           } @else {
             <p class="form-note">
               {{ i18n.t('user.modal.guestBrowseNote') }}
-              <code>POST /api/bookings</code>.
+              <code>POST /api/payments/checkout-session</code>.
             </p>
           }
         </form>

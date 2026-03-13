@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Repository;
 
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -43,5 +44,19 @@ public class PaymentRepository extends JsonRepositorySupport<PaymentRecord> {
         return findAll().stream()
                 .filter(payment -> paymentIntentId.equals(payment.getProviderPaymentIntentId()))
                 .findFirst();
+    }
+
+    public Optional<PaymentRecord> findByBookingId(Long bookingId) {
+        if (bookingId == null) {
+            return Optional.empty();
+        }
+        return findAll().stream().filter(payment -> bookingId.equals(payment.getBookingId())).findFirst();
+    }
+
+    public List<PaymentRecord> findByUserId(Long userId) {
+        if (userId == null) {
+            return List.of();
+        }
+        return findAll().stream().filter(payment -> userId.equals(payment.getUserId())).toList();
     }
 }

@@ -8,6 +8,7 @@ import org.springframework.lang.NonNull;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 @RestController
@@ -51,5 +52,12 @@ public class UserController {
     public void deleteUser(@PathVariable @NonNull Long id) {
         Objects.requireNonNull(id, "id must not be null");
         usersService.deleteUser(id);
+    }
+
+    @PutMapping("/{id}/permissions")
+    public @NonNull UserResponse updatePermissions(@PathVariable @NonNull Long id, @RequestBody Map<String, List<String>> payload) {
+        Objects.requireNonNull(id, "id must not be null");
+        List<String> permissions = payload == null ? List.of() : payload.getOrDefault("permissions", List.of());
+        return usersService.updatePermissions(id, permissions);
     }
 }

@@ -39,7 +39,7 @@
   "userId" : 3,
   "resourceId" : 3,
   "timeSlotId" : 1,
-  "status" : "CONFIRMED",
+  "status" : "PENDING",
   "bookingTime" : "2026-03-03T01:36:41.9545583",
   "customerName" : "anel",
   "serviceName" : "transfer"

@@ -21,7 +21,12 @@ public class Resources {
     private Integer baggageBags;
     private Boolean hasAirConditioning;
     private Integer horsepower;
+    private Integer kmPerDayLimit;
+    private Long extraKmFeePerKmCents;
+    private Long lateFeePerHourCents;
+    private Long depositAmountCents;
     private boolean active;
+    private boolean inMaintenance;
     private List<String> photoUrls = new ArrayList<>();
 
     public Long getId() { return id; }
@@ -83,8 +88,31 @@ public class Resources {
         this.horsepower = horsepower != null && horsepower > 0 ? horsepower : null;
     }
 
+    public Integer getKmPerDayLimit() { return kmPerDayLimit; }
+    public void setKmPerDayLimit(Integer kmPerDayLimit) {
+        this.kmPerDayLimit = kmPerDayLimit != null && kmPerDayLimit >= 0 ? kmPerDayLimit : null;
+    }
+
+    public Long getExtraKmFeePerKmCents() { return extraKmFeePerKmCents; }
+    public void setExtraKmFeePerKmCents(Long extraKmFeePerKmCents) {
+        this.extraKmFeePerKmCents = extraKmFeePerKmCents != null && extraKmFeePerKmCents >= 0 ? extraKmFeePerKmCents : null;
+    }
+
+    public Long getLateFeePerHourCents() { return lateFeePerHourCents; }
+    public void setLateFeePerHourCents(Long lateFeePerHourCents) {
+        this.lateFeePerHourCents = lateFeePerHourCents != null && lateFeePerHourCents >= 0 ? lateFeePerHourCents : null;
+    }
+
+    public Long getDepositAmountCents() { return depositAmountCents; }
+    public void setDepositAmountCents(Long depositAmountCents) {
+        this.depositAmountCents = depositAmountCents != null && depositAmountCents >= 0 ? depositAmountCents : null;
+    }
+
     public boolean isActive() { return active; }
     public void setActive(boolean active) { this.active = active; }
+
+    public boolean isInMaintenance() { return inMaintenance; }
+    public void setInMaintenance(boolean inMaintenance) { this.inMaintenance = inMaintenance; }
 
     public List<String> getPhotoUrls() {
         return photoUrls == null ? List.of() : photoUrls;

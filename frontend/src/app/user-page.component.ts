@@ -130,6 +130,8 @@ type Booking = {
 type BookingRequest = {
   userId: number;
   resourceId: number;
+  offerId?: number;
+  promoCode?: string;
   startDateTime: string;
   endDateTime: string;
   serviceName: string;
@@ -183,6 +185,18 @@ type OfferPageSettings = {
   heroBackgroundImageUrl: string;
 };
 
+type OfferCampaign = {
+  id: number;
+  title: string;
+  description: string | null;
+  discountType: 'PERCENT' | 'FIXED_AMOUNT';
+  discountValue: number;
+  startDateTime: string | null;
+  endDateTime: string | null;
+  enabled: boolean;
+  eligibleCarIds: number[];
+};
+
 type AccountDraft = {
   firstName: string;
   lastName: string;
@@ -231,6 +245,7 @@ export class UserPageComponent {
   protected readonly bookings = signal<Booking[]>([]);
   protected readonly profileUser = signal<User | null>(null);
   protected readonly publishedOfferSections = signal<OfferSection[]>([]);
+  protected readonly activeOfferCampaigns = signal<OfferCampaign[]>([]);
   protected readonly heroBackgroundImageUrl = signal('');
   protected readonly heroBackgroundStyle = computed(() => {
     const url = this.heroBackgroundImageUrl().trim();
@@ -257,6 +272,8 @@ export class UserPageComponent {
   protected readonly bookingCardCvv = signal('');
   protected readonly bookingWalletEmail = signal('');
   protected readonly serviceName = signal('');
+  protected readonly bookingPromoCode = signal('');
+  protected readonly bookingOfferId = signal<number | null>(null);
   protected readonly searchLocationInput = signal('');
   protected readonly searchStartDateInput = signal('');
   protected readonly searchEndDateInput = signal('');
@@ -275,7 +292,7 @@ export class UserPageComponent {
     },
     {
       label: this.i18n.t('user.stats.confirmedTrips'),
-      value: this.bookings().filter((booking) => booking.status === 'CONFIRMED').length,
+      value: this.bookings().filter((booking) => this.isActiveBookingStatus(booking.status)).length,
       note: this.i18n.t('user.stats.liveReservations')
     },
     {
@@ -305,7 +322,7 @@ export class UserPageComponent {
         return {
           ...car,
           confirmedBookings: bookings.filter(
-            (booking) => booking.resourceId === car.id && booking.status === 'CONFIRMED'
+            (booking) => booking.resourceId === car.id && this.isActiveBookingStatus(booking.status)
           ).length
         };
       });
@@ -371,6 +388,15 @@ export class UserPageComponent {
   protected readonly selectedCar = computed(
     () => this.cars().find((car) => car.id === this.selectedCarId()) ?? null
   );
+  protected readonly availableCampaignsForSelectedCar = computed(() => {
+    const selectedCarId = this.selectedCarId();
+    if (selectedCarId === null) {
+      return [] as OfferCampaign[];
+    }
+    return this.activeOfferCampaigns().filter((campaign) =>
+      !campaign.eligibleCarIds?.length || campaign.eligibleCarIds.includes(selectedCarId)
+    );
+  });
 
   protected readonly selectedCarPhotos = computed(() => this.selectedCar()?.photoUrls ?? []);
 
@@ -566,6 +592,8 @@ export class UserPageComponent {
     this.carDetailsId.set(null);
     this.bookingStartDateTime.set('');
     this.bookingEndDateTime.set('');
+    this.bookingPromoCode.set('');
+    this.bookingOfferId.set(null);
     this.resetBookingPaymentDetails();
     this.syncBookingFieldsFromUser(this.selectedUser(), this.selectedUser(), true);
     this.error.set(null);
@@ -785,6 +813,8 @@ export class UserPageComponent {
     const payload: BookingRequest = {
       userId: selectedUser.id,
       resourceId: selectedCar.id,
+      offerId: this.bookingOfferId() ?? undefined,
+      promoCode: this.bookingPromoCode().trim() || undefined,
       startDateTime,
       endDateTime,
       serviceName,
@@ -806,7 +836,7 @@ export class UserPageComponent {
 
     const checkoutPayload: CreateCheckoutSessionRequest = {
       booking: payload,
-      successUrl: `${window.location.origin}/bookings`,
+      successUrl: `${window.location.origin}/my-bookings`,
       cancelUrl: `${window.location.origin}/offers`,
       savePaymentMethod: true
     };
@@ -863,7 +893,7 @@ export class UserPageComponent {
     this.success.set(null);
 
     this.http
-      .patch<void>(`/api/bookings/${bookingId}/cancel`, {})
+      .patch<void>(`/api/operations/bookings/${bookingId}/cancel-with-refund`, {})
       .pipe(
         takeUntilDestroyed(this.destroyRef),
         finalize(() => this.cancellingId.set(null))
@@ -928,7 +958,19 @@ export class UserPageComponent {
   }
 
   protected isConfirmed(booking: Booking): boolean {
-    return booking.status === 'CONFIRMED';
+    return this.isActiveBookingStatus(booking.status);
+  }
+
+  protected selectOfferCampaign(offerId: number | null): void {
+    this.bookingOfferId.set(offerId);
+  }
+
+  protected parseOfferId(value: string | number | null): number | null {
+    if (value === null || value === '') {
+      return null;
+    }
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
   }
 
   protected hasPhotos(car: Resource | null | undefined): boolean {
@@ -1018,7 +1060,7 @@ export class UserPageComponent {
       ? this.http.get<UserResponse[]>('/api/users')
       : of([] as UserResponse[]);
     const bookingsRequest = this.auth.isAuthenticated()
-      ? this.http.get<Booking[]>('/api/bookings')
+      ? this.http.get<Booking[]>(this.auth.isAdmin() ? '/api/admin/bookings' : '/api/bookings')
       : of([] as Booking[]);
     const profileRequest =
       authenticatedUser !== null
@@ -1031,6 +1073,7 @@ export class UserPageComponent {
       bookings: bookingsRequest,
       profile: profileRequest,
       offers: this.http.get<OfferSection[]>('/api/offers/published'),
+      campaigns: this.http.get<OfferCampaign[]>('/api/commercial/offers').pipe(catchError(() => of([] as OfferCampaign[]))),
       offerSettings: this.http
         .get<OfferPageSettings>('/api/offers/settings/published')
         .pipe(catchError(() => of({ heroBackgroundImageUrl: '' } as OfferPageSettings)))
@@ -1040,7 +1083,7 @@ export class UserPageComponent {
         finalize(() => this.loading.set(false))
       )
       .subscribe({
-        next: ({ cars, users, bookings, profile, offers, offerSettings }) => {
+        next: ({ cars, users, bookings, profile, offers, campaigns, offerSettings }) => {
           const normalizedCars = cars.map((car) => this.normalizeResource(car));
           const normalizedUsers = users.map((user) => this.normalizeUser(user));
           const normalizedProfile = profile ? this.normalizeUser(profile) : null;
@@ -1052,6 +1095,7 @@ export class UserPageComponent {
           this.users.set(normalizedUsers);
           this.bookings.set(bookings);
           this.publishedOfferSections.set(normalizedOffers);
+          this.activeOfferCampaigns.set(campaigns.filter((campaign) => campaign.enabled));
           this.heroBackgroundImageUrl.set((offerSettings?.heroBackgroundImageUrl ?? '').trim());
 
           if (normalizedProfile) {
@@ -1300,7 +1344,7 @@ export class UserPageComponent {
       id: user.id,
       name: user.name,
       email: user.email,
-      role: user.role === 'ADMIN' ? 'ADMIN' : 'USER',
+      role: user.role === 'ADMIN' ? 'ADMIN' : user.role === 'EMPLOYEE' ? 'EMPLOYEE' : 'USER',
       firstName: user.firstName,
       lastName: user.lastName,
       addressStreet: user.addressStreet,
@@ -1699,7 +1743,7 @@ export class UserPageComponent {
     return !this.bookings().some((booking) => {
       if (
         booking.resourceId !== resourceId ||
-        booking.status !== 'CONFIRMED' ||
+        !this.isActiveBookingStatus(booking.status) ||
         !booking.startDateTime ||
         !booking.endDateTime
       ) {
@@ -1715,6 +1759,11 @@ export class UserPageComponent {
 
       return bookingStart < end && bookingEnd > start;
     });
+  }
+
+  private isActiveBookingStatus(status: string | null | undefined): boolean {
+    const normalized = (status ?? '').toUpperCase();
+    return normalized === 'PENDING' || normalized === 'ACTIVE' || normalized === 'COMPLETED' || normalized === 'NO_SHOW';
   }
 
   private readApiError(error: HttpErrorResponse, fallback: string): string {

@@ -6,17 +6,17 @@ import com.maher.booking_system.dto.CreateBookingRequest;
 import com.maher.booking_system.dto.CreateCheckoutSessionRequest;
 import com.maher.booking_system.dto.CreateCheckoutSessionResponse;
 import com.maher.booking_system.exception.BadRequestException;
+import com.maher.booking_system.exception.ConflictException;
 import com.maher.booking_system.exception.NotFoundException;
 import com.maher.booking_system.model.Booking;
 import com.maher.booking_system.model.PaymentRecord;
 import com.maher.booking_system.model.PaymentWebhookEvent;
 import com.maher.booking_system.model.Resources;
-import com.maher.booking_system.model.enums.BookingStatus;
 import com.maher.booking_system.model.enums.PaymentStatus;
-import com.maher.booking_system.repository.BookingRepository;
 import com.maher.booking_system.repository.PaymentRepository;
 import com.maher.booking_system.repository.PaymentWebhookEventRepository;
 import com.maher.booking_system.repository.ResourcesRepository;
+import com.maher.booking_system.repository.BranchRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -34,32 +34,41 @@ import java.util.Objects;
 public class PaymentService {
     private static final String PROVIDER = "stripe";
 
-    private final BookingRepository bookingRepository;
+    private final BookingService bookingService;
     private final PaymentRepository paymentRepository;
     private final PaymentWebhookEventRepository paymentWebhookEventRepository;
     private final ResourcesRepository resourcesRepository;
+    private final BranchRepository branchRepository;
     private final StripeApiClient stripeApiClient;
+    private final PromoCodeService promoCodeService;
+    private final OfferCampaignService offerCampaignService;
     private final ObjectMapper objectMapper;
     private final String webhookSecret;
     private final String publishableKey;
     private final String defaultCurrency;
 
     public PaymentService(
-            BookingRepository bookingRepository,
+            BookingService bookingService,
             PaymentRepository paymentRepository,
             PaymentWebhookEventRepository paymentWebhookEventRepository,
             ResourcesRepository resourcesRepository,
+            BranchRepository branchRepository,
             StripeApiClient stripeApiClient,
+            PromoCodeService promoCodeService,
+            OfferCampaignService offerCampaignService,
             ObjectMapper objectMapper,
             @Value("${app.payment.stripe.webhook-secret:}") String webhookSecret,
             @Value("${app.payment.stripe.publishable-key:}") String publishableKey,
             @Value("${app.payment.currency:eur}") String defaultCurrency
     ) {
-        this.bookingRepository = bookingRepository;
+        this.bookingService = bookingService;
         this.paymentRepository = paymentRepository;
         this.paymentWebhookEventRepository = paymentWebhookEventRepository;
         this.resourcesRepository = resourcesRepository;
+        this.branchRepository = branchRepository;
         this.stripeApiClient = stripeApiClient;
+        this.promoCodeService = promoCodeService;
+        this.offerCampaignService = offerCampaignService;
         this.objectMapper = objectMapper;
         this.webhookSecret = webhookSecret == null ? "" : webhookSecret.trim();
         this.publishableKey = publishableKey == null ? "" : publishableKey.trim();
@@ -82,19 +91,19 @@ public class PaymentService {
         }
 
         CreateBookingRequest bookingRequest = Objects.requireNonNull(request.getBooking(), "booking is required");
-        Pricing pricing = calculatePricing(bookingRequest.getResourceId(), bookingRequest.getStartDateTime(), bookingRequest.getEndDateTime());
-        Booking booking = createPendingBooking(bookingRequest, pricing);
+        Pricing pricing = calculatePricing(bookingRequest);
+        ensureAvailabilityBeforeCheckout(bookingRequest, pricing);
 
         StripeApiClient.CheckoutSession checkoutSession;
         try {
             checkoutSession = stripeApiClient.createCheckoutSession(
                     new StripeApiClient.CheckoutSessionRequest(
-                            booking.getId(),
-                            booking.getUserId(),
-                            booking.getResourceId(),
+                            null,
+                            bookingRequest.getUserId(),
+                            bookingRequest.getResourceId(),
                             pricing.amountCents(),
                             pricing.currency(),
-                            "Car booking #" + booking.getId(),
+                            "Car booking",
                             request.getSuccessUrl(),
                             request.getCancelUrl(),
                             request.isSavePaymentMethod()
@@ -102,14 +111,25 @@ public class PaymentService {
                     idempotencyKey
             );
         } catch (RuntimeException ex) {
-            booking.setPaymentStatus(PaymentStatus.FAILED);
-            bookingRepository.save(booking);
             throw ex;
         }
 
         PaymentRecord paymentRecord = new PaymentRecord();
-        paymentRecord.setBookingId(booking.getId());
-        paymentRecord.setUserId(booking.getUserId());
+        paymentRecord.setBookingId(null);
+        paymentRecord.setUserId(bookingRequest.getUserId());
+        paymentRecord.setResourceId(bookingRequest.getResourceId());
+        paymentRecord.setBranchId(bookingRequest.getBranchId());
+        paymentRecord.setOfferId(bookingRequest.getOfferId());
+        paymentRecord.setPromoCode(bookingRequest.getPromoCode());
+        paymentRecord.setAirportPickup(bookingRequest.isAirportPickup());
+        paymentRecord.setStartDateTime(pricing.start().toString());
+        paymentRecord.setEndDateTime(pricing.end().toString());
+        paymentRecord.setFirstName(bookingRequest.getFirstName());
+        paymentRecord.setLastName(bookingRequest.getLastName());
+        paymentRecord.setAddress(bookingRequest.getAddress());
+        paymentRecord.setBirthDate(bookingRequest.getBirthDate());
+        paymentRecord.setPaymentMethod(bookingRequest.getPaymentMethod());
+        paymentRecord.setServiceName(bookingRequest.getServiceName());
         paymentRecord.setProvider(PROVIDER);
         paymentRecord.setProviderSessionId(checkoutSession.sessionId());
         paymentRecord.setProviderPaymentIntentId(checkoutSession.paymentIntentId());
@@ -122,12 +142,9 @@ public class PaymentService {
         paymentRecord.setUpdatedAt(LocalDateTime.now());
         paymentRepository.save(paymentRecord);
 
-        booking.setPaymentProvider(PROVIDER);
-        bookingRepository.save(booking);
-
         return new CreateCheckoutSessionResponse(
-                booking.getId(),
-                booking.getPaymentStatus().name(),
+                null,
+                PaymentStatus.PENDING.name(),
                 checkoutSession.sessionId(),
                 checkoutSession.checkoutUrl()
         );
@@ -182,7 +199,8 @@ public class PaymentService {
         );
     }
 
-    private Pricing calculatePricing(Long resourceId, String startDateTime, String endDateTime) {
+    private Pricing calculatePricing(CreateBookingRequest request) {
+        Long resourceId = request.getResourceId();
         if (resourceId == null) {
             throw new BadRequestException("resourceId is required");
         }
@@ -195,8 +213,8 @@ public class PaymentService {
         LocalDateTime start;
         LocalDateTime end;
         try {
-            start = LocalDateTime.parse(startDateTime);
-            end = LocalDateTime.parse(endDateTime);
+            start = LocalDateTime.parse(request.getStartDateTime());
+            end = LocalDateTime.parse(request.getEndDateTime());
         } catch (Exception ex) {
             throw new BadRequestException("startDateTime and endDateTime must use yyyy-MM-ddTHH:mm format");
         }
@@ -207,37 +225,32 @@ public class PaymentService {
         long hours = ChronoUnit.HOURS.between(start, end);
         long days = Math.max(1L, (long) Math.ceil(hours / 24.0d));
         long amountCents = Math.round(resource.getDailyPrice() * 100.0d) * days;
+
+        if (request.getOfferId() != null) {
+            var matchingOffer = offerCampaignService.getActive().stream()
+                    .filter(offer -> request.getOfferId().equals(offer.getId()))
+                    .findFirst()
+                    .orElse(null);
+            if (matchingOffer != null) {
+                amountCents = applyDiscount(amountCents, matchingOffer.getDiscountType(), matchingOffer.getDiscountValue());
+            }
+        }
+        if (request.getPromoCode() != null && !request.getPromoCode().isBlank()) {
+            PromoCodeService.Preview preview = promoCodeService.previewDiscount(request.getPromoCode(), amountCents);
+            amountCents = preview.totalAfterDiscountCents();
+        }
+        if (request.isAirportPickup() && request.getBranchId() != null) {
+            amountCents += branchRepository.findById(request.getBranchId())
+                    .map(branch -> branch.isAirportPickupSupported() ? (branch.getAirportPickupFeeCents() == null ? 0L : branch.getAirportPickupFeeCents()) : 0L)
+                    .orElse(0L);
+        }
         return new Pricing(amountCents, defaultCurrency, start, end);
     }
 
-    private Booking createPendingBooking(CreateBookingRequest bookingRequest, Pricing pricing) {
-        Booking booking = new Booking();
-        booking.setUserId(bookingRequest.getUserId());
-        booking.setResourceId(bookingRequest.getResourceId());
-        booking.setTimeSlotId(bookingRequest.getTimeSlotId());
-        booking.setStartDateTime(pricing.start());
-        booking.setEndDateTime(pricing.end());
-        booking.setFirstName(normalizeRequired(bookingRequest.getFirstName(), "firstName"));
-        booking.setLastName(normalizeRequired(bookingRequest.getLastName(), "lastName"));
-        booking.setAddress(normalizeRequired(bookingRequest.getAddress(), "address"));
-        booking.setBirthDate(normalizeRequired(bookingRequest.getBirthDate(), "birthDate"));
-        booking.setPaymentMethod(PaymentMethodCatalog.normalizeRequired(bookingRequest.getPaymentMethod(), "paymentMethod"));
-        booking.setServiceName(normalizeRequired(bookingRequest.getServiceName(), "serviceName"));
-        booking.setCustomerName(booking.getFirstName() + " " + booking.getLastName());
-        booking.setStatus(BookingStatus.PENDING);
-        booking.setPaymentStatus(PaymentStatus.PENDING);
-        booking.setPayableAmountCents(pricing.amountCents());
-        booking.setPayableCurrency(pricing.currency());
-        booking.setPaymentProvider(PROVIDER);
-        booking.setBookingTime(LocalDateTime.now());
-        return bookingRepository.save(booking);
-    }
-
-    private String normalizeRequired(String value, String fieldName) {
-        if (value == null || value.trim().isBlank()) {
-            throw new BadRequestException(fieldName + " is required");
+    private void ensureAvailabilityBeforeCheckout(CreateBookingRequest bookingRequest, Pricing pricing) {
+        if (!bookingService.isCarAvailableForRange(bookingRequest.getResourceId(), pricing.start(), pricing.end())) {
+            throw new BadRequestException("Car is not available in the selected range");
         }
-        return value.trim();
     }
 
     private void handleCheckoutCompleted(JsonNode session) {
@@ -246,20 +259,48 @@ public class PaymentService {
         if (payment == null) {
             return;
         }
-        Booking booking = bookingRepository.findById(payment.getBookingId()).orElse(null);
-        if (booking == null) {
+        if (payment.getBookingId() != null) {
+            return;
+        }
+
+        CreateBookingRequest bookingRequest = new CreateBookingRequest();
+        bookingRequest.setUserId(payment.getUserId());
+        bookingRequest.setResourceId(payment.getResourceId());
+        bookingRequest.setBranchId(payment.getBranchId());
+        bookingRequest.setOfferId(payment.getOfferId());
+        bookingRequest.setPromoCode(payment.getPromoCode());
+        bookingRequest.setAirportPickup(payment.isAirportPickup());
+        bookingRequest.setStartDateTime(payment.getStartDateTime());
+        bookingRequest.setEndDateTime(payment.getEndDateTime());
+        bookingRequest.setFirstName(payment.getFirstName());
+        bookingRequest.setLastName(payment.getLastName());
+        bookingRequest.setAddress(payment.getAddress());
+        bookingRequest.setBirthDate(payment.getBirthDate());
+        bookingRequest.setPaymentMethod(payment.getPaymentMethod());
+        bookingRequest.setServiceName(payment.getServiceName());
+
+        Booking booking;
+        try {
+            booking = bookingService.createBookingAfterPaymentConfirmation(
+                    bookingRequest,
+                    PROVIDER,
+                    payment.getAmountCents(),
+                    payment.getCurrency()
+            );
+        } catch (ConflictException ex) {
+            payment.setStatus(PaymentStatus.FAILED);
+            payment.setLastError("Payment succeeded but booking range was no longer available");
+            payment.setUpdatedAt(LocalDateTime.now());
+            paymentRepository.save(payment);
             return;
         }
 
         String paymentIntentId = session.path("payment_intent").asText("");
         payment.setProviderPaymentIntentId(paymentIntentId.isBlank() ? payment.getProviderPaymentIntentId() : paymentIntentId);
         payment.setStatus(PaymentStatus.SUCCEEDED);
+        payment.setBookingId(booking.getId());
         payment.setUpdatedAt(LocalDateTime.now());
         paymentRepository.save(payment);
-
-        booking.setPaymentStatus(PaymentStatus.SUCCEEDED);
-        booking.setStatus(BookingStatus.CONFIRMED);
-        bookingRepository.save(booking);
     }
 
     private void handleCheckoutExpired(JsonNode session) {
@@ -268,18 +309,11 @@ public class PaymentService {
         if (payment == null) {
             return;
         }
-        Booking booking = bookingRepository.findById(payment.getBookingId()).orElse(null);
-        if (booking == null) {
-            return;
-        }
 
         payment.setStatus(PaymentStatus.FAILED);
         payment.setLastError("Checkout session expired");
         payment.setUpdatedAt(LocalDateTime.now());
         paymentRepository.save(payment);
-
-        booking.setPaymentStatus(PaymentStatus.FAILED);
-        bookingRepository.save(booking);
     }
 
     private void handlePaymentFailed(JsonNode paymentIntent) {
@@ -288,19 +322,12 @@ public class PaymentService {
         if (payment == null) {
             return;
         }
-        Booking booking = bookingRepository.findById(payment.getBookingId()).orElse(null);
-        if (booking == null) {
-            return;
-        }
 
         String message = paymentIntent.path("last_payment_error").path("message").asText("Payment failed");
         payment.setStatus(PaymentStatus.FAILED);
         payment.setLastError(message);
         payment.setUpdatedAt(LocalDateTime.now());
         paymentRepository.save(payment);
-
-        booking.setPaymentStatus(PaymentStatus.FAILED);
-        bookingRepository.save(booking);
     }
 
     private void handleChargeRefunded(JsonNode charge) {
@@ -309,19 +336,12 @@ public class PaymentService {
         if (payment == null) {
             return;
         }
-        Booking booking = bookingRepository.findById(payment.getBookingId()).orElse(null);
-        if (booking == null) {
-            return;
-        }
 
         long refunded = charge.path("amount_refunded").asLong(0L);
         payment.setStatus(PaymentStatus.REFUNDED);
         payment.setRefundedAmountCents(refunded);
         payment.setUpdatedAt(LocalDateTime.now());
         paymentRepository.save(payment);
-
-        booking.setPaymentStatus(PaymentStatus.REFUNDED);
-        bookingRepository.save(booking);
     }
 
     private void verifyWebhookSignature(String payload, String signatureHeader) {
@@ -367,5 +387,17 @@ public class PaymentService {
     }
 
     private record Pricing(long amountCents, String currency, LocalDateTime start, LocalDateTime end) {
+    }
+
+    private long applyDiscount(long amountCents, com.maher.booking_system.model.enums.DiscountType discountType, Double discountValue) {
+        if (discountType == null || discountValue == null || discountValue <= 0) {
+            return amountCents;
+        }
+        if (discountType == com.maher.booking_system.model.enums.DiscountType.PERCENT) {
+            long discount = Math.round(amountCents * discountValue / 100.0d);
+            return Math.max(0L, amountCents - discount);
+        }
+        long discount = Math.round(discountValue * 100.0d);
+        return Math.max(0L, amountCents - discount);
     }
 }

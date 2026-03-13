@@ -5,31 +5,49 @@ import com.maher.booking_system.exception.BadRequestException;
 import com.maher.booking_system.exception.ConflictException;
 import com.maher.booking_system.exception.NotFoundException;
 import com.maher.booking_system.model.Booking;
-import com.maher.booking_system.model.TimeSlot;
 import com.maher.booking_system.model.enums.BookingStatus;
 import com.maher.booking_system.model.enums.PaymentStatus;
 import com.maher.booking_system.repository.BookingRepository;
-import com.maher.booking_system.repository.TimeSlotRepository;
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeParseException;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 
 @Service
 public class BookingService {
-
-    private static final BookingStatus CONFIRMED_STATUS = BookingStatus.CONFIRMED;
+    private static final Set<BookingStatus> ACTIVE_BOOKING_STATUSES = EnumSet.of(
+            BookingStatus.PENDING,
+            BookingStatus.ACTIVE,
+            BookingStatus.COMPLETED
+    );
 
     private final BookingRepository bookingRepository;
-    private final TimeSlotRepository timeSlotRepository;
+    private final BranchService branchService;
+    private final PromoCodeService promoCodeService;
+    private final OfferCampaignService offerCampaignService;
+    private final NotificationLogService notificationLogService;
+    private final LoyaltyService loyaltyService;
 
-    public BookingService(BookingRepository bookingRepository, TimeSlotRepository timeSlotRepository) {
+    public BookingService(
+            BookingRepository bookingRepository,
+            BranchService branchService,
+            PromoCodeService promoCodeService,
+            OfferCampaignService offerCampaignService,
+            NotificationLogService notificationLogService,
+            LoyaltyService loyaltyService
+    ) {
         this.bookingRepository = bookingRepository;
-        this.timeSlotRepository = timeSlotRepository;
+        this.branchService = branchService;
+        this.promoCodeService = promoCodeService;
+        this.offerCampaignService = offerCampaignService;
+        this.notificationLogService = notificationLogService;
+        this.loyaltyService = loyaltyService;
     }
 
     public List<Booking> getAllBookings() {
@@ -42,8 +60,18 @@ public class BookingService {
                 .orElseThrow(() -> new NotFoundException("Booking not found with id: " + id));
     }
 
-    public synchronized @NonNull Booking createBooking(@NonNull CreateBookingRequest request) {
+    public @NonNull Booking createBookingAfterPaymentConfirmation(
+            @NonNull CreateBookingRequest request,
+            @NonNull String paymentProvider,
+            @NonNull Long amountCents,
+            @NonNull String currency
+    ) {
         CreateBookingRequest safeRequest = Objects.requireNonNull(request, "request must not be null");
+        String safeProvider = normalizeRequiredText(paymentProvider, "paymentProvider");
+        String safeCurrency = normalizeRequiredText(currency, "currency").toUpperCase();
+        if (amountCents <= 0) {
+            throw new BadRequestException("payable amount must be greater than zero");
+        }
 
         LocalDateTime requestedStart = normalizeDateTime(safeRequest.getStartDateTime(), "startDateTime");
         LocalDateTime requestedEnd = normalizeDateTime(safeRequest.getEndDateTime(), "endDateTime");
@@ -51,43 +79,26 @@ public class BookingService {
         if (!requestedStart.isBefore(requestedEnd)) {
             throw new BadRequestException("startDateTime must be before endDateTime");
         }
+        branchService.validateBookingWindow(safeRequest.getBranchId(), requestedStart, requestedEnd);
 
-        TimeSlot selectedSlot = null;
-        if (safeRequest.getTimeSlotId() != null) {
-            selectedSlot = timeSlotRepository.findByIdForUpdate(safeRequest.getTimeSlotId())
-                    .orElseThrow(() -> new NotFoundException("Time slot not found with id: " + safeRequest.getTimeSlotId()));
-
-            if (!selectedSlot.getResourceId().equals(safeRequest.getResourceId())) {
-                throw new BadRequestException("Time slot does not belong to resource id: " + safeRequest.getResourceId());
-            }
-
-            if (!selectedSlot.isAvailable()) {
-                throw new ConflictException("Time slot is not available");
-            }
-
-            boolean alreadyBooked = bookingRepository.existsByTimeSlotIdAndStatus(safeRequest.getTimeSlotId(), CONFIRMED_STATUS);
-            if (alreadyBooked) {
-                throw new ConflictException("Time slot already booked");
-            }
-        }
-
-        boolean carAlreadyBookedInPeriod = bookingRepository.findByResourceIdAndStatus(
-                        safeRequest.getResourceId(),
-                        CONFIRMED_STATUS
-                )
-                .stream()
-                .map(this::resolveBookingRange)
-                .filter(Objects::nonNull)
-                .anyMatch(range -> rangesOverlap(requestedStart, requestedEnd, range.start(), range.end()));
-
-        if (carAlreadyBookedInPeriod) {
+        boolean carAlreadyBookedInPeriod = bookingRepository.existsOverlapping(
+                safeRequest.getResourceId(),
+                requestedStart,
+                requestedEnd,
+                ACTIVE_BOOKING_STATUSES
+        );
+        if (carAlreadyBookedInPeriod || !isCarAvailableForRange(safeRequest.getResourceId(), requestedStart, requestedEnd)) {
             throw new ConflictException("Car is already booked for the selected period");
         }
 
         Booking booking = new Booking();
         booking.setUserId(safeRequest.getUserId());
         booking.setResourceId(safeRequest.getResourceId());
-        booking.setTimeSlotId(safeRequest.getTimeSlotId());
+        booking.setBranchId(safeRequest.getBranchId());
+        booking.setOfferId(safeRequest.getOfferId());
+        booking.setPromoCode(safeRequest.getPromoCode());
+        booking.setAirportPickup(safeRequest.isAirportPickup());
+        booking.setAirportPickupFeeCents(0L);
         booking.setStartDateTime(requestedStart);
         booking.setEndDateTime(requestedEnd);
         booking.setFirstName(normalizeRequiredText(safeRequest.getFirstName(), "firstName"));
@@ -96,48 +107,96 @@ public class BookingService {
         booking.setBirthDate(normalizeBirthDate(safeRequest.getBirthDate()));
         booking.setPaymentMethod(PaymentMethodCatalog.normalizeRequired(safeRequest.getPaymentMethod(), "paymentMethod"));
         booking.setPaymentStatus(PaymentStatus.SUCCEEDED);
-        booking.setPaymentProvider("manual");
+        booking.setPaymentProvider(safeProvider);
+        booking.setPayableAmountCents(amountCents);
+        booking.setPayableCurrency(safeCurrency);
         booking.setCustomerName(buildCustomerName(booking.getFirstName(), booking.getLastName()));
         booking.setServiceName(normalizeRequiredText(safeRequest.getServiceName(), "serviceName"));
-        booking.setStatus(CONFIRMED_STATUS);
+        booking.setStatus(BookingStatus.PENDING);
         booking.setBookingTime(LocalDateTime.now());
 
-        if (selectedSlot != null) {
-            selectedSlot.setAvailable(false);
-            timeSlotRepository.save(selectedSlot);
+        Booking saved = bookingRepository.saveIfNoOverlap(booking);
+        if (saved == null) {
+            throw new ConflictException("Car was booked by another payment confirmation. Please choose another time.");
         }
-
-        return bookingRepository.save(booking);
+        if (saved.getPromoCode() != null && !saved.getPromoCode().isBlank()) {
+            promoCodeService.consume(saved.getPromoCode());
+        }
+        if (saved.getOfferId() != null) {
+            offerCampaignService.recordAttributedBooking(saved.getOfferId(), saved.getPayableAmountCents());
+        }
+        notificationLogService.sendBookingConfirmation(saved);
+        return saved;
     }
 
-    public List<TimeSlot> getTimeSlotsByResource(@NonNull Long resourceId, Boolean available) {
+    public boolean isCarAvailableForRange(Long resourceId, LocalDateTime requestedStart, LocalDateTime requestedEnd) {
         Objects.requireNonNull(resourceId, "resourceId must not be null");
-        if (available == null) {
-            return timeSlotRepository.findByResourceId(resourceId);
+        Objects.requireNonNull(requestedStart, "requestedStart must not be null");
+        Objects.requireNonNull(requestedEnd, "requestedEnd must not be null");
+        if (!requestedStart.isBefore(requestedEnd)) {
+            throw new BadRequestException("startDateTime must be before endDateTime");
         }
-        return timeSlotRepository.findByResourceIdAndAvailable(resourceId, available);
+        return !bookingRepository.existsOverlapping(resourceId, requestedStart, requestedEnd, ACTIVE_BOOKING_STATUSES);
     }
 
-    public synchronized void cancelBooking(@NonNull Long bookingId) {
+    public List<Booking> getBookingsForAdmin(
+            String fromIso,
+            String toIso,
+            String statusValue,
+            Long resourceId,
+            Long userId,
+            String paymentStatusValue
+    ) {
+        LocalDateTime from = parseOptionalDateTime(fromIso, "from");
+        LocalDateTime to = parseOptionalDateTime(toIso, "to");
+        if (from != null && to != null && from.isAfter(to)) {
+            throw new BadRequestException("from must be before to");
+        }
+
+        BookingStatus status = parseOptionalBookingStatus(statusValue);
+        PaymentStatus paymentStatus = parseOptionalPaymentStatus(paymentStatusValue);
+        return bookingRepository.findByFilters(from, to, status, resourceId, userId, paymentStatus);
+    }
+
+    public void cancelBooking(@NonNull Long bookingId) {
         Objects.requireNonNull(bookingId, "bookingId must not be null");
 
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new NotFoundException("Booking not found"));
 
-        if (booking.getStatus() == BookingStatus.CANCELLED) {
+        if (booking.getStatus() == BookingStatus.CANCELLED || booking.getStatus() == BookingStatus.COMPLETED) {
             throw new BadRequestException("Booking already cancelled");
         }
 
         booking.setStatus(BookingStatus.CANCELLED);
         bookingRepository.save(booking);
+    }
 
-        Long slotId = booking.getTimeSlotId();
-        if (slotId != null) {
-            timeSlotRepository.findByIdForUpdate(slotId).ifPresent(slot -> {
-                slot.setAvailable(true);
-                timeSlotRepository.save(slot);
-            });
+    public Booking updateStatus(Long bookingId, BookingStatus targetStatus) {
+        Objects.requireNonNull(bookingId, "bookingId must not be null");
+        Objects.requireNonNull(targetStatus, "targetStatus must not be null");
+        Booking booking = getBookingById(bookingId);
+
+        if (!isValidTransition(booking.getStatus(), targetStatus)) {
+            throw new BadRequestException("Invalid status transition: " + booking.getStatus() + " -> " + targetStatus);
         }
+        booking.setStatus(targetStatus);
+        Booking updated = bookingRepository.save(booking);
+        if (updated.getStatus() == BookingStatus.COMPLETED) {
+            loyaltyService.awardCompletedBookingPoints(updated);
+        }
+        return updated;
+    }
+
+    private boolean isValidTransition(BookingStatus current, BookingStatus target) {
+        if (current == target) {
+            return true;
+        }
+        return switch (current) {
+            case PENDING -> target == BookingStatus.ACTIVE || target == BookingStatus.CANCELLED || target == BookingStatus.NO_SHOW;
+            case ACTIVE -> target == BookingStatus.COMPLETED || target == BookingStatus.CANCELLED;
+            case COMPLETED, CANCELLED, NO_SHOW -> false;
+        };
     }
 
     private String normalizeRequiredText(String value, String fieldName) {
@@ -169,35 +228,36 @@ public class BookingService {
         return firstName + " " + lastName;
     }
 
-    private BookingRange resolveBookingRange(Booking booking) {
-        if (booking.getStartDateTime() != null && booking.getEndDateTime() != null) {
-            if (booking.getStartDateTime().isBefore(booking.getEndDateTime())) {
-                return new BookingRange(booking.getStartDateTime(), booking.getEndDateTime());
-            }
+    private LocalDateTime parseOptionalDateTime(String value, String fieldName) {
+        if (value == null || value.isBlank()) {
             return null;
         }
+        try {
+            return LocalDateTime.parse(value.trim());
+        } catch (DateTimeParseException ex) {
+            throw new BadRequestException(fieldName + " must use yyyy-MM-ddTHH:mm format");
+        }
+    }
 
-        Long slotId = booking.getTimeSlotId();
-        if (slotId == null) {
+    private BookingStatus parseOptionalBookingStatus(String value) {
+        if (value == null || value.isBlank()) {
             return null;
         }
-
-        return timeSlotRepository.findById(slotId)
-                .filter(slot -> slot.getStartTime() != null && slot.getEndTime() != null)
-                .filter(slot -> slot.getStartTime().isBefore(slot.getEndTime()))
-                .map(slot -> new BookingRange(slot.getStartTime(), slot.getEndTime()))
-                .orElse(null);
+        try {
+            return BookingStatus.valueOf(value.trim().toUpperCase());
+        } catch (IllegalArgumentException ex) {
+            throw new BadRequestException("Unsupported booking status: " + value);
+        }
     }
 
-    private boolean rangesOverlap(
-            LocalDateTime requestedStart,
-            LocalDateTime requestedEnd,
-            LocalDateTime existingStart,
-            LocalDateTime existingEnd
-    ) {
-        return requestedStart.isBefore(existingEnd) && requestedEnd.isAfter(existingStart);
-    }
-
-    private record BookingRange(LocalDateTime start, LocalDateTime end) {
+    private PaymentStatus parseOptionalPaymentStatus(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        try {
+            return PaymentStatus.valueOf(value.trim().toUpperCase());
+        } catch (IllegalArgumentException ex) {
+            throw new BadRequestException("Unsupported payment status: " + value);
+        }
     }
 }

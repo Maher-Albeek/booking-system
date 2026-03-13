@@ -147,6 +147,9 @@ public class UsersService {
         );
         existingUser.setPaymentMethods(normalizedPaymentMethods);
         existingUser.setPaymentDetails(normalizedPaymentDetails);
+        if (existingUser.getPermissions().isEmpty()) {
+            existingUser.setPermissions(defaultPermissionsForRole(existingUser.getRole()));
+        }
 
         String displayName = buildDisplayName(existingUser.getFirstName(), existingUser.getLastName());
         if (displayName != null) {
@@ -206,6 +209,9 @@ public class UsersService {
         );
         safeUser.setPaymentMethods(normalizedPaymentMethods);
         safeUser.setPaymentDetails(normalizedPaymentDetails);
+        if (safeUser.getPermissions().isEmpty()) {
+            safeUser.setPermissions(defaultPermissionsForRole(safeUser.getRole()));
+        }
 
         return toUserResponse(usersRepository.save(safeUser));
     }
@@ -263,7 +269,26 @@ public class UsersService {
     }
 
     private String normalizeRole(String role) {
-        return "ADMIN".equalsIgnoreCase(role) ? "ADMIN" : "USER";
+        if ("ADMIN".equalsIgnoreCase(role)) {
+            return "ADMIN";
+        }
+        if ("EMPLOYEE".equalsIgnoreCase(role)) {
+            return "EMPLOYEE";
+        }
+        return "USER";
+    }
+
+    public @NonNull UserResponse updatePermissions(@NonNull Long userId, List<String> permissions) {
+        Users user = getRequiredUser(userId);
+        List<String> normalizedPermissions = permissions == null ? List.of() : permissions.stream()
+                .filter(Objects::nonNull)
+                .map(String::trim)
+                .filter(value -> !value.isBlank())
+                .map(String::toUpperCase)
+                .distinct()
+                .toList();
+        user.setPermissions(normalizedPermissions);
+        return toUserResponse(usersRepository.save(user));
     }
 
     private Users getRequiredUser(Long id) {
@@ -358,7 +383,19 @@ public class UsersService {
                 user.getBirthDate(),
                 user.getAvatarUrl(),
                 List.copyOf(user.getPaymentMethods()),
+                List.copyOf(user.getPermissions()),
                 Map.copyOf(user.getPaymentDetails())
         );
+    }
+
+    private List<String> defaultPermissionsForRole(String role) {
+        String normalizedRole = normalizeRole(role);
+        if ("ADMIN".equals(normalizedRole)) {
+            return List.of("MANAGE_CARS", "VIEW_PAYMENTS", "CHECK_IN_OUT", "VIEW_USERS", "MANAGE_BOOKINGS", "MANAGE_OFFERS");
+        }
+        if ("EMPLOYEE".equals(normalizedRole)) {
+            return List.of("CHECK_IN_OUT", "MANAGE_BOOKINGS");
+        }
+        return List.of();
     }
 }

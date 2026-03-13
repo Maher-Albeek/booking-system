@@ -13,6 +13,11 @@ public final class BookingMapper {
         response.setId(booking.getId());
         response.setUserId(booking.getUserId());
         response.setResourceId(booking.getResourceId());
+        response.setBranchId(booking.getBranchId());
+        response.setOfferId(booking.getOfferId());
+        response.setPromoCode(booking.getPromoCode());
+        response.setAirportPickup(booking.isAirportPickup());
+        response.setAirportPickupFeeCents(booking.getAirportPickupFeeCents());
         response.setTimeSlotId(booking.getTimeSlotId());
         response.setStartDateTime(booking.getStartDateTime());
         response.setEndDateTime(booking.getEndDateTime());
