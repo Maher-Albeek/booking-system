@@ -4,7 +4,7 @@ import { Component, DestroyRef, computed, effect, inject, signal } from '@angula
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink, RouterLinkActive } from '@angular/router';
-import { finalize } from 'rxjs';
+import { finalize, timeout } from 'rxjs';
 
 import { AuthStateService } from './auth-state.service';
 import { I18nService } from './i18n.service';
@@ -330,6 +330,7 @@ export class AccountPageComponent {
       })
       .pipe(
         takeUntilDestroyed(this.destroyRef),
+        timeout(10000),
         finalize(() => this.saving.set(false))
       )
       .subscribe({
@@ -392,6 +393,7 @@ export class AccountPageComponent {
       .resetPassword(identifier, newPassword)
       .pipe(
         takeUntilDestroyed(this.destroyRef),
+        timeout(10000),
         finalize(() => this.passwordSaving.set(false))
       )
       .subscribe({
@@ -422,6 +424,7 @@ export class AccountPageComponent {
       .get<UserResponse>(`/api/users/${authenticatedUser.id}`)
       .pipe(
         takeUntilDestroyed(this.destroyRef),
+        timeout(10000),
         finalize(() => this.loading.set(false))
       )
       .subscribe({
@@ -557,6 +560,10 @@ export class AccountPageComponent {
   }
 
   private readApiError(error: HttpErrorResponse, fallback: string): string {
+    if (error.status === 0) {
+      return `${fallback} Backend is not reachable on http://localhost:8099.`;
+    }
+
     if (typeof error.error === 'string' && error.error.trim()) {
       return error.error;
     }

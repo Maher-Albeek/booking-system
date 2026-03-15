@@ -75,7 +75,7 @@ public class PaymentService {
         if (existingPayment != null) {
             return new CreateCheckoutSessionResponse(
                     existingPayment.getBookingId(),
-                    existingPayment.getStatus().name(),
+                    existingPayment.getStatus() == null ? null : existingPayment.getStatus().name(),
                     existingPayment.getProviderSessionId(),
                     null
             );
@@ -127,7 +127,7 @@ public class PaymentService {
 
         return new CreateCheckoutSessionResponse(
                 booking.getId(),
-                booking.getPaymentStatus().name(),
+                booking.getPaymentStatus() == null ? null : booking.getPaymentStatus().name(),
                 checkoutSession.sessionId(),
                 checkoutSession.checkoutUrl()
         );

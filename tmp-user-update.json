@@ -1,0 +1,13 @@
+{
+  "firstName": "Test",
+  "lastName": "User",
+  "addressStreet": "Main",
+  "addressHouseNumber": "1",
+  "addressPostalCode": "12345",
+  "addressCity": "Berlin",
+  "addressCountry": "DE",
+  "birthDate": "1990-01-01",
+  "avatarUrl": "",
+  "paymentMethods": ["Visa"],
+  "paymentDetails": {"Visa": "4111 1111 1111 1111"}
+}

@@ -4,7 +4,7 @@ import { Component, DestroyRef, computed, effect, inject, signal } from '@angula
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { catchError, finalize, forkJoin, of } from 'rxjs';
+import { catchError, finalize, forkJoin, of, timeout } from 'rxjs';
 
 import { AuthStateService, AuthUser } from './auth-state.service';
 import { I18nService } from './i18n.service';
@@ -728,6 +728,7 @@ export class UserPageComponent {
       })
       .pipe(
         takeUntilDestroyed(this.destroyRef),
+        timeout(10000),
         finalize(() => this.accountSaving.set(false))
       )
       .subscribe({
@@ -1018,7 +1019,7 @@ export class UserPageComponent {
       ? this.http.get<UserResponse[]>('/api/users')
       : of([] as UserResponse[]);
     const bookingsRequest = this.auth.isAuthenticated()
-      ? this.http.get<Booking[]>('/api/bookings')
+      ? this.http.get<Booking[]>('/api/bookings').pipe(catchError(() => of([] as Booking[])))
       : of([] as Booking[]);
     const profileRequest =
       authenticatedUser !== null
@@ -1037,6 +1038,7 @@ export class UserPageComponent {
     })
       .pipe(
         takeUntilDestroyed(this.destroyRef),
+        timeout(10000),
         finalize(() => this.loading.set(false))
       )
       .subscribe({
@@ -1718,6 +1720,10 @@ export class UserPageComponent {
   }
 
   private readApiError(error: HttpErrorResponse, fallback: string): string {
+    if (error.status === 0) {
+      return `${fallback} Backend is not reachable on http://localhost:8099.`;
+    }
+
     if (typeof error.error === 'string' && error.error.trim()) {
       return error.error;
     }
