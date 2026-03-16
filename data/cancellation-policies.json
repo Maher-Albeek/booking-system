@@ -1,0 +1,23 @@
+[ {
+  "id" : 1,
+  "version" : "default-v1",
+  "agreementText" : "I agree to the cancellation policy shown before payment.",
+  "rules" : [ {
+    "minimumHoursBeforePickup" : 48,
+    "refundPercentage" : 100,
+    "label" : "Cancel at least 48 hours before pickup"
+  }, {
+    "minimumHoursBeforePickup" : 24,
+    "refundPercentage" : 50,
+    "label" : "Cancel 24 to 47 hours before pickup"
+  }, {
+    "minimumHoursBeforePickup" : 6,
+    "refundPercentage" : 25,
+    "label" : "Cancel 6 to 23 hours before pickup"
+  }, {
+    "minimumHoursBeforePickup" : 0,
+    "refundPercentage" : 0,
+    "label" : "Cancel less than 6 hours before pickup"
+  } ],
+  "updatedAt" : "2026-03-16T12:14:42.2638647"
+} ]

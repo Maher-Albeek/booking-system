@@ -8,6 +8,8 @@ import com.maher.booking_system.repository.CancellationPolicyRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -66,6 +68,30 @@ class CancellationPolicyServiceTest {
         assertThat(partialRefund.refundedAmountCents()).isEqualTo(10000L);
         assertThat(noRefund.refundPercentage()).isEqualTo(0);
         assertThat(noRefund.refundedAmountCents()).isZero();
+    }
+
+    @Test
+    void fallsBackToDefaultPolicyWhenStoredPolicyIsInvalid() throws IOException {
+        Files.writeString(
+                tempDir.resolve("cancellation-policies.json"),
+                """
+                [
+                  {
+                    "id": 1,
+                    "version": "",
+                    "agreementText": "broken",
+                    "rules": []
+                  }
+                ]
+                """
+        );
+        CancellationPolicyService service = createService();
+
+        CancellationPolicy policy = service.getCurrentPolicy();
+
+        assertThat(policy.getVersion()).isEqualTo("default-v1");
+        assertThat(policy.getRules()).hasSize(4);
+        assertThat(policy.getAgreementText()).isEqualTo("I agree to the cancellation policy shown before payment.");
     }
 
     private CancellationPolicyService createService() {

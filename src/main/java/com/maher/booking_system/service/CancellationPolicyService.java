@@ -4,8 +4,11 @@ import com.maher.booking_system.exception.BadRequestException;
 import com.maher.booking_system.model.CancellationPolicy;
 import com.maher.booking_system.model.CancellationPolicyRule;
 import com.maher.booking_system.repository.CancellationPolicyRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
+import java.io.UncheckedIOException;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
@@ -14,6 +17,8 @@ import java.util.List;
 
 @Service
 public class CancellationPolicyService {
+    private static final Logger log = LoggerFactory.getLogger(CancellationPolicyService.class);
+
     private final CancellationPolicyRepository cancellationPolicyRepository;
 
     public CancellationPolicyService(CancellationPolicyRepository cancellationPolicyRepository) {
@@ -21,10 +26,18 @@ public class CancellationPolicyService {
     }
 
     public synchronized CancellationPolicy getCurrentPolicy() {
-        return cancellationPolicyRepository.findAll().stream()
-                .findFirst()
-                .map(this::normalizePolicy)
-                .orElseGet(this::createDefaultPolicy);
+        try {
+            return cancellationPolicyRepository.findAll().stream()
+                    .findFirst()
+                    .map(this::normalizePolicy)
+                    .orElseGet(this::createDefaultPolicy);
+        } catch (BadRequestException | UncheckedIOException ex) {
+            log.warn(
+                    "Falling back to default cancellation policy because persisted policy is unavailable or invalid: {}",
+                    ex.getMessage()
+            );
+            return createDefaultPolicy();
+        }
     }
 
     public synchronized CancellationPolicy updatePolicy(CancellationPolicy policy) {
