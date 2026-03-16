@@ -5,7 +5,6 @@ import com.maher.booking_system.model.OfferPageSettings;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
-import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
@@ -39,17 +38,17 @@ public abstract class OfferPageSettingsFileRepository {
     public void write(OfferPageSettings settings) {
         synchronized (monitor) {
             ensureStorageExists();
-            Path tempPath = filePath.resolveSibling(filePath.getFileName() + ".tmp");
+        Path tempPath = filePath.resolveSibling(filePath.getFileName() + ".tmp");
+        try {
+            objectMapper.writerWithDefaultPrettyPrinter().writeValue(tempPath.toFile(), settings);
             try {
-                objectMapper.writerWithDefaultPrettyPrinter().writeValue(tempPath.toFile(), settings);
-                try {
-                    Files.move(tempPath, filePath, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
-                } catch (AtomicMoveNotSupportedException ex) {
-                    Files.move(tempPath, filePath, StandardCopyOption.REPLACE_EXISTING);
-                }
+                Files.move(tempPath, filePath, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
             } catch (IOException ex) {
-                throw new UncheckedIOException("Failed to write offer page settings to " + filePath, ex);
+                Files.move(tempPath, filePath, StandardCopyOption.REPLACE_EXISTING);
             }
+        } catch (IOException ex) {
+            throw new UncheckedIOException("Failed to write offer page settings to " + filePath, ex);
+        }
         }
     }
 

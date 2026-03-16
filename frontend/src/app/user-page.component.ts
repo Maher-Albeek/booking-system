@@ -141,6 +141,23 @@ type Booking = {
   refundReason: string | null;
   depositHoldStatus: string | null;
   depositHoldAmountCents: number | null;
+  confirmationEmailRecipient: string | null;
+  confirmationEmailSentAt: string | null;
+  returnReminderSentAt: string | null;
+};
+
+type BookingNotificationAttachment = {
+  label: string;
+  downloadUrl: string;
+};
+
+type BookingNotification = {
+  type: string;
+  subject: string;
+  recipient: string;
+  sentAt: string | null;
+  message: string;
+  attachments: BookingNotificationAttachment[];
 };
 
 type BookingRequest = {
@@ -269,6 +286,7 @@ export class UserPageComponent {
   protected readonly similarCars = signal<Resource[]>([]);
   protected readonly users = signal<User[]>([]);
   protected readonly bookings = signal<Booking[]>([]);
+  protected readonly bookingNotificationsByBookingId = signal<Record<number, BookingNotification[]>>({});
   protected readonly profileUser = signal<User | null>(null);
   protected readonly publishedOfferSections = signal<OfferSection[]>([]);
   protected readonly offerCarsBySectionId = signal<Record<number, Resource[]>>({});
@@ -1249,6 +1267,10 @@ export class UserPageComponent {
     return this.i18n.t('user.label.totalWithDays', { total: this.formatPrice(total, car.priceUnit), days });
   }
 
+  protected bookingNotifications(bookingId: number): BookingNotification[] {
+    return this.bookingNotificationsByBookingId()[bookingId] ?? [];
+  }
+
   private loadData(): void {
     this.loading.set(true);
     this.error.set(null);
@@ -1296,6 +1318,7 @@ export class UserPageComponent {
           this.catalogCars.set([]);
           this.users.set(normalizedUsers);
           this.bookings.set(bookings);
+          this.loadBookingNotifications(bookings);
           this.cancellationPolicy.set(cancellationPolicy);
           this.publishedOfferSections.set(normalizedOffers);
           this.loadOfferCars(normalizedOffers);
@@ -1521,6 +1544,30 @@ export class UserPageComponent {
         error: (error: HttpErrorResponse) => {
           this.error.set(this.readApiError(error, this.i18n.t('user.error.loadCatalogFailed')));
         }
+      });
+  }
+
+  private loadBookingNotifications(bookings: Booking[]): void {
+    if (!this.auth.isAuthenticated() || !bookings.length) {
+      this.bookingNotificationsByBookingId.set({});
+      return;
+    }
+
+    const requests = bookings.reduce<Record<string, Observable<BookingNotification[]>>>((accumulator, booking) => {
+      accumulator[String(booking.id)] = this.http
+        .get<BookingNotification[]>(`/api/bookings/${booking.id}/notifications`)
+        .pipe(catchError(() => of([] as BookingNotification[])));
+      return accumulator;
+    }, {});
+
+    forkJoin(requests)
+      .pipe(takeUntilDestroyed(this.destroyRef), timeout(10000))
+      .subscribe((responseMap) => {
+        const mapped: Record<number, BookingNotification[]> = {};
+        for (const [bookingId, notifications] of Object.entries(responseMap)) {
+          mapped[Number(bookingId)] = notifications;
+        }
+        this.bookingNotificationsByBookingId.set(mapped);
       });
   }
 

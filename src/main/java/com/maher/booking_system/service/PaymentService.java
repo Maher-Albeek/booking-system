@@ -46,6 +46,7 @@ public class PaymentService {
     private final StripeApiClient stripeApiClient;
     private final CancellationPolicyService cancellationPolicyService;
     private final OfferPageService offerPageService;
+    private final BookingNotificationService bookingNotificationService;
     private final ObjectMapper objectMapper;
     private final String webhookSecret;
     private final String publishableKey;
@@ -60,6 +61,7 @@ public class PaymentService {
             StripeApiClient stripeApiClient,
             CancellationPolicyService cancellationPolicyService,
             OfferPageService offerPageService,
+            BookingNotificationService bookingNotificationService,
             ObjectMapper objectMapper,
             @Value("${app.payment.stripe.webhook-secret:}") String webhookSecret,
             @Value("${app.payment.stripe.publishable-key:}") String publishableKey,
@@ -73,6 +75,7 @@ public class PaymentService {
         this.stripeApiClient = stripeApiClient;
         this.cancellationPolicyService = cancellationPolicyService;
         this.offerPageService = offerPageService;
+        this.bookingNotificationService = bookingNotificationService;
         this.objectMapper = objectMapper;
         this.webhookSecret = webhookSecret == null ? "" : webhookSecret.trim();
         this.publishableKey = publishableKey == null ? "" : publishableKey.trim();
@@ -399,7 +402,8 @@ public class PaymentService {
 
         booking.setPaymentStatus(PaymentStatus.SUCCEEDED);
         booking.setStatus(BookingStatus.PENDING);
-        bookingRepository.save(booking);
+        booking = bookingRepository.save(booking);
+        bookingNotificationService.sendBookingConfirmation(booking);
         syncTimeSlotAvailability(booking);
     }
 

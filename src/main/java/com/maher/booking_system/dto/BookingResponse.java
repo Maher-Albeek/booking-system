@@ -35,6 +35,9 @@ public class BookingResponse {
     private String depositHoldProvider;
     private LocalDateTime depositHoldCreatedAt;
     private LocalDateTime depositHoldReleasedAt;
+    private String confirmationEmailRecipient;
+    private LocalDateTime confirmationEmailSentAt;
+    private LocalDateTime returnReminderSentAt;
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -137,5 +140,20 @@ public class BookingResponse {
     public LocalDateTime getDepositHoldReleasedAt() { return depositHoldReleasedAt; }
     public void setDepositHoldReleasedAt(LocalDateTime depositHoldReleasedAt) {
         this.depositHoldReleasedAt = depositHoldReleasedAt;
+    }
+
+    public String getConfirmationEmailRecipient() { return confirmationEmailRecipient; }
+    public void setConfirmationEmailRecipient(String confirmationEmailRecipient) {
+        this.confirmationEmailRecipient = confirmationEmailRecipient;
+    }
+
+    public LocalDateTime getConfirmationEmailSentAt() { return confirmationEmailSentAt; }
+    public void setConfirmationEmailSentAt(LocalDateTime confirmationEmailSentAt) {
+        this.confirmationEmailSentAt = confirmationEmailSentAt;
+    }
+
+    public LocalDateTime getReturnReminderSentAt() { return returnReminderSentAt; }
+    public void setReturnReminderSentAt(LocalDateTime returnReminderSentAt) {
+        this.returnReminderSentAt = returnReminderSentAt;
     }
 }

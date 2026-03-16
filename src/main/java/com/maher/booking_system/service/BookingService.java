@@ -27,25 +27,30 @@ public class BookingService {
     private final TimeSlotRepository timeSlotRepository;
     private final PaymentService paymentService;
     private final OfferPageService offerPageService;
+    private final BookingNotificationService bookingNotificationService;
 
     public BookingService(
             BookingRepository bookingRepository,
             TimeSlotRepository timeSlotRepository,
             PaymentService paymentService,
-            OfferPageService offerPageService
+            OfferPageService offerPageService,
+            BookingNotificationService bookingNotificationService
     ) {
         this.bookingRepository = bookingRepository;
         this.timeSlotRepository = timeSlotRepository;
         this.paymentService = paymentService;
         this.offerPageService = offerPageService;
+        this.bookingNotificationService = bookingNotificationService;
     }
 
     public List<Booking> getAllBookings() {
+        bookingNotificationService.dispatchDueReturnReminders();
         return bookingRepository.findAll();
     }
 
     public @NonNull Booking getBookingById(@NonNull Long id) {
         Objects.requireNonNull(id, "id must not be null");
+        bookingNotificationService.dispatchDueReturnReminders();
         return bookingRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Booking not found with id: " + id));
     }
@@ -113,7 +118,7 @@ public class BookingService {
         booking.setBookingTime(LocalDateTime.now());
         Booking savedBooking = bookingRepository.save(booking);
         syncTimeSlotAvailability(savedBooking.getTimeSlotId(), selectedSlot);
-        return savedBooking;
+        return bookingNotificationService.sendBookingConfirmation(savedBooking);
     }
 
     public List<TimeSlot> getTimeSlotsByResource(@NonNull Long resourceId, Boolean available) {

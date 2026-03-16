@@ -637,6 +637,40 @@
                 }
               </dl>
 
+              @if (bookingNotifications(booking.id).length) {
+                <section class="booking-notifications">
+                  <div class="booking-notifications-header">
+                    <strong>Email notifications</strong>
+                    @if (booking.confirmationEmailRecipient) {
+                      <span>{{ booking.confirmationEmailRecipient }}</span>
+                    }
+                  </div>
+
+                  <div class="booking-notification-list">
+                    @for (notification of bookingNotifications(booking.id); track notification.type + notification.sentAt) {
+                      <article class="booking-notification-card">
+                        <div class="booking-notification-topline">
+                          <strong>{{ notification.subject }}</strong>
+                          <span>{{ formatDate(notification.sentAt) }}</span>
+                        </div>
+                        <p>{{ notification.message }}</p>
+
+                        @if (notification.attachments.length) {
+                          <div class="booking-document-links">
+                            @for (attachment of notification.attachments; track attachment.downloadUrl) {
+                              <a class="secondary-link booking-document-link" [href]="attachment.downloadUrl" download>
+                                <i class="fa-solid fa-file-pdf" aria-hidden="true"></i>
+                                <span>{{ attachment.label }}</span>
+                              </a>
+                            }
+                          </div>
+                        }
+                      </article>
+                    }
+                  </div>
+                </section>
+              }
+
               @if (canCancelBooking(booking)) {
                 <button
                   type="button"

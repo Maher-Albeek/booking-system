@@ -1,23 +1,24 @@
 [ {
   "id" : 1,
-  "name" : "Test User",
+  "name" : "Maher",
   "email" : "malbeek92@gmail.com",
   "password" : "$2a$10$qZVfbctZJjk96CHBalqFOu/YC.bVDepjeUx8bDUr2FVaLwuzVLlfW",
   "role" : "ADMIN",
-  "firstName" : "Test",
-  "lastName" : "User",
+  "firstName" : "Maher",
+  "lastName" : null,
   "address" : "Main 1, 12345 Berlin, DE",
   "addressStreet" : "Main",
   "addressHouseNumber" : "1",
   "addressPostalCode" : "12345",
   "addressCity" : "Berlin",
   "addressCountry" : "DE",
-  "birthDate" : "1990-01-01",
+  "birthDate" : "1990-01-04",
   "avatarUrl" : null,
   "paymentMethods" : [ "PayPal" ],
   "paymentDetails" : {
     "PayPal" : "roomgan@gmail.com"
-  }
+  },
+  "permissions" : [ ]
 }, {
   "id" : 2,
   "name" : "ad",
@@ -35,5 +36,6 @@
   "birthDate" : null,
   "avatarUrl" : null,
   "paymentMethods" : [ ],
-  "paymentDetails" : { }
+  "paymentDetails" : { },
+  "permissions" : [ ]
 } ]

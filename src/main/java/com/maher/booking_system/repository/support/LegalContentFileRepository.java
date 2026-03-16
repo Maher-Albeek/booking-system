@@ -5,7 +5,6 @@ import com.maher.booking_system.model.LegalContent;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
-import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
@@ -41,7 +40,7 @@ public abstract class LegalContentFileRepository {
                 objectMapper.writerWithDefaultPrettyPrinter().writeValue(tempPath.toFile(), legalContent);
                 try {
                     Files.move(tempPath, filePath, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
-                } catch (AtomicMoveNotSupportedException ex) {
+                } catch (IOException ex) {
                     Files.move(tempPath, filePath, StandardCopyOption.REPLACE_EXISTING);
                 }
             } catch (IOException ex) {

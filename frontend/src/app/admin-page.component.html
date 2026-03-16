@@ -46,6 +46,24 @@
       </section>
     }
 
+    @if (requestProgress() !== null) {
+      <section class="banner progress">
+        <div class="progress-copy">
+          <strong>{{ progressLabel() }}</strong>
+          <span>{{ requestProgress() }}%</span>
+        </div>
+        <div
+          class="progress-track"
+          role="progressbar"
+          aria-valuemin="0"
+          aria-valuemax="100"
+          [attr.aria-valuenow]="requestProgress()"
+        >
+          <div class="progress-fill" [style.width.%]="requestProgress()"></div>
+        </div>
+      </section>
+    }
+
     <section class="stats">
       @for (stat of stats(); track stat.label) {
         <article class="stat-card">

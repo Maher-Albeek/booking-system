@@ -57,6 +57,9 @@ public class Booking {
     private Long finalTotalAmountCents;
     private String finalInvoiceNumber;
     private LocalDateTime finalInvoiceIssuedAt;
+    private String confirmationEmailRecipient;
+    private LocalDateTime confirmationEmailSentAt;
+    private LocalDateTime returnReminderSentAt;
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -225,6 +228,21 @@ public class Booking {
 
     public LocalDateTime getFinalInvoiceIssuedAt() { return finalInvoiceIssuedAt; }
     public void setFinalInvoiceIssuedAt(LocalDateTime finalInvoiceIssuedAt) { this.finalInvoiceIssuedAt = finalInvoiceIssuedAt; }
+
+    public String getConfirmationEmailRecipient() { return confirmationEmailRecipient; }
+    public void setConfirmationEmailRecipient(String confirmationEmailRecipient) {
+        this.confirmationEmailRecipient = normalizeText(confirmationEmailRecipient);
+    }
+
+    public LocalDateTime getConfirmationEmailSentAt() { return confirmationEmailSentAt; }
+    public void setConfirmationEmailSentAt(LocalDateTime confirmationEmailSentAt) {
+        this.confirmationEmailSentAt = confirmationEmailSentAt;
+    }
+
+    public LocalDateTime getReturnReminderSentAt() { return returnReminderSentAt; }
+    public void setReturnReminderSentAt(LocalDateTime returnReminderSentAt) {
+        this.returnReminderSentAt = returnReminderSentAt;
+    }
 
     private String normalizeText(String value) {
         if (value == null || value.isBlank()) {

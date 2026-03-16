@@ -4,7 +4,7 @@ import { Component, DestroyRef, ElementRef, ViewChild, computed, effect, inject,
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { catchError, finalize, forkJoin, Observable, of, switchMap } from 'rxjs';
+import { catchError, finalize, forkJoin, map, Observable, of, switchMap } from 'rxjs';
 
 import { AuthStateService } from './auth-state.service';
 import { I18nService } from './i18n.service';
@@ -153,6 +153,7 @@ export class AdminPageComponent {
   protected readonly pageMode: 'tools' | 'offers' | 'cars' | 'users' | 'legal' = this.resolvePageMode();
   protected readonly loading = signal(true);
   protected readonly busyKey = signal<string | null>(null);
+  protected readonly requestProgress = signal<number | null>(null);
   protected readonly error = signal<string | null>(null);
   protected readonly success = signal<string | null>(null);
   protected readonly isPhotoDragActive = signal(false);
@@ -307,8 +308,43 @@ export class AdminPageComponent {
   protected readonly showCarsPanel = computed(() => this.pageMode === 'cars');
   protected readonly showUsersPanel = computed(() => this.pageMode === 'users');
   protected readonly showLegalPanel = computed(() => this.pageMode === 'legal');
+  protected readonly progressLabel = computed(() => {
+    const busyKey = this.busyKey();
+    if (!busyKey) {
+      return '';
+    }
+
+    switch (busyKey) {
+      case 'save-offer-draft':
+        return 'Saving offer draft';
+      case 'publish-offer-draft':
+        return 'Publishing offers';
+      case 'save-legal-draft':
+        return 'Saving legal draft';
+      case 'publish-legal-draft':
+        return 'Publishing legal pages';
+      case 'save-car':
+        return this.editingCarId() === null ? 'Adding car' : 'Updating car';
+      case 'create-user':
+        return 'Creating user';
+      case 'load-offer-analytics':
+        return 'Refreshing analytics';
+      default:
+        if (busyKey.startsWith('delete-car-')) {
+          return 'Deleting car';
+        }
+        if (busyKey.startsWith('delete-user-')) {
+          return 'Deleting user';
+        }
+        return 'Updating';
+    }
+  });
+
+  private requestProgressTimer: number | null = null;
 
   constructor() {
+    this.destroyRef.onDestroy(() => this.stopRequestProgress());
+
     effect(() => {
       const message = this.error();
       if (message) {
@@ -396,12 +432,22 @@ export class AdminPageComponent {
       this.http
         .put<OfferSection[]>('/api/offers/draft', this.offerDraftSections())
         .pipe(
-          switchMap(() =>
-            this.http.put<OfferPageSettings>('/api/offers/settings/draft', this.offerDraftSettings())
-          ),
-          catchError(() => of(this.offerDraftSettings()))
+          switchMap((sections) =>
+            this.http.put<OfferPageSettings>('/api/offers/settings/draft', this.offerDraftSettings()).pipe(
+              map((settings) => ({ sections, settings }))
+            )
+          )
         ),
-      'Offer draft saved successfully.'
+      'Offer draft saved successfully.',
+      ({ sections, settings }) => {
+        this.offerDraftSections.set(
+          this.reorderOfferSections(
+            sections.map((section, index) => this.normalizeOfferSection(section, index))
+          )
+        );
+        this.offerDraftSettings.set(this.normalizeOfferPageSettings(settings));
+        this.syncDraftDefaults();
+      }
     );
   }
 
@@ -411,15 +457,34 @@ export class AdminPageComponent {
       this.http
         .put<OfferSection[]>('/api/offers/draft', this.offerDraftSections())
         .pipe(
-          switchMap(() =>
-            this.http.put<OfferPageSettings>('/api/offers/settings/draft', this.offerDraftSettings())
-          ),
-          catchError(() => of(this.offerDraftSettings())),
-          switchMap(() => this.http.post<OfferSection[]>('/api/offers/publish', {})),
-          switchMap(() => this.http.post<OfferPageSettings>('/api/offers/settings/publish', {})),
-          catchError(() => of(this.offerDraftSettings()))
+          switchMap(() => this.http.put<OfferPageSettings>('/api/offers/settings/draft', this.offerDraftSettings())),
+          switchMap((draftSettings) =>
+            this.http.post<OfferSection[]>('/api/offers/publish', {}).pipe(
+              switchMap((publishedSections) =>
+                this.http.post<OfferPageSettings>('/api/offers/settings/publish', {}).pipe(
+                  map((publishedSettings) => ({
+                    publishedSections,
+                    publishedSettings,
+                    draftSettings
+                  }))
+                )
+              )
+            )
+          )
         ),
-      'Offer page is now published.'
+      'Offer page is now published.',
+      ({ publishedSections, publishedSettings, draftSettings }) => {
+        const normalizedSections = this.reorderOfferSections(
+          publishedSections.map((section, index) => this.normalizeOfferSection(section, index))
+        );
+        const normalizedSettings = this.normalizeOfferPageSettings(publishedSettings);
+        this.offerDraftSections.set(normalizedSections);
+        this.offerPublishedSections.set(normalizedSections);
+        this.offerDraftSettings.set(this.normalizeOfferPageSettings(draftSettings));
+        this.offerPublishedSettings.set(normalizedSettings);
+        this.syncDraftDefaults();
+        this.reloadOfferAnalytics();
+      }
     );
   }
 
@@ -610,7 +675,10 @@ export class AdminPageComponent {
       'save-car',
       request,
       editingCarId === null ? this.i18n.t('admin.success.carAdded') : this.i18n.t('admin.success.carUpdated'),
-      () => this.cancelCarEdit()
+      (resource) => {
+        this.upsertResource(resource);
+        this.cancelCarEdit();
+      }
     );
   }
 
@@ -725,6 +793,7 @@ export class AdminPageComponent {
       this.http.delete<void>(`/api/resources/${carId}`),
       this.i18n.t('admin.success.carDeleted'),
       () => {
+        this.resources.update((resources) => resources.filter((resource) => resource.id !== carId));
         if (this.selectedCarId() === carId) {
           this.closeCarDetails();
         }
@@ -761,7 +830,10 @@ export class AdminPageComponent {
         permissions: this.userDraft.permissions
       }),
       this.i18n.t('admin.success.userCreated'),
-      () => {
+      (user) => {
+        this.users.update((users) =>
+          [...users, user].sort((left, right) => left.name.localeCompare(right.name))
+        );
         this.userDraft = {
           name: '',
           email: '',
@@ -781,7 +853,10 @@ export class AdminPageComponent {
     this.runRequest(
       `delete-user-${userId}`,
       this.http.delete<void>(`/api/users/${userId}`),
-      this.i18n.t('admin.success.userDeleted')
+      this.i18n.t('admin.success.userDeleted'),
+      () => {
+        this.users.update((users) => users.filter((user) => user.id !== userId));
+      }
     );
   }
 
@@ -856,7 +931,10 @@ export class AdminPageComponent {
     this.runRequest(
       'save-legal-draft',
       this.http.put<LegalContent>('/api/legal/draft', this.legalDraftContent()),
-      'Legal draft saved successfully.'
+      'Legal draft saved successfully.',
+      (content) => {
+        this.legalDraftContent.set(this.normalizeLegalContent(content));
+      }
     );
   }
 
@@ -866,7 +944,12 @@ export class AdminPageComponent {
       this.http
         .put<LegalContent>('/api/legal/draft', this.legalDraftContent())
         .pipe(switchMap(() => this.http.post<LegalContent>('/api/legal/publish', {}))),
-      'Legal pages are now published.'
+      'Legal pages are now published.',
+      (content) => {
+        const normalized = this.normalizeLegalContent(content);
+        this.legalDraftContent.set(normalized);
+        this.legalPublishedContent.set(normalized);
+      }
     );
   }
 
@@ -1221,6 +1304,18 @@ export class AdminPageComponent {
     };
   }
 
+  private upsertResource(resource: ResourceResponse): void {
+    const normalized = this.normalizeResource(resource);
+    this.resources.update((resources) => {
+      const existingIndex = resources.findIndex((entry) => entry.id === normalized.id);
+      if (existingIndex < 0) {
+        return [...resources, normalized];
+      }
+
+      return resources.map((entry, index) => (index === existingIndex ? normalized : entry));
+    });
+  }
+
   private buildCarPayload(name: string, location: string): Omit<Resource, 'id'> {
     return {
       name,
@@ -1485,13 +1580,50 @@ export class AdminPageComponent {
     });
   }
 
+  private startRequestProgress(): void {
+    this.stopRequestProgress();
+    this.requestProgress.set(0);
+    this.requestProgressTimer = window.setInterval(() => {
+      const current = this.requestProgress();
+      if (current === null || current >= 90) {
+        return;
+      }
+
+      const step = current < 40 ? 12 : current < 70 ? 7 : 3;
+      this.requestProgress.set(Math.min(90, current + step));
+    }, 180);
+  }
+
+  private finishRequestProgress(): void {
+    this.stopRequestProgress();
+    this.requestProgress.set(100);
+    window.setTimeout(() => {
+      if (this.requestProgress() === 100) {
+        this.requestProgress.set(null);
+      }
+    }, 450);
+  }
+
+  private resetRequestProgress(): void {
+    this.stopRequestProgress();
+    this.requestProgress.set(null);
+  }
+
+  private stopRequestProgress(): void {
+    if (this.requestProgressTimer !== null) {
+      window.clearInterval(this.requestProgressTimer);
+      this.requestProgressTimer = null;
+    }
+  }
+
   private runRequest<T>(
     key: string,
     request: Observable<T>,
     successMessage: string,
-    afterSuccess?: () => void
+    afterSuccess?: (response: T) => void
   ): void {
     this.busyKey.set(key);
+    this.startRequestProgress();
     this.error.set(null);
     this.success.set(null);
 
@@ -1505,12 +1637,13 @@ export class AdminPageComponent {
         })
       )
       .subscribe({
-        next: () => {
-          afterSuccess?.();
+        next: (response) => {
+          this.finishRequestProgress();
+          afterSuccess?.(response);
           this.success.set(successMessage);
-          this.loadData();
         },
         error: (error: HttpErrorResponse) => {
+          this.resetRequestProgress();
           this.error.set(this.readApiError(error, this.i18n.t('admin.error.actionFailed')));
         }
       });

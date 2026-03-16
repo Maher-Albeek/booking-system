@@ -41,6 +41,9 @@ public final class BookingMapper {
         response.setDepositHoldProvider(booking.getDepositHoldProvider());
         response.setDepositHoldCreatedAt(booking.getDepositHoldCreatedAt());
         response.setDepositHoldReleasedAt(booking.getDepositHoldReleasedAt());
+        response.setConfirmationEmailRecipient(booking.getConfirmationEmailRecipient());
+        response.setConfirmationEmailSentAt(booking.getConfirmationEmailSentAt());
+        response.setReturnReminderSentAt(booking.getReturnReminderSentAt());
         return response;
     }
 }
