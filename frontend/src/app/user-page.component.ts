@@ -4,7 +4,7 @@ import { Component, DestroyRef, computed, effect, inject, signal } from '@angula
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { catchError, finalize, forkJoin, of, timeout } from 'rxjs';
+import { catchError, finalize, forkJoin, fromEvent, of, timeout } from 'rxjs';
 
 import { AuthStateService, AuthUser } from './auth-state.service';
 import { I18nService } from './i18n.service';
@@ -225,6 +225,7 @@ export class UserPageComponent {
   protected readonly supportedPaymentMethods = PAYMENT_METHOD_OPTIONS;
   protected readonly paymentMethodMeta = PAYMENT_METHOD_META;
   protected readonly loading = signal(true);
+  protected readonly catalogLoading = signal(false);
   protected readonly submitting = signal(false);
   protected readonly accountSaving = signal(false);
   protected readonly avatarUploading = signal(false);
@@ -275,6 +276,11 @@ export class UserPageComponent {
   protected readonly searchLocation = signal('');
   protected readonly searchStartDate = signal('');
   protected readonly searchEndDate = signal('');
+  protected readonly detailFilterCarType = signal('');
+  protected readonly detailFilterTransmission = signal('');
+  protected readonly detailFilterFuelType = signal('');
+  protected readonly detailFilterMinSeats = signal('');
+  protected readonly detailFilterMaxPrice = signal('');
   protected readonly visibleCarCount = signal(CAR_PAGE_SIZE);
 
   protected accountDraft: AccountDraft = this.emptyAccountDraft();
@@ -338,7 +344,7 @@ export class UserPageComponent {
       return false;
     }
 
-    return startDate > endDate;
+    return startDate >= endDate;
   });
 
   protected readonly hasCompleteSearchFilters = computed(() => {
@@ -347,12 +353,66 @@ export class UserPageComponent {
     return Boolean(start && end);
   });
 
+  protected readonly availableCarTypes = computed(() =>
+    [...new Set(
+      this.cars()
+        .map((car) => (car.carType ?? car.type)?.trim())
+        .filter((value): value is string => !!value)
+    )]
+      .sort((left, right) => left.localeCompare(right))
+  );
+
+  protected readonly availableTransmissions = computed(() =>
+    [...new Set(this.cars().map((car) => car.transmission?.trim()).filter((value): value is string => !!value))]
+      .sort((left, right) => left.localeCompare(right))
+  );
+
+  protected readonly availableFuelTypes = computed(() =>
+    [...new Set(this.cars().map((car) => car.fuelType?.trim()).filter((value): value is string => !!value))]
+      .sort((left, right) => left.localeCompare(right))
+  );
+
+  protected readonly availableSeatCounts = computed(() =>
+    [...new Set(this.cars().map((car) => car.seats).filter((value): value is number => typeof value === 'number'))]
+      .sort((left, right) => left - right)
+  );
+
+  protected readonly hasDetailFilters = computed(() =>
+    Boolean(
+      this.detailFilterCarType().trim() ||
+      this.detailFilterTransmission().trim() ||
+      this.detailFilterFuelType().trim() ||
+      this.detailFilterMinSeats().trim() ||
+      this.detailFilterMaxPrice().trim()
+    )
+  );
+
   protected readonly filteredCarSummaries = computed<CarSummary[]>(() => {
     if (!this.hasCompleteSearchFilters()) {
       return [];
     }
     const bookings = this.bookings();
+    const selectedCarType = this.detailFilterCarType().trim().toLowerCase();
+    const selectedTransmission = this.detailFilterTransmission().trim().toLowerCase();
+    const selectedFuelType = this.detailFilterFuelType().trim().toLowerCase();
+    const minSeatsRaw = this.detailFilterMinSeats().trim();
+    const maxPriceRaw = this.detailFilterMaxPrice().trim();
+    const minSeatsValue = Number(minSeatsRaw);
+    const maxPriceValue = Number(maxPriceRaw);
+    const hasMinSeatsFilter = minSeatsRaw !== '' && Number.isFinite(minSeatsValue) && minSeatsValue > 0;
+    const hasMaxPriceFilter = maxPriceRaw !== '' && Number.isFinite(maxPriceValue) && maxPriceValue >= 0;
+
     return [...this.catalogCars()]
+      .filter(
+        (car) => !selectedCarType || ((car.carType ?? car.type) ?? '').trim().toLowerCase() === selectedCarType
+      )
+      .filter(
+        (car) =>
+          !selectedTransmission || (car.transmission ?? '').trim().toLowerCase() === selectedTransmission
+      )
+      .filter((car) => !selectedFuelType || (car.fuelType ?? '').trim().toLowerCase() === selectedFuelType)
+      .filter((car) => !hasMinSeatsFilter || (car.seats ?? 0) >= minSeatsValue)
+      .filter((car) => !hasMaxPriceFilter || (car.dailyPrice ?? Number.POSITIVE_INFINITY) <= maxPriceValue)
       .sort((left, right) => left.name.localeCompare(right.name))
       .map((car) => ({
         ...car,
@@ -524,10 +584,6 @@ export class UserPageComponent {
     let wasProfileInfoVisible = false;
 
     effect(() => {
-      this.syncSearchFiltersFromInput();
-    });
-
-    effect(() => {
       const message = this.error();
       if (message) {
         this.notifications.error(message);
@@ -562,6 +618,28 @@ export class UserPageComponent {
       wasProfileInfoVisible = profileInfoVisible;
     });
 
+    fromEvent<CustomEvent<{ carId: number; favorite: boolean }>>(window, 'favorites-updated')
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((event) => {
+        const detail = event.detail;
+        if (!detail) {
+          return;
+        }
+
+        this.cars.update((cars) =>
+          cars.map((car) => (car.id === detail.carId ? { ...car, favorite: detail.favorite } : car))
+        );
+        this.catalogCars.update((cars) =>
+          cars.map((car) => (car.id === detail.carId ? { ...car, favorite: detail.favorite } : car))
+        );
+        this.similarCars.update((cars) =>
+          cars.map((car) => (car.id === detail.carId ? { ...car, favorite: detail.favorite } : car))
+        );
+        this.favoriteCars.update((cars) =>
+          detail.favorite ? cars : cars.filter((car) => car.id !== detail.carId)
+        );
+      });
+
     this.loadData();
   }
 
@@ -576,6 +654,8 @@ export class UserPageComponent {
       return;
     }
 
+    const nextFavoriteState = !car.favorite;
+
     const request = car.favorite
       ? this.http.delete<ResourceResponse>(`/api/resources/${car.id}/favorites/${authenticatedUser.id}`)
       : this.http.post<ResourceResponse>(`/api/resources/${car.id}/favorites`, { userId: authenticatedUser.id });
@@ -584,10 +664,18 @@ export class UserPageComponent {
       .pipe(takeUntilDestroyed(this.destroyRef), timeout(10000))
       .subscribe({
         next: (resource) => {
-          const normalized = this.normalizeResource(resource);
+          const normalized = {
+            ...this.normalizeResource(resource),
+            favorite: nextFavoriteState
+          };
           this.replaceCatalogResource(normalized);
           this.refreshFavoriteCars();
           this.refreshSimilarCars();
+          window.dispatchEvent(
+            new CustomEvent('favorites-updated', {
+              detail: { carId: normalized.id, favorite: normalized.favorite }
+            })
+          );
         },
         error: (error: HttpErrorResponse) => {
           this.error.set(this.readApiError(error, this.i18n.t('user.favorite.updateFailed')));
@@ -989,7 +1077,10 @@ export class UserPageComponent {
   }
 
   protected applySearchFilters(): void {
+    this.error.set(null);
+    this.success.set(null);
     this.syncSearchFiltersFromInput();
+    this.clearDetailFilters();
     this.fetchCatalogCars();
   }
 
@@ -1000,11 +1091,21 @@ export class UserPageComponent {
     this.searchLocation.set('');
     this.searchStartDate.set('');
     this.searchEndDate.set('');
+    this.error.set(null);
     this.visibleCarCount.set(CAR_PAGE_SIZE);
   }
 
   protected showMoreCars(): void {
     this.visibleCarCount.update((count) => count + CAR_PAGE_SIZE);
+  }
+
+  protected clearDetailFilters(): void {
+    this.detailFilterCarType.set('');
+    this.detailFilterTransmission.set('');
+    this.detailFilterFuelType.set('');
+    this.detailFilterMinSeats.set('');
+    this.detailFilterMaxPrice.set('');
+    this.visibleCarCount.set(CAR_PAGE_SIZE);
   }
 
   private syncSearchFiltersFromInput(): void {
@@ -1013,15 +1114,12 @@ export class UserPageComponent {
     const end = this.searchEndDateInput().trim();
     const hasInvalidDateRange = this.searchDateRangeInvalid();
 
-    if (!location || !start || !end || hasInvalidDateRange) {
+    if (!start || !end || hasInvalidDateRange) {
       this.searchLocation.set('');
       this.searchStartDate.set('');
       this.searchEndDate.set('');
       this.catalogCars.set([]);
       this.visibleCarCount.set(CAR_PAGE_SIZE);
-      if (this.carDetailsId() !== null) {
-        this.carDetailsId.set(null);
-      }
       return;
     }
 
@@ -1284,6 +1382,7 @@ export class UserPageComponent {
   private fetchCatalogCars(): void {
     if (!this.hasCompleteSearchFilters()) {
       this.catalogCars.set([]);
+      this.catalogLoading.set(false);
       return;
     }
 
@@ -1292,17 +1391,26 @@ export class UserPageComponent {
     if (location) {
       params.set('location', location);
     }
-    params.set('pickupDateTime', this.searchStartDate().trim());
-    params.set('returnDateTime', this.searchEndDate().trim());
+    const start = this.searchStartDate().trim();
+    const end = this.searchEndDate().trim();
+    params.set('pickupDateTime', start);
+    params.set('returnDateTime', end);
     if (this.auth.user()?.id) {
       params.set('userId', String(this.auth.user()!.id));
     }
 
+    this.catalogLoading.set(true);
+
     this.http
       .get<ResourceResponse[]>(`/api/resources/catalog?${params.toString()}`)
-      .pipe(takeUntilDestroyed(this.destroyRef), timeout(10000))
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        timeout(10000),
+        finalize(() => this.catalogLoading.set(false))
+      )
       .subscribe({
         next: (resources) => {
+          this.error.set(null);
           this.catalogCars.set(resources.map((resource) => this.normalizeResource(resource)));
           this.refreshSimilarCars();
         },

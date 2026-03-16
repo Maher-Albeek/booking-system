@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { HttpErrorResponse } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Component, DestroyRef, computed, effect, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
@@ -14,6 +14,14 @@ import { NotificationService } from './notification.service';
 type HeaderLink = {
   path: string;
   label: string;
+};
+
+type FavoriteCar = {
+  id: number;
+  name: string;
+  location: string;
+  dailyPrice: number | null;
+  priceUnit: string | null;
 };
 
 type CookieConsent = {
@@ -33,6 +41,7 @@ const COOKIE_CONSENT_KEY = 'booking-system-cookie-consent-v1';
   styleUrl: './app.scss'
 })
 export class App {
+  private readonly http = inject(HttpClient);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
 
@@ -59,6 +68,8 @@ export class App {
   protected readonly cookiePreferences = signal(false);
   protected readonly cookieAnalytics = signal(false);
   protected readonly cookieMarketing = signal(false);
+  protected readonly favoritesModalOpen = signal(false);
+  protected readonly favoriteCars = signal<FavoriteCar[]>([]);
 
   protected readonly navLinks = computed<HeaderLink[]>(() => {
     const links: HeaderLink[] = [{ path: '/offers', label: this.i18n.t('app.link.offers') }];
@@ -265,7 +276,47 @@ export class App {
     this.auth.logout();
     this.closeMenu();
     this.closeAuthModal();
+    this.closeFavoritesModal();
     void this.router.navigate(['/offers']);
+  }
+
+  protected openFavoritesModal(): void {
+    const authenticatedUser = this.auth.user();
+    if (!authenticatedUser) {
+      return;
+    }
+
+    this.closeMenu();
+    this.favoritesModalOpen.set(true);
+    this.http
+      .get<FavoriteCar[]>(`/api/resources/favorites?userId=${authenticatedUser.id}`)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (cars) => this.favoriteCars.set(cars),
+        error: () => this.favoriteCars.set([])
+      });
+  }
+
+  protected closeFavoritesModal(): void {
+    this.favoritesModalOpen.set(false);
+  }
+
+  protected removeFavoriteCar(carId: number): void {
+    const authenticatedUser = this.auth.user();
+    if (!authenticatedUser) {
+      return;
+    }
+
+    this.http
+      .delete(`/api/resources/${carId}/favorites/${authenticatedUser.id}`)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.favoriteCars.update((cars) => cars.filter((car) => car.id !== carId));
+          window.dispatchEvent(new CustomEvent('favorites-updated', { detail: { carId, favorite: false } }));
+        },
+        error: () => this.notifications.error(this.i18n.t('user.favorite.updateFailed'))
+      });
   }
 
   protected setLanguage(language: LanguageCode): void {

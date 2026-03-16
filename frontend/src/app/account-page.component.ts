@@ -84,8 +84,6 @@ type FavoriteCar = {
 };
 
 type AccountDraft = {
-  name: string;
-  email: string;
   firstName: string;
   lastName: string;
   addressStreet: string;
@@ -193,7 +191,7 @@ export class AccountPageComponent {
 
   protected displayName(): string {
     const fullName = `${this.accountDraft.firstName} ${this.accountDraft.lastName}`.trim();
-    return this.accountDraft.name.trim() || fullName || this.auth.user()?.name || 'User';
+    return fullName || this.auth.user()?.name || 'User';
   }
 
   protected locationLine(): string {
@@ -327,8 +325,6 @@ export class AccountPageComponent {
 
     this.http
       .put<UserResponse>(`/api/users/${authenticatedUser.id}`, {
-        name: this.accountDraft.name.trim(),
-        email: this.accountDraft.email.trim(),
         firstName: this.accountDraft.firstName.trim(),
         lastName: this.accountDraft.lastName.trim(),
         addressStreet: this.accountDraft.addressStreet.trim(),
@@ -381,8 +377,8 @@ export class AccountPageComponent {
       return;
     }
 
-    if (!this.isStrongPassword(newPassword)) {
-      this.error.set(this.i18n.t('login.error.passwordPolicy'));
+    if (newPassword.length < 6) {
+      this.error.set(this.i18n.t('login.error.passwordLength'));
       return;
     }
 
@@ -468,8 +464,6 @@ export class AccountPageComponent {
 
   private accountDraftFromUser(user: UserResponse): AccountDraft {
     return {
-      name: user.name ?? '',
-      email: user.email ?? '',
       firstName: user.firstName ?? '',
       lastName: user.lastName ?? '',
       addressStreet: user.addressStreet ?? '',
@@ -486,8 +480,6 @@ export class AccountPageComponent {
 
   private emptyDraft(): AccountDraft {
     return {
-      name: '',
-      email: '',
       firstName: '',
       lastName: '',
       addressStreet: '',
@@ -582,16 +574,6 @@ export class AccountPageComponent {
       expiry: details.expiry,
       cvv: details.cvv
     });
-  }
-
-  private isStrongPassword(password: string): boolean {
-    return (
-      password.length >= 8 &&
-      /[a-z]/.test(password) &&
-      /[A-Z]/.test(password) &&
-      /\d/.test(password) &&
-      /[^A-Za-z\d]/.test(password)
-    );
   }
 
   private readApiError(error: HttpErrorResponse, fallback: string): string {

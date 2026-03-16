@@ -82,7 +82,7 @@
               type="button"
               class="submit-button compact-button"
               (click)="applySearchFilters()"
-              [disabled]="searchDateRangeInvalid()"
+              [disabled]="searchDateRangeInvalid() || catalogLoading()"
             >
               <span class="button-content">
                 <i class="button-icon fa-solid fa-magnifying-glass" aria-hidden="true"></i>
@@ -174,26 +174,6 @@
   <section class="layout">
     @if (pageMode === 'offers') {
       <article class="panel fleet-panel">
-      @if (auth.isAuthenticated() && favoriteCarSummaries().length) {
-        <section class="favorites-strip">
-          <div class="panel-header">
-            <div>
-              <p class="eyebrow">{{ i18n.t('user.favorite.eyebrow') }}</p>
-              <h3>{{ i18n.t('user.favorite.title') }}</h3>
-            </div>
-          </div>
-
-          <div class="favorite-chip-list">
-            @for (car of favoriteCarSummaries(); track car.id) {
-              <button type="button" class="favorite-chip" (click)="openCarDetails(car.id)">
-                <i class="fa-solid fa-heart" aria-hidden="true"></i>
-                <span>{{ car.name }}</span>
-              </button>
-            }
-          </div>
-        </section>
-      }
-
       <div class="panel-header">
         <div>
           <p class="eyebrow">{{ i18n.t('user.fleet.eyebrow') }}</p>
@@ -203,7 +183,97 @@
 
       @if (!hasCompleteSearchFilters()) {
         <p class="empty-state">{{ i18n.t('user.fleet.enterFilters') }}</p>
+      } @else if (catalogLoading()) {
+        <p class="empty-state">{{ i18n.t('user.banner.loadingTitle') }}</p>
       } @else {
+        <section class="detail-filter-panel">
+          <div class="panel-header">
+            <div>
+              <p class="eyebrow">{{ i18n.t('user.search.refineResults') }}</p>
+              <h3>{{ i18n.t('user.search.customFilters') }}</h3>
+            </div>
+            @if (hasDetailFilters()) {
+              <button type="button" class="ghost-button compact-button" (click)="clearDetailFilters()">
+                <span class="button-content">
+                  <i class="button-icon fa-solid fa-rotate-left" aria-hidden="true"></i>
+                  <span>{{ i18n.t('user.search.resetFilters') }}</span>
+                </span>
+              </button>
+            }
+          </div>
+
+          <div class="detail-filter-grid">
+            <label class="field">
+              <span>{{ i18n.t('user.car.type') }}</span>
+              <select
+                name="detailFilterCarType"
+                [ngModel]="detailFilterCarType()"
+                (ngModelChange)="detailFilterCarType.set($event); visibleCarCount.set(9)"
+              >
+                <option value="">{{ i18n.t('user.search.anyOption') }}</option>
+                @for (option of availableCarTypes(); track option) {
+                  <option [value]="option">{{ option }}</option>
+                }
+              </select>
+            </label>
+
+            <label class="field">
+              <span>{{ i18n.t('user.car.transmission') }}</span>
+              <select
+                name="detailFilterTransmission"
+                [ngModel]="detailFilterTransmission()"
+                (ngModelChange)="detailFilterTransmission.set($event); visibleCarCount.set(9)"
+              >
+                <option value="">{{ i18n.t('user.search.anyOption') }}</option>
+                @for (option of availableTransmissions(); track option) {
+                  <option [value]="option">{{ option }}</option>
+                }
+              </select>
+            </label>
+
+            <label class="field">
+              <span>{{ i18n.t('user.car.fuel') }}</span>
+              <select
+                name="detailFilterFuelType"
+                [ngModel]="detailFilterFuelType()"
+                (ngModelChange)="detailFilterFuelType.set($event); visibleCarCount.set(9)"
+              >
+                <option value="">{{ i18n.t('user.search.anyOption') }}</option>
+                @for (option of availableFuelTypes(); track option) {
+                  <option [value]="option">{{ option }}</option>
+                }
+              </select>
+            </label>
+
+            <label class="field">
+              <span>{{ i18n.t('user.search.minSeats') }}</span>
+              <select
+                name="detailFilterMinSeats"
+                [ngModel]="detailFilterMinSeats()"
+                (ngModelChange)="detailFilterMinSeats.set($event); visibleCarCount.set(9)"
+              >
+                <option value="">{{ i18n.t('user.search.anyOption') }}</option>
+                @for (option of availableSeatCounts(); track option) {
+                  <option [value]="option">{{ option }}</option>
+                }
+              </select>
+            </label>
+
+            <label class="field">
+              <span>{{ i18n.t('user.search.maxPrice') }}</span>
+              <input
+                type="number"
+                min="0"
+                step="1"
+                name="detailFilterMaxPrice"
+                [ngModel]="detailFilterMaxPrice()"
+                (ngModelChange)="detailFilterMaxPrice.set($event); visibleCarCount.set(9)"
+                [placeholder]="i18n.t('user.search.maxPricePlaceholder')"
+              />
+            </label>
+          </div>
+        </section>
+
         <div class="car-showcase-grid">
           @for (car of visibleFilteredCarSummaries(); track car.id) {
             <article
@@ -222,10 +292,15 @@
               <button
                 type="button"
                 class="favorite-toggle"
+                [class.active]="car.favorite"
                 (click)="$event.stopPropagation(); toggleFavorite(car)"
                 [attr.aria-pressed]="car.favorite"
               >
-                <i [class]="car.favorite ? 'fa-solid fa-heart' : 'fa-regular fa-heart'" aria-hidden="true"></i>
+                <i
+                  [class]="car.favorite ? 'fa-solid fa-heart' : 'fa-regular fa-heart'"
+                  [style.color]="car.favorite ? '#ff5c78' : null"
+                  aria-hidden="true"
+                ></i>
               </button>
 
               <div class="car-chip-row">

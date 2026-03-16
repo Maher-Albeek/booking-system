@@ -62,6 +62,7 @@
               <a routerLink="/my-bookings" (click)="closeMenu()">{{ i18n.t('app.link.myBookings') }}</a>
               <a routerLink="/my-profile" (click)="closeMenu()">{{ i18n.t('app.link.myProfile') }}</a>
               <a routerLink="/payment-methods" (click)="closeMenu()">{{ i18n.t('app.link.paymentMethods') }}</a>
+              <button type="button" (click)="openFavoritesModal()">{{ i18n.t('app.link.myFavoriteCars') }}</button>
               <button type="button" class="danger" (click)="logout()">{{ i18n.t('app.session.logout') }}</button>
             </div>
           </div>
@@ -193,6 +194,46 @@
                 <span>{{ i18n.t('login.action.signinWithGoogle') }}</span>
               </button>
             </form>
+          }
+        </div>
+      </article>
+    </div>
+  }
+
+  @if (favoritesModalOpen()) {
+    <div class="auth-modal-backdrop" (click)="closeFavoritesModal()">
+      <article
+        class="favorites-modal"
+        role="dialog"
+        aria-modal="true"
+        [attr.aria-label]="i18n.t('app.link.myFavoriteCars')"
+        (click)="$event.stopPropagation()"
+      >
+        <button type="button" class="modal-close" (click)="closeFavoritesModal()">
+          {{ i18n.t('common.close') }}
+        </button>
+
+        <div class="favorites-modal-content">
+          <p class="eyebrow">{{ i18n.t('user.favorite.eyebrow') }}</p>
+          <h3>{{ i18n.t('app.link.myFavoriteCars') }}</h3>
+
+          @if (favoriteCars().length) {
+            <div class="favorites-modal-list">
+              @for (car of favoriteCars(); track car.id) {
+                <div class="favorites-modal-card">
+                  <div>
+                    <strong>{{ car.name }}</strong>
+                    <p>{{ car.location }}</p>
+                    <span>{{ car.dailyPrice ?? '-' }} {{ car.priceUnit || 'EUR' }}</span>
+                  </div>
+                  <button type="button" class="danger" (click)="removeFavoriteCar(car.id)">
+                    {{ i18n.t('common.remove') }}
+                  </button>
+                </div>
+              }
+            </div>
+          } @else {
+            <p class="empty-favorites">{{ i18n.t('user.favorite.noneYet') }}</p>
           }
         </div>
       </article>

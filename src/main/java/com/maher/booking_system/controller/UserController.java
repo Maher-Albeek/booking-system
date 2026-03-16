@@ -4,7 +4,6 @@ import com.maher.booking_system.dto.UpdateUserRequest;
 import com.maher.booking_system.dto.UserResponse;
 import com.maher.booking_system.model.Users;
 import com.maher.booking_system.service.UsersService;
-import jakarta.validation.Valid;
 import org.springframework.lang.NonNull;
 import org.springframework.web.bind.annotation.*;
 
@@ -41,7 +40,7 @@ public class UserController {
     @PutMapping("/{id}")
     public @NonNull UserResponse updateUser(
             @PathVariable @NonNull Long id,
-            @Valid @RequestBody @NonNull UpdateUserRequest request
+            @RequestBody @NonNull UpdateUserRequest request
     ) {
         Objects.requireNonNull(id, "id must not be null");
         Objects.requireNonNull(request, "request must not be null");

@@ -556,6 +556,7 @@ textarea:focus {
 }
 
 .car-showcase-card {
+  position: relative;
   display: grid;
   gap: 14px;
   padding: 18px;
@@ -858,7 +859,9 @@ dd {
   color: rgba(247, 242, 234, 0.74);
 }
 
-.favorites-strip,.similar-section{display:grid;gap:.75rem}.favorites-strip{margin-bottom:1rem}.favorite-chip-list{display:flex;flex-wrap:wrap;gap:.6rem}.favorite-chip,.similar-card,.favorite-toggle{border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.06);color:#f7f2ea}.favorite-chip{padding:.45rem .8rem}.favorite-toggle{position:absolute;top:.9rem;right:.9rem;width:2.2rem;height:2.2rem;padding:0}.gallery-row{margin-bottom:1rem}.gallery-thumb{width:5rem;height:5rem;object-fit:cover}.similar-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:.65rem}.similar-card{display:grid;gap:.2rem;padding:.8rem;text-align:left}
+.detail-filter-panel{display:grid;gap:14px;margin-bottom:18px;padding:18px;border-radius:20px;background:rgba(255,255,255,.04)}.detail-filter-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px}
+
+.similar-section{display:grid;gap:.75rem}.similar-card,.favorite-toggle{border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.06);color:#f7f2ea}.favorite-toggle{position:absolute;top:.9rem;right:.9rem;width:2.2rem;height:2.2rem;padding:0;box-shadow:none;opacity:1;visibility:visible}.favorite-toggle i{opacity:1;color:rgba(247,242,234,.92)}.favorite-toggle.active{border-color:rgba(255,99,132,.55);background:rgba(255,99,132,.18);color:#ff5c78}.favorite-toggle.active i{color:#ff5c78}.gallery-thumb{width:5rem;height:5rem;object-fit:cover}.similar-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:.65rem}.similar-card{display:grid;gap:.2rem;padding:.8rem;text-align:left}
 
 @media (max-width: 1100px) {
   .layout,
@@ -867,6 +870,10 @@ dd {
   }
 
   .search-header-form {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .detail-filter-grid {
     grid-template-columns: 1fr 1fr;
   }
 
@@ -893,7 +900,8 @@ dd {
   .account-grid,
   .account-fields,
   .booking-fields,
-  .search-header-form {
+  .search-header-form,
+  .detail-filter-grid {
     grid-template-columns: 1fr;
   }
 

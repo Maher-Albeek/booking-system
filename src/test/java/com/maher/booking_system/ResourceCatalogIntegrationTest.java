@@ -45,6 +45,19 @@ class ResourceCatalogIntegrationTest {
     }
 
     @Test
+    void catalogSupportsUserIdAndFavoritesEndpointReturnsOk() throws Exception {
+        mockMvc.perform(get("/api/resources/catalog")
+                        .param("pickupDateTime", "2026-03-17T10:00")
+                        .param("returnDateTime", "2026-03-17T12:00")
+                        .param("userId", "1"))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/resources/favorites")
+                        .param("userId", "1"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
     void favoritesCanBeAddedAndRemoved() throws Exception {
         mockMvc.perform(post("/api/resources/14/favorites")
                         .contentType(APPLICATION_JSON)
