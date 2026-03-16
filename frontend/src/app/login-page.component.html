@@ -55,6 +55,7 @@
               [placeholder]="i18n.t('login.placeholder.password')"
               autocomplete="current-password"
             />
+            <p class="password-hint">{{ i18n.t('login.placeholder.passwordPolicy') }}</p>
             <button type="submit" class="button sign-in" [disabled]="submitting() || resettingPassword()">
               {{ submitting() ? i18n.t('login.action.signingIn') : i18n.t('login.mode.login') }}
             </button>
@@ -100,6 +101,7 @@
               [placeholder]="i18n.t('login.placeholder.passwordMin')"
               autocomplete="new-password"
             />
+            <p class="password-hint">{{ i18n.t('login.placeholder.passwordPolicy') }}</p>
             <button type="submit" class="button sign-in" [disabled]="registerSubmitting()">
               {{ registerSubmitting() ? i18n.t('login.action.creatingAccount') : i18n.t('login.action.registerAsUser') }}
             </button>

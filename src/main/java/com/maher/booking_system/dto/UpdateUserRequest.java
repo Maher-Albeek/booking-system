@@ -1,9 +1,14 @@
 package com.maher.booking_system.dto;
 
+import jakarta.validation.constraints.Email;
+
 import java.util.List;
 import java.util.Map;
 
 public record UpdateUserRequest(
+        String name,
+        @Email(message = "email must be valid")
+        String email,
         String firstName,
         String lastName,
         String address,

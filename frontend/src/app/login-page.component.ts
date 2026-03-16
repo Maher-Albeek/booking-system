@@ -102,8 +102,8 @@ export class LoginPageComponent {
       return;
     }
 
-    if (newPassword.length < 6) {
-      this.error.set(this.i18n.t('login.error.passwordLength'));
+    if (!this.isStrongPassword(newPassword)) {
+      this.error.set(this.i18n.t('login.error.passwordPolicy'));
       return;
     }
 
@@ -135,8 +135,8 @@ export class LoginPageComponent {
       return;
     }
 
-    if (password.length < 6) {
-      this.registerError.set(this.i18n.t('login.error.passwordLength'));
+    if (!this.isStrongPassword(password)) {
+      this.registerError.set(this.i18n.t('login.error.passwordPolicy'));
       return;
     }
 
@@ -158,7 +158,17 @@ export class LoginPageComponent {
   }
 
   protected startGoogleAuth(): void {
-    window.location.href = '/api/auth/oauth2/authorization/google';
+    this.notifications.info(this.i18n.t('login.info.googleNotConfigured'));
+  }
+
+  private isStrongPassword(password: string): boolean {
+    return (
+      password.length >= 8 &&
+      /[a-z]/.test(password) &&
+      /[A-Z]/.test(password) &&
+      /\d/.test(password) &&
+      /[^A-Za-z\d]/.test(password)
+    );
   }
 
   private readApiError(error: HttpErrorResponse, fallback: string): string {

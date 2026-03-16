@@ -40,8 +40,8 @@ class AuthResetPasswordIntegrationTest {
                         .contentType(APPLICATION_JSON)
                         .content("""
                                 {
-                                  "identifier": "maher",
-                                  "newPassword": "abcdef"
+                                  "identifier": "malbeek92@gmail.com",
+                                  "newPassword": "Abcdef1!"
                                 }
                                 """))
                 .andExpect(status().isOk());

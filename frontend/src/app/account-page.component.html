@@ -102,6 +102,32 @@
 
           <div class="field-grid field-grid-2">
             <label class="field">
+              <span>{{ i18n.t('login.field.name') }}</span>
+              <input
+                class="account-input"
+                type="text"
+                name="accountDisplayName"
+                [ngModel]="accountDraft.name"
+                (ngModelChange)="accountDraft.name = $event"
+                autocomplete="name"
+              />
+            </label>
+
+            <label class="field">
+              <span>{{ i18n.t('login.field.email') }}</span>
+              <input
+                class="account-input"
+                type="email"
+                name="accountEmail"
+                [ngModel]="accountDraft.email"
+                (ngModelChange)="accountDraft.email = $event"
+                autocomplete="email"
+              />
+            </label>
+          </div>
+
+          <div class="field-grid field-grid-2">
+            <label class="field">
               <span>{{ i18n.t('account.field.firstName') }}</span>
               <input
                 class="account-input"
@@ -123,13 +149,6 @@
                 (ngModelChange)="accountDraft.lastName = $event"
                 autocomplete="family-name"
               />
-            </label>
-          </div>
-
-          <div class="field-grid field-grid-1">
-            <label class="field">
-              <span>{{ i18n.t('login.field.email') }}</span>
-              <input class="account-input" type="email" [value]="auth.user()?.email || ''" autocomplete="email" readonly />
             </label>
           </div>
 
@@ -263,9 +282,9 @@
 
             <aside class="password-requirements">
               <p class="requirements-title">{{ i18n.t('account.subtitle.password') }}</p>
-              <p class="text-muted">{{ i18n.t('login.placeholder.passwordMin') }}</p>
+              <p class="text-muted">{{ i18n.t('login.placeholder.passwordPolicy') }}</p>
               <ul>
-                <li>{{ i18n.t('login.placeholder.passwordMin') }}</li>
+                <li>{{ i18n.t('login.placeholder.passwordPolicy') }}</li>
                 <li>{{ i18n.t('account.error.passwordMismatch') }}</li>
                 <li>{{ i18n.t('account.error.passwordRequired') }}</li>
               </ul>

@@ -22,11 +22,15 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.regex.Pattern;
 
 @Service
 public class UsersService {
     private static final String BASE64_PASSWORD_PREFIX = "b64:";
     private static final BCryptPasswordEncoder PASSWORD_ENCODER = new BCryptPasswordEncoder();
+    private static final int MIN_PASSWORD_LENGTH = 8;
+    private static final Pattern STRONG_PASSWORD_PATTERN =
+            Pattern.compile("^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[^A-Za-z\\d]).+$");
     private final UsersRepository usersRepository;
 
     public UsersService(UsersRepository usersRepository){
@@ -96,9 +100,7 @@ public class UsersService {
             throw new IllegalArgumentException("Email or username is required");
         }
 
-        if (normalizedNewPassword.length() < 6) {
-            throw new IllegalArgumentException("Password must be at least 6 characters long");
-        }
+        validatePasswordPolicy(normalizedNewPassword);
 
         Users user = usersRepository.findAll().stream()
                 .filter(existingUser -> matchesIdentifier(existingUser, safeIdentifier))
@@ -119,12 +121,25 @@ public class UsersService {
         UpdateUserRequest safeRequest = Objects.requireNonNull(request, "request must not be null");
 
         Users existingUser = getRequiredUser(id);
+        String normalizedName = normalizeOptional(safeRequest.name());
+        String normalizedEmail = normalizeEmail(safeRequest.email());
         String addressStreet = normalizeAddressPart(safeRequest.addressStreet());
         String addressHouseNumber = normalizeAddressPart(safeRequest.addressHouseNumber());
         String addressPostalCode = normalizeAddressPart(safeRequest.addressPostalCode());
         String addressCity = normalizeAddressPart(safeRequest.addressCity());
         String addressCountry = normalizeAddressPart(safeRequest.addressCountry());
         String legacyAddress = normalizeOptional(safeRequest.address());
+
+        if (normalizedName != null) {
+            existingUser.setName(normalizedName);
+        }
+
+        if (normalizedEmail != null && !normalizedEmail.equalsIgnoreCase(existingUser.getEmail())) {
+            if (emailExists(normalizedEmail, existingUser.getId())) {
+                throw new IllegalArgumentException("An account with this email already exists");
+            }
+            existingUser.setEmail(normalizedEmail);
+        }
 
         if (legacyAddress != null && addressStreet == null) {
             addressStreet = legacyAddress;
@@ -166,11 +181,9 @@ public class UsersService {
         if(normalizedName.isBlank() || normalizedEmail.isBlank()) {
             throw new IllegalArgumentException("Name and email cannot be null");
         }
-        if(normalizedPassword.length() < 6) {
-            throw new IllegalArgumentException("Password must be at least 6 characters long");
-        }
+        validatePasswordPolicy(normalizedPassword);
 
-        if (emailExists(normalizedEmail)) {
+        if (emailExists(normalizedEmail, null)) {
             throw new IllegalArgumentException("An account with this email already exists");
         }
 
@@ -254,12 +267,30 @@ public class UsersService {
         }
     }
 
-    private boolean emailExists(String email) {
+    private boolean emailExists(String email, Long ignoredUserId) {
         return usersRepository.findAll().stream()
+                .filter(user -> ignoredUserId == null || !Objects.equals(user.getId(), ignoredUserId))
                 .map(Users::getEmail)
                 .filter(Objects::nonNull)
                 .map(existingEmail -> existingEmail.trim().toLowerCase(Locale.ROOT))
                 .anyMatch(email::equals);
+    }
+
+    private String normalizeEmail(String email) {
+        String normalizedEmail = normalizeOptional(email);
+        return normalizedEmail == null ? null : normalizedEmail.toLowerCase(Locale.ROOT);
+    }
+
+    private void validatePasswordPolicy(String password) {
+        if (password.length() < MIN_PASSWORD_LENGTH) {
+            throw new IllegalArgumentException("Password must be at least 8 characters long");
+        }
+
+        if (!STRONG_PASSWORD_PATTERN.matcher(password).matches()) {
+            throw new IllegalArgumentException(
+                    "Password must include uppercase, lowercase, number, and special character"
+            );
+        }
     }
 
     private String normalizeRole(String role) {
