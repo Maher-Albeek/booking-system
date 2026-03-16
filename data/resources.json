@@ -16,6 +16,14 @@
   "baggageBags" : null,
   "hasAirConditioning" : null,
   "horsepower" : null,
+  "kmPerDayLimit" : 250,
+  "extraKmFeePerKm" : 0.45,
+  "lateFeePerHour" : 18.0,
+  "depositAmount" : 500.0,
+  "maintenanceStartDateTime" : null,
+  "maintenanceEndDateTime" : null,
+  "maintenanceNotes" : null,
+  "favoriteUserIds" : [ ],
   "active" : true,
   "photoUrls" : [ ]
 }, {
@@ -36,6 +44,14 @@
   "baggageBags" : null,
   "hasAirConditioning" : null,
   "horsepower" : null,
+  "kmPerDayLimit" : 220,
+  "extraKmFeePerKm" : 0.4,
+  "lateFeePerHour" : 20.0,
+  "depositAmount" : 450.0,
+  "maintenanceStartDateTime" : null,
+  "maintenanceEndDateTime" : null,
+  "maintenanceNotes" : null,
+  "favoriteUserIds" : [ ],
   "active" : true,
   "photoUrls" : [ ]
 }, {
@@ -56,6 +72,14 @@
   "baggageBags" : null,
   "hasAirConditioning" : null,
   "horsepower" : null,
+  "kmPerDayLimit" : 280,
+  "extraKmFeePerKm" : 0.3,
+  "lateFeePerHour" : 16.0,
+  "depositAmount" : 400.0,
+  "maintenanceStartDateTime" : "2026-03-18T09:00:00",
+  "maintenanceEndDateTime" : "2026-03-18T17:00:00",
+  "maintenanceNotes" : "Scheduled battery inspection and tire rotation.",
+  "favoriteUserIds" : [ ],
   "active" : true,
   "photoUrls" : [ ]
 }, {
@@ -156,6 +180,14 @@
   "baggageBags" : null,
   "hasAirConditioning" : true,
   "horsepower" : null,
+  "kmPerDayLimit" : 240,
+  "extraKmFeePerKm" : 0.25,
+  "lateFeePerHour" : 14.0,
+  "depositAmount" : 350.0,
+  "maintenanceStartDateTime" : null,
+  "maintenanceEndDateTime" : null,
+  "maintenanceNotes" : null,
+  "favoriteUserIds" : [ ],
   "active" : true,
   "photoUrls" : [ "/api/resources/11/photos/photo-4f15caf5-5dc5-4119-bc4c-2ab3d96e5f6b.png" ]
 }, {
@@ -216,6 +248,14 @@
   "baggageBags" : 3,
   "hasAirConditioning" : true,
   "horsepower" : 150,
+  "kmPerDayLimit" : 260,
+  "extraKmFeePerKm" : 0.22,
+  "lateFeePerHour" : 12.0,
+  "depositAmount" : 300.0,
+  "maintenanceStartDateTime" : null,
+  "maintenanceEndDateTime" : null,
+  "maintenanceNotes" : null,
+  "favoriteUserIds" : [ ],
   "active" : true,
   "photoUrls" : [ "/api/resources/14/photos/photo-f7fd209c-0615-4249-900e-36dc02ee00a7.png" ]
 } ]

@@ -273,6 +273,28 @@
   gap: 1.15rem;
 }
 
+.saved-favorites {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.favorite-summary-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.75rem;
+}
+
+.favorite-summary-card {
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.8rem 0.9rem;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  text-decoration: none;
+  color: #f7f2ea;
+}
+
 .password-column {
   display: grid;
   gap: 0.82rem;

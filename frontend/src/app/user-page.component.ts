@@ -75,7 +75,16 @@ type Resource = {
   baggageBags: number | null;
   hasAirConditioning: boolean | null;
   horsepower: number | null;
+  kmPerDayLimit: number | null;
+  extraKmFeePerKm: number | null;
+  lateFeePerHour: number | null;
+  depositAmount: number | null;
+  maintenanceStartDateTime: string | null;
+  maintenanceEndDateTime: string | null;
+  maintenanceNotes: string | null;
   active: boolean;
+  available: boolean;
+  favorite: boolean;
   photoUrls: string[];
 };
 
@@ -227,6 +236,9 @@ export class UserPageComponent {
   protected readonly carDetailsId = signal<number | null>(null);
 
   protected readonly cars = signal<Resource[]>([]);
+  protected readonly catalogCars = signal<Resource[]>([]);
+  protected readonly favoriteCars = signal<Resource[]>([]);
+  protected readonly similarCars = signal<Resource[]>([]);
   protected readonly users = signal<User[]>([]);
   protected readonly bookings = signal<Booking[]>([]);
   protected readonly profileUser = signal<User | null>(null);
@@ -319,8 +331,8 @@ export class UserPageComponent {
       return false;
     }
 
-    const startDate = new Date(`${start}T00:00:00`);
-    const endDate = new Date(`${end}T00:00:00`);
+    const startDate = new Date(start);
+    const endDate = new Date(end);
 
     if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) {
       return false;
@@ -330,53 +342,54 @@ export class UserPageComponent {
   });
 
   protected readonly hasCompleteSearchFilters = computed(() => {
-    const location = this.searchLocation().trim();
     const start = this.searchStartDate().trim();
     const end = this.searchEndDate().trim();
-    return Boolean(location && start && end);
+    return Boolean(start && end);
   });
 
   protected readonly filteredCarSummaries = computed<CarSummary[]>(() => {
     if (!this.hasCompleteSearchFilters()) {
       return [];
     }
-
-    const locationQuery = this.searchLocation().trim().toLowerCase();
-    const start = this.searchStartDate().trim();
-    const end = this.searchEndDate().trim();
-    const requestedStart = new Date(`${start}T00:00:00`);
-    const requestedEnd = new Date(`${end}T23:59:59`);
-
-    if (Number.isNaN(requestedStart.getTime()) || Number.isNaN(requestedEnd.getTime())) {
-      return [];
-    }
-
-    return this.carSummaries().filter((car) => {
-      const matchesLocation = car.location.toLowerCase().includes(locationQuery);
-      const matchesDateRange = this.isCarAvailableInDateRange(car.id, requestedStart, requestedEnd);
-
-      return matchesLocation && matchesDateRange;
-    });
+    const bookings = this.bookings();
+    return [...this.catalogCars()]
+      .sort((left, right) => left.name.localeCompare(right.name))
+      .map((car) => ({
+        ...car,
+        confirmedBookings: bookings.filter(
+          (booking) => booking.resourceId === car.id && booking.status === 'CONFIRMED'
+        ).length
+      }));
   });
   protected readonly visibleFilteredCarSummaries = computed<CarSummary[]>(() =>
     this.filteredCarSummaries().slice(0, this.visibleCarCount())
   );
   protected readonly selectedSearchDays = computed(() =>
-    this.calculateSearchDays(this.searchStartDate().trim(), this.searchEndDate().trim())
+    this.calculateRentalDays(this.searchStartDate().trim(), this.searchEndDate().trim())
   );
   protected readonly canShowMoreCars = computed(
     () => this.filteredCarSummaries().length > this.visibleFilteredCarSummaries().length
   );
 
   protected readonly selectedCar = computed(
-    () => this.cars().find((car) => car.id === this.selectedCarId()) ?? null
+    () => this.cars().find((car) => car.id === this.selectedCarId()) ?? this.catalogCars().find((car) => car.id === this.selectedCarId()) ?? null
   );
 
   protected readonly selectedCarPhotos = computed(() => this.selectedCar()?.photoUrls ?? []);
 
   protected readonly selectedCarDetails = computed(
-    () => this.carSummaries().find((car) => car.id === this.carDetailsId()) ?? null
+    () => this.filteredCarSummaries().find((car) => car.id === this.carDetailsId()) ?? this.carSummaries().find((car) => car.id === this.carDetailsId()) ?? null
   );
+
+  protected readonly favoriteCarSummaries = computed<CarSummary[]>(() => {
+    const bookings = this.bookings();
+    return this.favoriteCars().map((car) => ({
+      ...car,
+      confirmedBookings: bookings.filter(
+        (booking) => booking.resourceId === car.id && booking.status === 'CONFIRMED'
+      ).length
+    }));
+  });
 
   protected readonly bookingWindowPreview = computed(() => {
     const start = this.bookingStartDateTime().trim();
@@ -556,6 +569,32 @@ export class UserPageComponent {
     this.loadData();
   }
 
+  protected toggleFavorite(car: Resource): void {
+    const authenticatedUser = this.auth.user();
+    if (!authenticatedUser) {
+      this.notifications.info(this.i18n.t('user.favorite.loginRequired'));
+      return;
+    }
+
+    const request = car.favorite
+      ? this.http.delete<ResourceResponse>(`/api/resources/${car.id}/favorites/${authenticatedUser.id}`)
+      : this.http.post<ResourceResponse>(`/api/resources/${car.id}/favorites`, { userId: authenticatedUser.id });
+
+    request
+      .pipe(takeUntilDestroyed(this.destroyRef), timeout(10000))
+      .subscribe({
+        next: (resource) => {
+          const normalized = this.normalizeResource(resource);
+          this.replaceCatalogResource(normalized);
+          this.refreshFavoriteCars();
+          this.refreshSimilarCars();
+        },
+        error: (error: HttpErrorResponse) => {
+          this.error.set(this.readApiError(error, this.i18n.t('user.favorite.updateFailed')));
+        }
+      });
+  }
+
   protected selectCar(carId: number): void {
     this.selectedCarId.set(carId);
     this.success.set(null);
@@ -588,6 +627,7 @@ export class UserPageComponent {
   protected openCarDetails(carId: number): void {
     this.carDetailsId.set(carId);
     this.success.set(null);
+    this.refreshSimilarCars();
   }
 
   protected closeCarDetails(): void {
@@ -950,6 +990,7 @@ export class UserPageComponent {
 
   protected applySearchFilters(): void {
     this.syncSearchFiltersFromInput();
+    this.fetchCatalogCars();
   }
 
   protected clearSearchFilters(): void {
@@ -976,6 +1017,7 @@ export class UserPageComponent {
       this.searchLocation.set('');
       this.searchStartDate.set('');
       this.searchEndDate.set('');
+      this.catalogCars.set([]);
       this.visibleCarCount.set(CAR_PAGE_SIZE);
       if (this.carDetailsId() !== null) {
         this.carDetailsId.set(null);
@@ -1051,6 +1093,7 @@ export class UserPageComponent {
             .sort((left, right) => left.sortOrder - right.sortOrder);
 
           this.cars.set(normalizedCars);
+          this.catalogCars.set([]);
           this.users.set(normalizedUsers);
           this.bookings.set(bookings);
           this.publishedOfferSections.set(normalizedOffers);
@@ -1064,6 +1107,10 @@ export class UserPageComponent {
           }
 
           this.syncDefaults(normalizedCars, normalizedUsers, normalizedProfile);
+          this.refreshFavoriteCars();
+          if (this.hasCompleteSearchFilters()) {
+            this.fetchCatalogCars();
+          }
         },
         error: (error: HttpErrorResponse) => {
           this.error.set(
@@ -1221,8 +1268,95 @@ export class UserPageComponent {
       hasAirConditioning:
         typeof resource.hasAirConditioning === 'boolean' ? resource.hasAirConditioning : null,
       horsepower: this.normalizeWholeNumber(resource.horsepower),
+      kmPerDayLimit: this.normalizeWholeNumber(resource.kmPerDayLimit),
+      extraKmFeePerKm: this.normalizeDecimal(resource.extraKmFeePerKm),
+      lateFeePerHour: this.normalizeDecimal(resource.lateFeePerHour),
+      depositAmount: this.normalizeDecimal(resource.depositAmount),
+      maintenanceStartDateTime: resource.maintenanceStartDateTime ?? null,
+      maintenanceEndDateTime: resource.maintenanceEndDateTime ?? null,
+      maintenanceNotes: this.normalizeText(resource.maintenanceNotes),
+      available: typeof resource.available === 'boolean' ? resource.available : resource.active,
+      favorite: typeof resource.favorite === 'boolean' ? resource.favorite : false,
       photoUrls: Array.isArray(resource.photoUrls) ? resource.photoUrls : []
     };
+  }
+
+  private fetchCatalogCars(): void {
+    if (!this.hasCompleteSearchFilters()) {
+      this.catalogCars.set([]);
+      return;
+    }
+
+    const params = new URLSearchParams();
+    const location = this.searchLocation().trim();
+    if (location) {
+      params.set('location', location);
+    }
+    params.set('pickupDateTime', this.searchStartDate().trim());
+    params.set('returnDateTime', this.searchEndDate().trim());
+    if (this.auth.user()?.id) {
+      params.set('userId', String(this.auth.user()!.id));
+    }
+
+    this.http
+      .get<ResourceResponse[]>(`/api/resources/catalog?${params.toString()}`)
+      .pipe(takeUntilDestroyed(this.destroyRef), timeout(10000))
+      .subscribe({
+        next: (resources) => {
+          this.catalogCars.set(resources.map((resource) => this.normalizeResource(resource)));
+          this.refreshSimilarCars();
+        },
+        error: (error: HttpErrorResponse) => {
+          this.error.set(this.readApiError(error, this.i18n.t('user.error.loadCatalogFailed')));
+        }
+      });
+  }
+
+  private refreshFavoriteCars(): void {
+    const authenticatedUser = this.auth.user();
+    if (!authenticatedUser) {
+      this.favoriteCars.set([]);
+      return;
+    }
+
+    this.http
+      .get<ResourceResponse[]>(`/api/resources/favorites?userId=${authenticatedUser.id}`)
+      .pipe(takeUntilDestroyed(this.destroyRef), timeout(10000), catchError(() => of([] as ResourceResponse[])))
+      .subscribe((resources) => {
+        this.favoriteCars.set(resources.map((resource) => this.normalizeResource(resource)));
+      });
+  }
+
+  private refreshSimilarCars(): void {
+    const selectedCarId = this.carDetailsId();
+    if (!selectedCarId) {
+      this.similarCars.set([]);
+      return;
+    }
+
+    const params = new URLSearchParams();
+    if (this.searchStartDate().trim()) {
+      params.set('pickupDateTime', this.searchStartDate().trim());
+    }
+    if (this.searchEndDate().trim()) {
+      params.set('returnDateTime', this.searchEndDate().trim());
+    }
+    if (this.auth.user()?.id) {
+      params.set('userId', String(this.auth.user()!.id));
+    }
+
+    this.http
+      .get<ResourceResponse[]>(`/api/resources/${selectedCarId}/similar?${params.toString()}`)
+      .pipe(takeUntilDestroyed(this.destroyRef), timeout(10000), catchError(() => of([] as ResourceResponse[])))
+      .subscribe((resources) => {
+        this.similarCars.set(resources.map((resource) => this.normalizeResource(resource)));
+      });
+  }
+
+  private replaceCatalogResource(resource: Resource): void {
+    this.cars.update((cars) => cars.map((entry) => (entry.id === resource.id ? { ...entry, ...resource } : entry)));
+    this.catalogCars.update((cars) => cars.map((entry) => (entry.id === resource.id ? { ...entry, ...resource } : entry)));
+    this.similarCars.update((cars) => cars.map((entry) => (entry.id === resource.id ? { ...entry, ...resource } : entry)));
   }
 
   private normalizeOfferSection(section: Partial<OfferSection>, fallbackIndex: number): OfferSection {
@@ -1448,7 +1582,7 @@ export class UserPageComponent {
       .join('');
   }
 
-  private formatPeriod(start: string, end: string): string {
+  protected formatPeriod(start: string, end: string): string {
     return `${this.formatDay(start)} | ${this.formatTime(start)} - ${this.formatTime(end)}`;
   }
 
@@ -1539,40 +1673,6 @@ export class UserPageComponent {
     }
 
     return Number((car.dailyPrice * days).toFixed(2));
-  }
-
-  private calculateSearchDays(startValue: string, endValue: string): number | null {
-    if (!startValue || !endValue) {
-      return null;
-    }
-
-    const startParts = startValue.split('-').map((part) => Number(part));
-    const endParts = endValue.split('-').map((part) => Number(part));
-    if (startParts.length !== 3 || endParts.length !== 3) {
-      return null;
-    }
-
-    const [startYear, startMonth, startDay] = startParts;
-    const [endYear, endMonth, endDay] = endParts;
-    if (
-      !Number.isInteger(startYear) ||
-      !Number.isInteger(startMonth) ||
-      !Number.isInteger(startDay) ||
-      !Number.isInteger(endYear) ||
-      !Number.isInteger(endMonth) ||
-      !Number.isInteger(endDay)
-    ) {
-      return null;
-    }
-
-    const startUtcMs = Date.UTC(startYear, startMonth - 1, startDay);
-    const endUtcMs = Date.UTC(endYear, endMonth - 1, endDay);
-    if (startUtcMs > endUtcMs) {
-      return null;
-    }
-
-    const dayInMs = 24 * 60 * 60 * 1000;
-    return Math.max(1, Math.round((endUtcMs - startUtcMs) / dayInMs));
   }
 
   private normalizeWholeNumber(value: unknown): number | null {

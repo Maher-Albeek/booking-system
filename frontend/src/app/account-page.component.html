@@ -228,6 +228,27 @@
 
           <hr class="divider" />
 
+          @if (favoriteCars().length) {
+            <section class="saved-favorites">
+              <div class="password-header">
+                <span>{{ i18n.t('user.favorite.eyebrow') }}</span>
+                <strong>{{ i18n.t('user.favorite.title') }}</strong>
+              </div>
+
+              <div class="favorite-summary-list">
+                @for (car of favoriteCars(); track car.id) {
+                  <a class="favorite-summary-card" routerLink="/offers">
+                    <strong>{{ car.name }}</strong>
+                    <span>{{ car.location }}</span>
+                    <span>{{ car.dailyPrice !== null ? car.dailyPrice : '-' }} {{ car.priceUnit || 'EUR' }}</span>
+                  </a>
+                }
+              </div>
+            </section>
+
+            <hr class="divider" />
+          }
+
           <section class="password-layout">
             <div class="password-column">
               <div class="password-header">

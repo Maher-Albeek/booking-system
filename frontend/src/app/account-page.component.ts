@@ -75,6 +75,14 @@ type UserResponse = {
   paymentDetails?: Record<string, string> | null;
 };
 
+type FavoriteCar = {
+  id: number;
+  name: string;
+  location: string;
+  dailyPrice: number | null;
+  priceUnit: string | null;
+};
+
 type AccountDraft = {
   name: string;
   email: string;
@@ -113,6 +121,7 @@ export class AccountPageComponent {
   protected readonly saving = signal(false);
   protected readonly passwordSaving = signal(false);
   protected readonly avatarUploading = signal(false);
+  protected readonly favoriteCars = signal<FavoriteCar[]>([]);
   protected readonly error = signal<string | null>(null);
   protected readonly success = signal<string | null>(null);
   protected readonly newPassword = signal('');
@@ -446,6 +455,14 @@ export class AccountPageComponent {
         error: (error: HttpErrorResponse) => {
           this.error.set(this.readApiError(error, this.i18n.t('account.error.loadFailed')));
         }
+      });
+
+    this.http
+      .get<FavoriteCar[]>(`/api/resources/favorites?userId=${authenticatedUser.id}`)
+      .pipe(takeUntilDestroyed(this.destroyRef), timeout(10000))
+      .subscribe({
+        next: (cars) => this.favoriteCars.set(cars),
+        error: () => this.favoriteCars.set([])
       });
   }
 

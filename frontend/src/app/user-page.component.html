@@ -60,7 +60,7 @@
           <label class="field">
             <span>{{ i18n.t('common.startDate') }}</span>
             <input
-              type="date"
+              type="datetime-local"
               name="homeSearchStartDate"
               [ngModel]="searchStartDateInput()"
               (ngModelChange)="searchStartDateInput.set($event)"
@@ -70,7 +70,7 @@
           <label class="field">
             <span>{{ i18n.t('common.endDate') }}</span>
             <input
-              type="date"
+              type="datetime-local"
               name="homeSearchEndDate"
               [ngModel]="searchEndDateInput()"
               (ngModelChange)="searchEndDateInput.set($event)"
@@ -174,6 +174,26 @@
   <section class="layout">
     @if (pageMode === 'offers') {
       <article class="panel fleet-panel">
+      @if (auth.isAuthenticated() && favoriteCarSummaries().length) {
+        <section class="favorites-strip">
+          <div class="panel-header">
+            <div>
+              <p class="eyebrow">{{ i18n.t('user.favorite.eyebrow') }}</p>
+              <h3>{{ i18n.t('user.favorite.title') }}</h3>
+            </div>
+          </div>
+
+          <div class="favorite-chip-list">
+            @for (car of favoriteCarSummaries(); track car.id) {
+              <button type="button" class="favorite-chip" (click)="openCarDetails(car.id)">
+                <i class="fa-solid fa-heart" aria-hidden="true"></i>
+                <span>{{ car.name }}</span>
+              </button>
+            }
+          </div>
+        </section>
+      }
+
       <div class="panel-header">
         <div>
           <p class="eyebrow">{{ i18n.t('user.fleet.eyebrow') }}</p>
@@ -199,6 +219,15 @@
                 <p>{{ car.description || car.carType || i18n.t('user.fleet.fleetVehicle') }}</p>
               </div>
 
+              <button
+                type="button"
+                class="favorite-toggle"
+                (click)="$event.stopPropagation(); toggleFavorite(car)"
+                [attr.aria-pressed]="car.favorite"
+              >
+                <i [class]="car.favorite ? 'fa-solid fa-heart' : 'fa-regular fa-heart'" aria-hidden="true"></i>
+              </button>
+
               <div class="car-chip-row">
                 <span class="chip">{{ car.carType || i18n.t('user.fleet.similarModel') }}</span>
                 <span class="chip"><i class="fa-solid fa-user-group" aria-hidden="true"></i> {{ car.seats ?? '-' }}</span>
@@ -216,7 +245,12 @@
               </div>
 
               <p class="car-availability">
-                <i class="fa-solid fa-check" aria-hidden="true"></i> {{ i18n.t('user.fleet.unlimitedKm') }}
+                <i class="fa-solid fa-check" aria-hidden="true"></i>
+                {{
+                  car.kmPerDayLimit !== null
+                    ? i18n.t('user.car.kmPerDayLimit', { value: car.kmPerDayLimit })
+                    : i18n.t('user.fleet.unlimitedKm')
+                }}
               </p>
 
               <div class="car-price-line">
@@ -258,6 +292,14 @@
             </div>
 
             <p class="drawer-description">{{ selectedCarDetails.description || i18n.t('user.car.noDescription') }}</p>
+
+            @if (selectedCarDetails.photoUrls.length) {
+              <div class="selected-photo-row gallery-row">
+                @for (photoUrl of selectedCarDetails.photoUrls; track photoUrl) {
+                  <img class="selected-photo-thumb gallery-thumb" [src]="photoUrl" [alt]="selectedCarDetails.name" />
+                }
+              </div>
+            }
 
             <dl>
               <div>
@@ -322,20 +364,63 @@
               </div>
               <div>
                 <dt>{{ i18n.t('user.car.status') }}</dt>
-                <dd>{{ selectedCarDetails.active ? i18n.t('user.car.available') : i18n.t('common.inactive') }}</dd>
+                <dd>{{ selectedCarDetails.available ? i18n.t('user.car.available') : i18n.t('common.unavailable') }}</dd>
               </div>
               <div>
                 <dt>{{ auth.isAuthenticated() ? i18n.t('user.car.trips') : i18n.t('user.car.access') }}</dt>
                 <dd>{{ auth.isAuthenticated() ? selectedCarDetails.confirmedBookings : i18n.t('user.car.browseOnly') }}</dd>
               </div>
+              <div>
+                <dt>{{ i18n.t('user.car.kmRule') }}</dt>
+                <dd>
+                  {{
+                    selectedCarDetails.kmPerDayLimit !== null
+                      ? i18n.t('user.car.kmPerDayLimit', { value: selectedCarDetails.kmPerDayLimit })
+                      : i18n.t('user.fleet.unlimitedKm')
+                  }}
+                </dd>
+              </div>
+              <div>
+                <dt>{{ i18n.t('user.car.extraKmFee') }}</dt>
+                <dd>{{ formatPrice(selectedCarDetails.extraKmFeePerKm, selectedCarDetails.priceUnit) }}</dd>
+              </div>
+              <div>
+                <dt>{{ i18n.t('user.car.lateFee') }}</dt>
+                <dd>{{ formatPrice(selectedCarDetails.lateFeePerHour, selectedCarDetails.priceUnit) }}</dd>
+              </div>
+              <div>
+                <dt>{{ i18n.t('user.car.deposit') }}</dt>
+                <dd>{{ formatPrice(selectedCarDetails.depositAmount, selectedCarDetails.priceUnit) }}</dd>
+              </div>
+              <div>
+                <dt>{{ i18n.t('user.car.maintenance') }}</dt>
+                <dd>
+                  {{
+                    selectedCarDetails.maintenanceStartDateTime && selectedCarDetails.maintenanceEndDateTime
+                      ? formatPeriod(selectedCarDetails.maintenanceStartDateTime, selectedCarDetails.maintenanceEndDateTime)
+                      : i18n.t('common.notScheduled')
+                  }}
+                </dd>
+              </div>
             </dl>
 
-            @if (selectedCarDetails.photoUrls.length) {
-              <div class="selected-photo-row">
-                @for (photoUrl of selectedCarDetails.photoUrls; track photoUrl) {
-                  <img class="selected-photo-thumb" [src]="photoUrl" [alt]="selectedCarDetails.name" />
-                }
-              </div>
+            @if (selectedCarDetails.maintenanceNotes) {
+              <p class="drawer-description">{{ selectedCarDetails.maintenanceNotes }}</p>
+            }
+
+            @if (similarCars().length) {
+              <section class="similar-section">
+                <p class="eyebrow">{{ i18n.t('user.similar.eyebrow') }}</p>
+                <div class="similar-grid">
+                  @for (car of similarCars(); track car.id) {
+                    <button type="button" class="similar-card" (click)="openCarDetails(car.id)">
+                      <strong>{{ car.name }}</strong>
+                      <span>{{ car.carType || car.type }}</span>
+                      <span>{{ formatPrice(car.dailyPrice, car.priceUnit) }}</span>
+                    </button>
+                  }
+                </div>
+              </section>
             }
 
             <div class="car-actions">
@@ -353,11 +438,11 @@
                 type="button"
                 class="reserve-button compact-button"
                 (click)="openReservationModal(selectedCarDetails.id)"
-                [disabled]="!selectedCarDetails.active"
+                [disabled]="!selectedCarDetails.available"
               >
                 <span class="button-content">
                   <i class="button-icon fa-solid fa-car-side" aria-hidden="true"></i>
-                  <span>{{ selectedCarDetails.active ? i18n.t('user.action.reserve') : i18n.t('common.unavailable') }}</span>
+                  <span>{{ selectedCarDetails.available ? i18n.t('user.action.reserve') : i18n.t('common.unavailable') }}</span>
                 </span>
               </button>
             </div>
