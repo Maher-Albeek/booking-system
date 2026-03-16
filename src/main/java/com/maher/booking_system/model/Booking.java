@@ -5,6 +5,8 @@ import com.maher.booking_system.model.enums.DepositHoldStatus;
 import com.maher.booking_system.model.enums.PaymentStatus;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 public class Booking {
 
@@ -33,11 +35,28 @@ public class Booking {
     private Long refundedAmountCents;
     private String refundReason;
     private LocalDateTime cancelledAt;
+    private Long offerId;
     private DepositHoldStatus depositHoldStatus;
     private Long depositHoldAmountCents;
     private String depositHoldProvider;
     private LocalDateTime depositHoldCreatedAt;
     private LocalDateTime depositHoldReleasedAt;
+    private Integer pickupOdometerKm;
+    private String pickupFuelLevel;
+    private String pickupNotes;
+    private List<String> pickupPhotoUrls = new ArrayList<>();
+    private LocalDateTime checkedInAt;
+    private Integer returnOdometerKm;
+    private LocalDateTime actualReturnDateTime;
+    private String returnNotes;
+    private List<String> returnPhotoUrls = new ArrayList<>();
+    private List<DamageReportItem> damageReports = new ArrayList<>();
+    private Long extraKmFeeCents;
+    private Long lateFeeCents;
+    private Long damageFeeCents;
+    private Long finalTotalAmountCents;
+    private String finalInvoiceNumber;
+    private LocalDateTime finalInvoiceIssuedAt;
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -120,6 +139,9 @@ public class Booking {
     public LocalDateTime getCancelledAt() { return cancelledAt; }
     public void setCancelledAt(LocalDateTime cancelledAt) { this.cancelledAt = cancelledAt; }
 
+    public Long getOfferId() { return offerId; }
+    public void setOfferId(Long offerId) { this.offerId = offerId; }
+
     public DepositHoldStatus getDepositHoldStatus() { return depositHoldStatus; }
     public void setDepositHoldStatus(DepositHoldStatus depositHoldStatus) { this.depositHoldStatus = depositHoldStatus; }
 
@@ -139,5 +161,85 @@ public class Booking {
     public LocalDateTime getDepositHoldReleasedAt() { return depositHoldReleasedAt; }
     public void setDepositHoldReleasedAt(LocalDateTime depositHoldReleasedAt) {
         this.depositHoldReleasedAt = depositHoldReleasedAt;
+    }
+
+    public Integer getPickupOdometerKm() { return pickupOdometerKm; }
+    public void setPickupOdometerKm(Integer pickupOdometerKm) { this.pickupOdometerKm = pickupOdometerKm; }
+
+    public String getPickupFuelLevel() { return pickupFuelLevel; }
+    public void setPickupFuelLevel(String pickupFuelLevel) { this.pickupFuelLevel = normalizeText(pickupFuelLevel); }
+
+    public String getPickupNotes() { return pickupNotes; }
+    public void setPickupNotes(String pickupNotes) { this.pickupNotes = normalizeText(pickupNotes); }
+
+    public List<String> getPickupPhotoUrls() {
+        return pickupPhotoUrls == null ? List.of() : pickupPhotoUrls;
+    }
+
+    public void setPickupPhotoUrls(List<String> pickupPhotoUrls) {
+        this.pickupPhotoUrls = normalizeUrls(pickupPhotoUrls);
+    }
+
+    public LocalDateTime getCheckedInAt() { return checkedInAt; }
+    public void setCheckedInAt(LocalDateTime checkedInAt) { this.checkedInAt = checkedInAt; }
+
+    public Integer getReturnOdometerKm() { return returnOdometerKm; }
+    public void setReturnOdometerKm(Integer returnOdometerKm) { this.returnOdometerKm = returnOdometerKm; }
+
+    public LocalDateTime getActualReturnDateTime() { return actualReturnDateTime; }
+    public void setActualReturnDateTime(LocalDateTime actualReturnDateTime) { this.actualReturnDateTime = actualReturnDateTime; }
+
+    public String getReturnNotes() { return returnNotes; }
+    public void setReturnNotes(String returnNotes) { this.returnNotes = normalizeText(returnNotes); }
+
+    public List<String> getReturnPhotoUrls() {
+        return returnPhotoUrls == null ? List.of() : returnPhotoUrls;
+    }
+
+    public void setReturnPhotoUrls(List<String> returnPhotoUrls) {
+        this.returnPhotoUrls = normalizeUrls(returnPhotoUrls);
+    }
+
+    public List<DamageReportItem> getDamageReports() {
+        return damageReports == null ? List.of() : damageReports;
+    }
+
+    public void setDamageReports(List<DamageReportItem> damageReports) {
+        this.damageReports = damageReports == null ? new ArrayList<>() : new ArrayList<>(damageReports);
+    }
+
+    public Long getExtraKmFeeCents() { return extraKmFeeCents; }
+    public void setExtraKmFeeCents(Long extraKmFeeCents) { this.extraKmFeeCents = extraKmFeeCents; }
+
+    public Long getLateFeeCents() { return lateFeeCents; }
+    public void setLateFeeCents(Long lateFeeCents) { this.lateFeeCents = lateFeeCents; }
+
+    public Long getDamageFeeCents() { return damageFeeCents; }
+    public void setDamageFeeCents(Long damageFeeCents) { this.damageFeeCents = damageFeeCents; }
+
+    public Long getFinalTotalAmountCents() { return finalTotalAmountCents; }
+    public void setFinalTotalAmountCents(Long finalTotalAmountCents) { this.finalTotalAmountCents = finalTotalAmountCents; }
+
+    public String getFinalInvoiceNumber() { return finalInvoiceNumber; }
+    public void setFinalInvoiceNumber(String finalInvoiceNumber) { this.finalInvoiceNumber = normalizeText(finalInvoiceNumber); }
+
+    public LocalDateTime getFinalInvoiceIssuedAt() { return finalInvoiceIssuedAt; }
+    public void setFinalInvoiceIssuedAt(LocalDateTime finalInvoiceIssuedAt) { this.finalInvoiceIssuedAt = finalInvoiceIssuedAt; }
+
+    private String normalizeText(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        return value.trim();
+    }
+
+    private List<String> normalizeUrls(List<String> values) {
+        if (values == null) {
+            return new ArrayList<>();
+        }
+        return values.stream()
+                .filter(value -> value != null && !value.isBlank())
+                .map(String::trim)
+                .toList();
     }
 }

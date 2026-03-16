@@ -23,6 +23,7 @@ public class Users {
     private String avatarUrl;
     private List<String> paymentMethods = new ArrayList<>();
     private Map<String, String> paymentDetails = new LinkedHashMap<>();
+    private List<String> permissions = new ArrayList<>();
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -89,5 +90,16 @@ public class Users {
 
     public void setPaymentDetails(Map<String, String> paymentDetails) {
         this.paymentDetails = paymentDetails == null ? new LinkedHashMap<>() : new LinkedHashMap<>(paymentDetails);
+    }
+
+    public List<String> getPermissions() {
+        if (permissions == null) {
+            permissions = new ArrayList<>();
+        }
+        return permissions;
+    }
+
+    public void setPermissions(List<String> permissions) {
+        this.permissions = permissions == null ? new ArrayList<>() : new ArrayList<>(permissions);
     }
 }

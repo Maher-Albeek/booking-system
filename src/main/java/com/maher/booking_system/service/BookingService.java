@@ -26,15 +26,18 @@ public class BookingService {
     private final BookingRepository bookingRepository;
     private final TimeSlotRepository timeSlotRepository;
     private final PaymentService paymentService;
+    private final OfferPageService offerPageService;
 
     public BookingService(
             BookingRepository bookingRepository,
             TimeSlotRepository timeSlotRepository,
-            PaymentService paymentService
+            PaymentService paymentService,
+            OfferPageService offerPageService
     ) {
         this.bookingRepository = bookingRepository;
         this.timeSlotRepository = timeSlotRepository;
         this.paymentService = paymentService;
+        this.offerPageService = offerPageService;
     }
 
     public List<Booking> getAllBookings() {
@@ -56,6 +59,8 @@ public class BookingService {
         if (!requestedStart.isBefore(requestedEnd)) {
             throw new BadRequestException("startDateTime must be before endDateTime");
         }
+
+        offerPageService.validateOfferAttribution(safeRequest.getOfferId(), safeRequest.getResourceId());
 
         TimeSlot selectedSlot = null;
         if (safeRequest.getTimeSlotId() != null) {
@@ -91,6 +96,7 @@ public class BookingService {
         Booking booking = new Booking();
         booking.setUserId(safeRequest.getUserId());
         booking.setResourceId(safeRequest.getResourceId());
+        booking.setOfferId(safeRequest.getOfferId());
         booking.setTimeSlotId(safeRequest.getTimeSlotId());
         booking.setStartDateTime(requestedStart);
         booking.setEndDateTime(requestedEnd);

@@ -1,0 +1,228 @@
+<main class="operations-shell">
+  <section class="hero">
+    <div>
+      <p class="eyebrow">Operations</p>
+      <h2>Booking check-in, return, and reporting</h2>
+      <p>Use filters to find bookings, open a booking to process pickup/return, and export the current report view.</p>
+    </div>
+    <div class="hero-actions">
+      <button type="button" (click)="loadAll()" [disabled]="loading() || busyKey() !== null">
+        {{ loading() ? 'Refreshing...' : 'Refresh' }}
+      </button>
+      <button type="button" class="ghost-button" (click)="exportCsv()" [disabled]="busyKey() === 'export'">
+        {{ busyKey() === 'export' ? 'Exporting...' : 'Export CSV' }}
+      </button>
+    </div>
+  </section>
+
+  @if (error()) {
+    <section class="banner error">{{ error() }}</section>
+  }
+
+  <section class="filters panel">
+    <label>
+      <span>Start after</span>
+      <input type="datetime-local" [(ngModel)]="filters.startDateTime" />
+    </label>
+    <label>
+      <span>End before</span>
+      <input type="datetime-local" [(ngModel)]="filters.endDateTime" />
+    </label>
+    <label>
+      <span>Status</span>
+      <select [(ngModel)]="filters.status">
+        <option value="">All</option>
+        <option value="PENDING">Pending</option>
+        <option value="ACTIVE">Active</option>
+        <option value="COMPLETED">Completed</option>
+        <option value="CANCELLED">Cancelled</option>
+        <option value="NO_SHOW">No-show</option>
+      </select>
+    </label>
+    <label>
+      <span>Car</span>
+      <select [(ngModel)]="filters.carId">
+        <option value="">All</option>
+        @for (resource of resources(); track resource.id) {
+          <option [value]="resource.id">{{ resource.name }}</option>
+        }
+      </select>
+    </label>
+    <label>
+      <span>User</span>
+      <select [(ngModel)]="filters.userId">
+        <option value="">All</option>
+        @for (user of users(); track user.id) {
+          <option [value]="user.id">{{ user.name }}</option>
+        }
+      </select>
+    </label>
+    <label>
+      <span>Payment</span>
+      <select [(ngModel)]="filters.paymentStatus">
+        <option value="">All</option>
+        <option value="PENDING">Pending</option>
+        <option value="SUCCEEDED">Succeeded</option>
+        <option value="FAILED">Failed</option>
+        <option value="REFUNDED">Refunded</option>
+      </select>
+    </label>
+    <div class="filter-actions">
+      <button type="button" (click)="applyFilters()">Apply</button>
+      <button type="button" class="ghost-button" (click)="resetFilters()">Reset</button>
+    </div>
+  </section>
+
+  <section class="content-grid">
+    <article class="panel list-panel">
+      <div class="panel-header">
+        <div>
+          <p class="eyebrow">Bookings</p>
+          <h3>{{ bookings().length }} results</h3>
+        </div>
+      </div>
+      <div class="booking-list">
+        @for (booking of bookings(); track booking.id) {
+          <button type="button" class="booking-row" [class.selected]="selectedBookingId() === booking.id" (click)="selectBooking(booking)">
+            <strong>#{{ booking.id }} {{ booking.resourceName }}</strong>
+            <span>{{ booking.userName || booking.customerName || 'Unknown customer' }}</span>
+            <span>{{ booking.startDateTime | date:'medium' }}</span>
+            <span class="pill">{{ booking.status }}</span>
+          </button>
+        } @empty {
+          <p class="empty-state">No bookings match the current filters.</p>
+        }
+      </div>
+    </article>
+
+    <article class="panel detail-panel">
+      @if (selectedBooking(); as booking) {
+        <div class="panel-header">
+          <div>
+            <p class="eyebrow">Booking Detail</p>
+            <h3>#{{ booking.id }} {{ booking.resourceName }}</h3>
+          </div>
+          <span class="pill">{{ booking.status }}</span>
+        </div>
+
+        <div class="summary-grid">
+          <div><span>Customer</span><strong>{{ booking.userName || booking.customerName || '-' }}</strong></div>
+          <div><span>Payment</span><strong>{{ booking.paymentStatus || '-' }}</strong></div>
+          <div><span>Period</span><strong>{{ booking.startDateTime | date:'short' }} to {{ booking.endDateTime | date:'short' }}</strong></div>
+          <div><span>Base total</span><strong>{{ formatMoney(booking.payableAmountCents, booking.payableCurrency) }}</strong></div>
+          <div><span>Final total</span><strong>{{ formatMoney(booking.finalTotalAmountCents ?? booking.payableAmountCents, booking.payableCurrency) }}</strong></div>
+          <div><span>Invoice</span><strong>{{ booking.finalInvoiceNumber || 'Not issued yet' }}</strong></div>
+        </div>
+
+        @if (canCheckIn(booking)) {
+          <section class="form-section">
+            <h4>Check-in</h4>
+            <div class="form-grid">
+              <label>
+                <span>Pickup odometer (km)</span>
+                <input type="number" min="0" [(ngModel)]="checkInDraft.pickupOdometerKm" />
+              </label>
+              <label>
+                <span>Fuel level</span>
+                <input type="text" [(ngModel)]="checkInDraft.pickupFuelLevel" placeholder="Full / 75% / half" />
+              </label>
+              <label class="wide">
+                <span>Internal notes</span>
+                <textarea rows="3" [(ngModel)]="checkInDraft.pickupNotes"></textarea>
+              </label>
+              <label class="wide">
+                <span>Condition photos</span>
+                <input type="file" accept="image/*" multiple (change)="onCheckInPhotoChange($event)" />
+              </label>
+            </div>
+            <div class="photo-grid">
+              @for (photo of checkInDraft.pickupPhotoUrls; track photo; let index = $index) {
+                <article class="photo-card">
+                  <img [src]="photo" alt="Check-in photo" />
+                  <button type="button" class="ghost-button" (click)="removeCheckInPhoto(index)">Remove</button>
+                </article>
+              }
+            </div>
+            <button type="button" (click)="submitCheckIn()" [disabled]="busyKey() === 'check-in'">
+              {{ busyKey() === 'check-in' ? 'Saving...' : 'Complete check-in' }}
+            </button>
+          </section>
+        }
+
+        @if (canCheckOut(booking)) {
+          <section class="form-section">
+            <h4>Check-out</h4>
+            <div class="form-grid">
+              <label>
+                <span>Return odometer (km)</span>
+                <input type="number" min="0" [(ngModel)]="checkOutDraft.returnOdometerKm" />
+              </label>
+              <label>
+                <span>Actual return time</span>
+                <input type="datetime-local" [(ngModel)]="checkOutDraft.actualReturnDateTime" />
+              </label>
+              <label class="wide">
+                <span>Return notes</span>
+                <textarea rows="3" [(ngModel)]="checkOutDraft.returnNotes"></textarea>
+              </label>
+              <label class="wide">
+                <span>Return photos</span>
+                <input type="file" accept="image/*" multiple (change)="onCheckOutPhotoChange($event)" />
+              </label>
+            </div>
+
+            <div class="photo-grid">
+              @for (photo of checkOutDraft.returnPhotoUrls; track photo; let index = $index) {
+                <article class="photo-card">
+                  <img [src]="photo" alt="Check-out photo" />
+                  <button type="button" class="ghost-button" (click)="removeCheckOutPhoto(index)">Remove</button>
+                </article>
+              }
+            </div>
+
+            <div class="damage-list">
+              <div class="panel-header compact">
+                <h4>Damage report</h4>
+                <button type="button" class="ghost-button" (click)="addDamageReport()">Add fee item</button>
+              </div>
+              @for (report of checkOutDraft.damageReports; track $index; let index = $index) {
+                <div class="damage-row">
+                  <select [ngModel]="report.type" (ngModelChange)="updateDamageReport(index, 'type', $event)">
+                    <option value="SCRATCH">Scratch</option>
+                    <option value="DENT">Dent</option>
+                    <option value="CLEANING">Cleaning</option>
+                    <option value="OTHER">Other</option>
+                  </select>
+                  <input type="text" [ngModel]="report.notes" (ngModelChange)="updateDamageReport(index, 'notes', $event)" placeholder="Notes" />
+                  <input type="number" min="0" step="100" [ngModel]="report.feeCents" (ngModelChange)="updateDamageReport(index, 'feeCents', $event)" placeholder="Fee cents" />
+                  <button type="button" class="ghost-button" (click)="removeDamageReport(index)">Remove</button>
+                </div>
+              }
+            </div>
+
+            <button type="button" (click)="submitCheckOut()" [disabled]="busyKey() === 'check-out'">
+              {{ busyKey() === 'check-out' ? 'Saving...' : 'Complete check-out' }}
+            </button>
+          </section>
+        }
+
+        <section class="fees-grid">
+          <article>
+            <span>Extra km fee</span>
+            <strong>{{ formatMoney(booking.extraKmFeeCents, booking.payableCurrency) }}</strong>
+          </article>
+          <article>
+            <span>Late fee</span>
+            <strong>{{ formatMoney(booking.lateFeeCents, booking.payableCurrency) }}</strong>
+          </article>
+          <article>
+            <span>Damage fee</span>
+            <strong>{{ formatMoney(booking.damageFeeCents, booking.payableCurrency) }}</strong>
+          </article>
+        </section>
+      } @else {
+        <p class="empty-state">Select a booking from the left to review details or process check-in/check-out.</p>
+      }
+    </article>
+  </section>
+</main>

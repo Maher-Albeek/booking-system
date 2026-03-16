@@ -1,5 +1,9 @@
 package com.maher.booking_system.model;
 
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+
 public class OfferSection {
 
     private Long id;
@@ -20,6 +24,11 @@ public class OfferSection {
     private Double titleYPercent;
     private Double descriptionXPercent;
     private Double descriptionYPercent;
+    private Boolean enabled;
+    private LocalDateTime startDateTime;
+    private LocalDateTime endDateTime;
+    private String ctaLabel;
+    private List<Long> linkedResourceIds = new ArrayList<>();
 
     public Long getId() {
         return id;
@@ -163,5 +172,45 @@ public class OfferSection {
 
     public void setDescriptionYPercent(Double descriptionYPercent) {
         this.descriptionYPercent = descriptionYPercent;
+    }
+
+    public Boolean getEnabled() {
+        return enabled;
+    }
+
+    public void setEnabled(Boolean enabled) {
+        this.enabled = enabled;
+    }
+
+    public LocalDateTime getStartDateTime() {
+        return startDateTime;
+    }
+
+    public void setStartDateTime(LocalDateTime startDateTime) {
+        this.startDateTime = startDateTime;
+    }
+
+    public LocalDateTime getEndDateTime() {
+        return endDateTime;
+    }
+
+    public void setEndDateTime(LocalDateTime endDateTime) {
+        this.endDateTime = endDateTime;
+    }
+
+    public String getCtaLabel() {
+        return ctaLabel;
+    }
+
+    public void setCtaLabel(String ctaLabel) {
+        this.ctaLabel = ctaLabel;
+    }
+
+    public List<Long> getLinkedResourceIds() {
+        return linkedResourceIds == null ? List.of() : linkedResourceIds;
+    }
+
+    public void setLinkedResourceIds(List<Long> linkedResourceIds) {
+        this.linkedResourceIds = linkedResourceIds == null ? new ArrayList<>() : new ArrayList<>(linkedResourceIds);
     }
 }

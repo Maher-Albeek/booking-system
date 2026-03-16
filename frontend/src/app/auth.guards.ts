@@ -21,6 +21,17 @@ export const adminGuard: CanActivateFn = () => {
   return auth.isAdmin() ? true : router.createUrlTree(['/offers']);
 };
 
+export const operationsGuard: CanActivateFn = () => {
+  const auth = inject(AuthStateService);
+  const router = inject(Router);
+
+  if (!auth.isAuthenticated()) {
+    return router.createUrlTree(['/login']);
+  }
+
+  return auth.canAccessOperations() ? true : router.createUrlTree(['/offers']);
+};
+
 export const loginRedirectGuard: CanActivateFn = () => {
   const auth = inject(AuthStateService);
   const router = inject(Router);

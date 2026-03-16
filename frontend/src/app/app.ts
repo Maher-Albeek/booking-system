@@ -74,6 +74,10 @@ export class App {
   protected readonly navLinks = computed<HeaderLink[]>(() => {
     const links: HeaderLink[] = [{ path: '/offers', label: this.i18n.t('app.link.offers') }];
 
+    if (this.auth.canAccessOperations()) {
+      links.push({ path: '/admin/operations', label: 'Operations' });
+    }
+
     if (this.auth.isAdmin()) {
       links.push(
         { path: '/admin/tools', label: this.i18n.t('app.link.adminTools') },

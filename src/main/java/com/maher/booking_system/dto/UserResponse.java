@@ -19,6 +19,7 @@ public record UserResponse(
         String birthDate,
         String avatarUrl,
         List<String> paymentMethods,
-        Map<String, String> paymentDetails
+        Map<String, String> paymentDetails,
+        List<String> permissions
 ) {
 }

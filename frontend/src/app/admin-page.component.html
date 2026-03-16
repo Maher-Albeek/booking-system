@@ -229,6 +229,48 @@
                   </label>
 
                   <label class="field">
+                    <span>Offer enabled</span>
+                    <select
+                      name="offerSectionEnabled"
+                      [ngModel]="section.enabled"
+                      (ngModelChange)="updateSelectedOfferSection({ enabled: $event })"
+                    >
+                      <option [ngValue]="true">Enabled</option>
+                      <option [ngValue]="false">Disabled</option>
+                    </select>
+                  </label>
+
+                  <label class="field">
+                    <span>Offer start</span>
+                    <input
+                      type="datetime-local"
+                      name="offerSectionStart"
+                      [ngModel]="section.startDateTime"
+                      (ngModelChange)="updateSelectedOfferSection({ startDateTime: $event || null })"
+                    />
+                  </label>
+
+                  <label class="field">
+                    <span>Offer end</span>
+                    <input
+                      type="datetime-local"
+                      name="offerSectionEnd"
+                      [ngModel]="section.endDateTime"
+                      (ngModelChange)="updateSelectedOfferSection({ endDateTime: $event || null })"
+                    />
+                  </label>
+
+                  <label class="field">
+                    <span>CTA label</span>
+                    <input
+                      type="text"
+                      name="offerSectionCtaLabel"
+                      [ngModel]="section.ctaLabel"
+                      (ngModelChange)="updateSelectedOfferSection({ ctaLabel: $event })"
+                    />
+                  </label>
+
+                  <label class="field">
                     <span>Background color</span>
                     <input
                       type="color"
@@ -433,11 +475,84 @@
                     </p>
                   </article>
                 </section>
+
+                <section class="offer-preview-shell">
+                  <div class="offer-preview-title-row">
+                    <p class="eyebrow">Eligible cars</p>
+                    <span>Link this offer to the cars customers can book from the offer page.</span>
+                  </div>
+
+                  <div class="offer-car-picker">
+                    @for (car of cars(); track car.id) {
+                      <label class="offer-car-option">
+                        <input
+                          type="checkbox"
+                          [checked]="isOfferCarLinked(section, car.id)"
+                          (change)="toggleOfferCarLink(section, car.id, $any($event.target).checked)"
+                        />
+                        <span>
+                          <strong>{{ car.name }}</strong>
+                          <small>{{ car.carType || car.type }} · {{ formatPrice(car.dailyPrice, car.priceUnit) }}</small>
+                        </span>
+                      </label>
+                    } @empty {
+                      <p class="empty-state">No cars available to link yet.</p>
+                    }
+                  </div>
+                </section>
               } @else {
                 <p class="empty-state">Select a section from the left or create a new one.</p>
               }
             </div>
           </div>
+
+          <section class="offer-analytics-panel">
+            <div class="panel-header">
+              <div>
+                <p class="eyebrow">Offer analytics</p>
+                <h3>Track attributed bookings and revenue</h3>
+              </div>
+              <div class="offer-toolbar">
+                <label class="field">
+                  <span>From</span>
+                  <input
+                    type="date"
+                    name="offerAnalyticsDateFrom"
+                    [ngModel]="offerAnalyticsDateFrom()"
+                    (ngModelChange)="offerAnalyticsDateFrom.set($event)"
+                  />
+                </label>
+                <label class="field">
+                  <span>To</span>
+                  <input
+                    type="date"
+                    name="offerAnalyticsDateTo"
+                    [ngModel]="offerAnalyticsDateTo()"
+                    (ngModelChange)="offerAnalyticsDateTo.set($event)"
+                  />
+                </label>
+                <button type="button" class="secondary-button" (click)="reloadOfferAnalytics()" [disabled]="isBusy('load-offer-analytics')">
+                  {{ isBusy('load-offer-analytics') ? 'Loading...' : 'Refresh analytics' }}
+                </button>
+              </div>
+            </div>
+
+            <div class="analytics-grid">
+              @for (entry of offerAnalytics(); track entry.offerId) {
+                <article class="analytics-card">
+                  <div class="analytics-card-head">
+                    <strong>{{ entry.title || ('Offer #' + entry.offerId) }}</strong>
+                    <span>{{ entry.activeNow ? 'Live now' : (entry.enabled ? 'Scheduled' : 'Disabled') }}</span>
+                  </div>
+                  <p>{{ entry.linkedCarsCount }} linked cars</p>
+                  <p>{{ entry.bookingsCount }} bookings attributed</p>
+                  <p>{{ formatMoneyFromCents(entry.revenueCents, 'EUR') }} revenue</p>
+                </article>
+              } @empty {
+                <p class="empty-state">No offer analytics available yet.</p>
+              }
+            </div>
+          </section>
         </article>
       }
 
@@ -710,6 +825,18 @@
           </label>
 
           <label class="field">
+            <span>Price per hour</span>
+            <input
+              type="number"
+              name="carHourlyPrice"
+              [(ngModel)]="carDraft.hourlyPrice"
+              min="0"
+              step="0.01"
+              placeholder="12.50"
+            />
+          </label>
+
+          <label class="field">
             <span>{{ i18n.t('admin.field.priceUnit') }}</span>
             <input
               type="text"
@@ -741,6 +868,26 @@
               max="2000"
               placeholder="190"
             />
+          </label>
+
+          <label class="field">
+            <span>Km per day limit</span>
+            <input type="number" name="carKmPerDayLimit" [(ngModel)]="carDraft.kmPerDayLimit" min="0" placeholder="250" />
+          </label>
+
+          <label class="field">
+            <span>Extra km fee / km</span>
+            <input type="number" name="carExtraKmFeePerKm" [(ngModel)]="carDraft.extraKmFeePerKm" min="0" step="0.01" placeholder="0.30" />
+          </label>
+
+          <label class="field">
+            <span>Late fee / hour</span>
+            <input type="number" name="carLateFeePerHour" [(ngModel)]="carDraft.lateFeePerHour" min="0" step="0.01" placeholder="18.00" />
+          </label>
+
+          <label class="field">
+            <span>Deposit amount</span>
+            <input type="number" name="carDepositAmount" [(ngModel)]="carDraft.depositAmount" min="0" step="0.01" placeholder="500.00" />
           </label>
 
           <div class="field">
@@ -788,6 +935,16 @@
               [(ngModel)]="carDraft.photoUrlsText"
               rows="3"
               [placeholder]="i18n.t('admin.placeholder.photoUrls')"
+            ></textarea>
+          </label>
+
+          <label class="field field-wide">
+            <span>Seasonal pricing rules</span>
+            <textarea
+              name="carSeasonalPricing"
+              [(ngModel)]="carDraft.seasonalPricingText"
+              rows="4"
+              placeholder='One JSON object per line. Example: {"label":"Summer","startDate":"2026-06-01","endDate":"2026-08-31","dailyPrice":99.9,"hourlyPrice":15}'
             ></textarea>
           </label>
 
@@ -913,6 +1070,10 @@
                   <dd>{{ formatPrice(selectedCar.dailyPrice, selectedCar.priceUnit) }}</dd>
                 </div>
                 <div>
+                  <dt>Price per hour</dt>
+                  <dd>{{ formatPrice(selectedCar.hourlyPrice, selectedCar.priceUnit) }}</dd>
+                </div>
+                <div>
                   <dt>{{ i18n.t('admin.field.priceUnit') }}</dt>
                   <dd>{{ selectedCar.priceUnit || i18n.t('common.notSet') }}</dd>
                 </div>
@@ -927,6 +1088,26 @@
                 <div>
                   <dt>{{ i18n.t('admin.field.horsepower') }}</dt>
                   <dd>{{ selectedCar.horsepower ? selectedCar.horsepower + ' PS' : i18n.t('common.notSet') }}</dd>
+                </div>
+                <div>
+                  <dt>Km / day</dt>
+                  <dd>{{ selectedCar.kmPerDayLimit ?? i18n.t('common.notSet') }}</dd>
+                </div>
+                <div>
+                  <dt>Extra km fee</dt>
+                  <dd>{{ formatPrice(selectedCar.extraKmFeePerKm, selectedCar.priceUnit) }}</dd>
+                </div>
+                <div>
+                  <dt>Late fee / hour</dt>
+                  <dd>{{ formatPrice(selectedCar.lateFeePerHour, selectedCar.priceUnit) }}</dd>
+                </div>
+                <div>
+                  <dt>Deposit</dt>
+                  <dd>{{ formatPrice(selectedCar.depositAmount, selectedCar.priceUnit) }}</dd>
+                </div>
+                <div>
+                  <dt>Seasonal pricing</dt>
+                  <dd>{{ selectedCar.seasonalPricing.length ? selectedCar.seasonalPricing.length + ' rule(s)' : i18n.t('common.notSet') }}</dd>
                 </div>
                 <div>
                   <dt>{{ i18n.t('admin.field.status') }}</dt>
@@ -1009,10 +1190,37 @@
           <label class="field">
             <span>{{ i18n.t('admin.field.role') }}</span>
             <select name="userRole" [(ngModel)]="userDraft.role">
-              <option value="USER">{{ i18n.t('app.role.user') }}</option>
+              <option value="CUSTOMER">Customer</option>
+              <option value="EMPLOYEE">Employee</option>
               <option value="ADMIN">{{ i18n.t('app.role.admin') }}</option>
             </select>
           </label>
+
+          @if (userDraft.role === 'EMPLOYEE') {
+            <div class="field field-wide permission-grid">
+              <span>Employee permissions</span>
+              <label class="checkbox-field">
+                <input type="checkbox" [checked]="hasDraftPermission('MANAGE_CARS')" (change)="toggleDraftPermission('MANAGE_CARS', $any($event.target).checked)" />
+                <span>Manage Cars</span>
+              </label>
+              <label class="checkbox-field">
+                <input type="checkbox" [checked]="hasDraftPermission('VIEW_PAYMENTS')" (change)="toggleDraftPermission('VIEW_PAYMENTS', $any($event.target).checked)" />
+                <span>View Payments</span>
+              </label>
+              <label class="checkbox-field">
+                <input type="checkbox" [checked]="hasDraftPermission('CHECKIN_CHECKOUT')" (change)="toggleDraftPermission('CHECKIN_CHECKOUT', $any($event.target).checked)" />
+                <span>Check-in/out</span>
+              </label>
+              <label class="checkbox-field">
+                <input type="checkbox" [checked]="hasDraftPermission('VIEW_USERS')" (change)="toggleDraftPermission('VIEW_USERS', $any($event.target).checked)" />
+                <span>View Users</span>
+              </label>
+              <label class="checkbox-field">
+                <input type="checkbox" [checked]="hasDraftPermission('VIEW_BOOKINGS')" (change)="toggleDraftPermission('VIEW_BOOKINGS', $any($event.target).checked)" />
+                <span>View Bookings</span>
+              </label>
+            </div>
+          }
 
           <button type="submit" [disabled]="isBusy('create-user')">
             {{ isBusy('create-user') ? i18n.t('admin.action.savingUser') : i18n.t('admin.action.addUser') }}
@@ -1026,6 +1234,9 @@
                 <div>
                   <strong>{{ user.name }}</strong>
                   <p>{{ user.email || i18n.t('admin.user.noEmail') }}</p>
+                  @if (user.permissions?.length) {
+                    <p>Permissions: {{ user.permissions?.join(', ') }}</p>
+                  }
                 </div>
                 <span class="pill">{{ roleLabel(user.role) }}</span>
               </div>

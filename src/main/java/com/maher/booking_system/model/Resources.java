@@ -1,6 +1,7 @@
 package com.maher.booking_system.model;
 
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -18,6 +19,7 @@ public class Resources {
     private String transmission;
     private String fuelType;
     private Double dailyPrice;
+    private Double hourlyPrice;
     private String priceUnit;
     private Integer baggageBags;
     private Boolean hasAirConditioning;
@@ -32,6 +34,7 @@ public class Resources {
     private List<Long> favoriteUserIds = new ArrayList<>();
     private boolean active;
     private List<String> photoUrls = new ArrayList<>();
+    private List<SeasonalPricingRule> seasonalPricing = new ArrayList<>();
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -72,6 +75,11 @@ public class Resources {
     public Double getDailyPrice() { return dailyPrice; }
     public void setDailyPrice(Double dailyPrice) {
         this.dailyPrice = dailyPrice != null && dailyPrice >= 0 ? dailyPrice : null;
+    }
+
+    public Double getHourlyPrice() { return hourlyPrice; }
+    public void setHourlyPrice(Double hourlyPrice) {
+        this.hourlyPrice = hourlyPrice != null && hourlyPrice >= 0 ? hourlyPrice : null;
     }
 
     public String getPriceUnit() { return priceUnit; }
@@ -152,6 +160,18 @@ public class Resources {
                         .filter(url -> url != null && !url.isBlank())
                         .map(String::trim)
                         .collect(java.util.stream.Collectors.toCollection(ArrayList::new));
+    }
+
+    public List<SeasonalPricingRule> getSeasonalPricing() {
+        return seasonalPricing == null ? List.of() : Collections.unmodifiableList(seasonalPricing);
+    }
+
+    public void setSeasonalPricing(List<SeasonalPricingRule> seasonalPricing) {
+        this.seasonalPricing = seasonalPricing == null
+                ? new ArrayList<>()
+                : seasonalPricing.stream()
+                .filter(java.util.Objects::nonNull)
+                .collect(java.util.stream.Collectors.toCollection(ArrayList::new));
     }
 
     private String normalizeText(String value) {

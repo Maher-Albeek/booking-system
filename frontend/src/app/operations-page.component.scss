@@ -1,0 +1,255 @@
+:host {
+  display: block;
+}
+
+.operations-shell {
+  display: grid;
+  gap: 20px;
+  min-height: 100vh;
+  padding-top: 24px;
+  color: #f7f2ea;
+}
+
+.hero,
+.panel,
+.banner {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 24px;
+  background: rgba(9, 18, 31, 0.8);
+  backdrop-filter: blur(18px);
+}
+
+.hero {
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 32px;
+  background:
+    radial-gradient(circle at top right, rgba(255, 168, 76, 0.24), transparent 36%),
+    linear-gradient(135deg, rgba(22, 25, 37, 0.96), rgba(15, 47, 69, 0.92));
+}
+
+.eyebrow {
+  margin: 0 0 10px;
+  color: #ffcb7a;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+h2,
+h3,
+h4 {
+  margin: 0;
+  font-family: 'Space Grotesk', 'Segoe UI Variable', sans-serif;
+}
+
+.hero-actions,
+.filter-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.banner {
+  padding: 16px 20px;
+}
+
+.banner.error {
+  background: rgba(205, 70, 70, 0.16);
+}
+
+.panel {
+  padding: 24px;
+}
+
+.filters {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.content-grid {
+  display: grid;
+  grid-template-columns: minmax(320px, 420px) minmax(0, 1fr);
+  gap: 18px;
+}
+
+.booking-list {
+  display: grid;
+  gap: 10px;
+}
+
+.booking-row {
+  display: grid;
+  justify-items: start;
+  gap: 4px;
+  padding: 14px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.04);
+  color: #f7f2ea;
+  box-shadow: none;
+}
+
+.booking-row.selected {
+  border: 1px solid rgba(255, 203, 122, 0.48);
+  background: rgba(255, 203, 122, 0.12);
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  font-size: 0.76rem;
+}
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+  margin-bottom: 18px;
+}
+
+.panel-header.compact {
+  margin-bottom: 12px;
+}
+
+.summary-grid,
+.fees-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.summary-grid div,
+.fees-grid article,
+.damage-list {
+  padding: 14px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.summary-grid span,
+.fees-grid span,
+label span {
+  display: block;
+  margin-bottom: 6px;
+  color: rgba(247, 242, 234, 0.72);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.form-section {
+  display: grid;
+  gap: 14px;
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.wide {
+  grid-column: 1 / -1;
+}
+
+input,
+select,
+textarea,
+button {
+  border-radius: 16px;
+  font: inherit;
+}
+
+input,
+select,
+textarea {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.05);
+  color: #f7f2ea;
+}
+
+button {
+  border: 0;
+  padding: 12px 18px;
+  background: linear-gradient(135deg, #ffd07b, #ff9e43);
+  color: #101522;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.ghost-button {
+  background: rgba(255, 255, 255, 0.08);
+  color: #f7f2ea;
+}
+
+.photo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 10px;
+}
+
+.photo-card {
+  overflow: hidden;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.photo-card img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+}
+
+.photo-card button {
+  width: calc(100% - 16px);
+  margin: 8px;
+}
+
+.damage-list {
+  display: grid;
+  gap: 10px;
+}
+
+.damage-row {
+  display: grid;
+  grid-template-columns: 180px minmax(0, 1fr) 160px auto;
+  gap: 10px;
+}
+
+.empty-state {
+  margin: 0;
+  padding: 18px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(247, 242, 234, 0.74);
+}
+
+@media (max-width: 1100px) {
+  .filters,
+  .summary-grid,
+  .fees-grid,
+  .content-grid,
+  .form-grid,
+  .damage-row {
+    grid-template-columns: 1fr;
+  }
+
+  .hero,
+  .panel-header {
+    flex-direction: column;
+  }
+}

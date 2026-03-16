@@ -2,9 +2,10 @@ import { Routes } from '@angular/router';
 
 import { AdminPageComponent } from './admin-page.component';
 import { AccountPageComponent } from './account-page.component';
-import { adminGuard, authGuard, loginRedirectGuard } from './auth.guards';
+import { adminGuard, authGuard, loginRedirectGuard, operationsGuard } from './auth.guards';
 import { LegalPageComponent } from './legal-page.component';
 import { LoginPageComponent } from './login-page.component';
+import { OperationsPageComponent } from './operations-page.component';
 import { UserPageComponent } from './user-page.component';
 
 export const routes: Routes = [
@@ -88,6 +89,12 @@ export const routes: Routes = [
     data: {
       adminPageMode: 'tools'
     }
+  },
+  {
+    path: 'admin/operations',
+    component: OperationsPageComponent,
+    title: 'Operations',
+    canActivate: [operationsGuard]
   },
   {
     path: 'admin/tools',

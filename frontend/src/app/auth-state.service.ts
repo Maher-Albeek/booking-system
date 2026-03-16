@@ -2,7 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { Observable, tap } from 'rxjs';
 
-export type AuthRole = 'USER' | 'ADMIN';
+export type AuthRole = 'CUSTOMER' | 'EMPLOYEE' | 'ADMIN';
 
 export type AuthUser = {
   id: number;
@@ -20,6 +20,7 @@ export type AuthUser = {
   avatarUrl: string | null;
   paymentMethods: string[];
   paymentDetails: Record<string, string>;
+  permissions: string[];
 };
 
 @Injectable({ providedIn: 'root' })
@@ -30,6 +31,8 @@ export class AuthStateService {
   readonly user = signal<AuthUser | null>(this.readUser());
   readonly isAuthenticated = computed(() => this.user() !== null);
   readonly isAdmin = computed(() => this.user()?.role === 'ADMIN');
+  readonly isEmployee = computed(() => this.user()?.role === 'EMPLOYEE');
+  readonly canAccessOperations = computed(() => this.isAdmin() || this.isEmployee());
 
   login(identifier: string, password: string): Observable<AuthUser> {
     return this.persistSession(
@@ -67,8 +70,25 @@ export class AuthStateService {
     }
   }
 
-  landingRoute(): '/admin/tools' | '/offers' {
-    return this.isAdmin() ? '/admin/tools' : '/offers';
+  landingRoute(): '/admin/tools' | '/admin/operations' | '/offers' {
+    if (this.isAdmin()) {
+      return '/admin/tools';
+    }
+    if (this.isEmployee()) {
+      return '/admin/operations';
+    }
+    return '/offers';
+  }
+
+  hasPermission(permission: string): boolean {
+    const user = this.user();
+    if (!user) {
+      return false;
+    }
+    if (user.role === 'ADMIN') {
+      return true;
+    }
+    return user.permissions.includes(permission);
   }
 
   syncUser(user: Partial<AuthUser>): void {
@@ -129,7 +149,11 @@ export class AuthStateService {
       id: user.id,
       name: user.name,
       email: user.email ?? null,
-      role: user.role === 'ADMIN' ? 'ADMIN' : 'USER',
+      role: user.role === 'ADMIN'
+        ? 'ADMIN'
+        : user.role === 'EMPLOYEE'
+          ? 'EMPLOYEE'
+          : 'CUSTOMER',
       firstName: user.firstName ?? null,
       lastName: user.lastName ?? null,
       addressStreet: user.addressStreet ?? legacyAddress,
@@ -153,7 +177,12 @@ export class AuthStateService {
                   !!entry[1].trim()
               )
             )
-          : {}
+          : {},
+      permissions: Array.isArray((user as { permissions?: unknown[] }).permissions)
+        ? (user as { permissions?: unknown[] }).permissions!.filter(
+            (value): value is string => typeof value === 'string' && !!value.trim()
+          )
+        : []
     };
   }
 }

@@ -12,6 +12,7 @@ import com.maher.booking_system.model.CancellationPolicy;
 import com.maher.booking_system.model.PaymentRecord;
 import com.maher.booking_system.model.PaymentWebhookEvent;
 import com.maher.booking_system.model.Resources;
+import com.maher.booking_system.model.SeasonalPricingRule;
 import com.maher.booking_system.model.enums.BookingStatus;
 import com.maher.booking_system.model.enums.DepositHoldStatus;
 import com.maher.booking_system.model.enums.PaymentStatus;
@@ -44,6 +45,7 @@ public class PaymentService {
     private final TimeSlotRepository timeSlotRepository;
     private final StripeApiClient stripeApiClient;
     private final CancellationPolicyService cancellationPolicyService;
+    private final OfferPageService offerPageService;
     private final ObjectMapper objectMapper;
     private final String webhookSecret;
     private final String publishableKey;
@@ -57,6 +59,7 @@ public class PaymentService {
             TimeSlotRepository timeSlotRepository,
             StripeApiClient stripeApiClient,
             CancellationPolicyService cancellationPolicyService,
+            OfferPageService offerPageService,
             ObjectMapper objectMapper,
             @Value("${app.payment.stripe.webhook-secret:}") String webhookSecret,
             @Value("${app.payment.stripe.publishable-key:}") String publishableKey,
@@ -69,6 +72,7 @@ public class PaymentService {
         this.timeSlotRepository = timeSlotRepository;
         this.stripeApiClient = stripeApiClient;
         this.cancellationPolicyService = cancellationPolicyService;
+        this.offerPageService = offerPageService;
         this.objectMapper = objectMapper;
         this.webhookSecret = webhookSecret == null ? "" : webhookSecret.trim();
         this.publishableKey = publishableKey == null ? "" : publishableKey.trim();
@@ -299,10 +303,6 @@ public class PaymentService {
         }
         Resources resource = resourcesRepository.findById(resourceId)
                 .orElseThrow(() -> new NotFoundException("Resource not found with id: " + resourceId));
-        if (resource.getDailyPrice() == null || resource.getDailyPrice() <= 0) {
-            throw new BadRequestException("Resource does not have a valid daily price");
-        }
-
         LocalDateTime start;
         LocalDateTime end;
         try {
@@ -317,14 +317,36 @@ public class PaymentService {
 
         long hours = ChronoUnit.HOURS.between(start, end);
         long days = Math.max(1L, (long) Math.ceil(hours / 24.0d));
-        long amountCents = Math.round(resource.getDailyPrice() * 100.0d) * days;
+        AppliedPrice appliedPrice = resolveAppliedPrice(resource, start, end);
+        long amountCents;
+        if (hours < 24 && appliedPrice.hourlyPrice() != null) {
+            amountCents = Math.round(appliedPrice.hourlyPrice() * 100.0d) * Math.max(1L, hours);
+        } else if (appliedPrice.dailyPrice() != null) {
+            amountCents = Math.round(appliedPrice.dailyPrice() * 100.0d) * days;
+        } else {
+            throw new BadRequestException("Resource does not have a valid base or seasonal price");
+        }
         return new Pricing(amountCents, defaultCurrency, start, end);
+    }
+
+    private AppliedPrice resolveAppliedPrice(Resources resource, LocalDateTime start, LocalDateTime end) {
+        SeasonalPricingRule seasonalRule = resource.getSeasonalPricing().stream()
+                .filter(rule -> rule.getStartDate() != null && rule.getEndDate() != null)
+                .filter(rule -> !start.toLocalDate().isBefore(rule.getStartDate()) && !end.toLocalDate().isAfter(rule.getEndDate()))
+                .findFirst()
+                .orElse(null);
+        if (seasonalRule != null && (seasonalRule.getDailyPrice() != null || seasonalRule.getHourlyPrice() != null)) {
+            return new AppliedPrice(seasonalRule.getDailyPrice(), seasonalRule.getHourlyPrice());
+        }
+        return new AppliedPrice(resource.getDailyPrice(), resource.getHourlyPrice());
     }
 
     private Booking createPendingBooking(CreateBookingRequest bookingRequest, Pricing pricing, CancellationPolicy cancellationPolicy) {
         Booking booking = new Booking();
+        offerPageService.validateOfferAttribution(bookingRequest.getOfferId(), bookingRequest.getResourceId());
         booking.setUserId(bookingRequest.getUserId());
         booking.setResourceId(bookingRequest.getResourceId());
+        booking.setOfferId(bookingRequest.getOfferId());
         booking.setTimeSlotId(bookingRequest.getTimeSlotId());
         booking.setStartDateTime(pricing.start());
         booking.setEndDateTime(pricing.end());
@@ -542,5 +564,8 @@ public class PaymentService {
     }
 
     private record Pricing(long amountCents, String currency, LocalDateTime start, LocalDateTime end) {
+    }
+
+    private record AppliedPrice(Double dailyPrice, Double hourlyPrice) {
     }
 }

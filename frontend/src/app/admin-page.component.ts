@@ -24,10 +24,16 @@ type Resource = {
   transmission: string | null;
   fuelType: string | null;
   dailyPrice: number | null;
+  hourlyPrice: number | null;
   priceUnit: string | null;
   baggageBags: number | null;
   hasAirConditioning: boolean | null;
   horsepower: number | null;
+  kmPerDayLimit: number | null;
+  extraKmFeePerKm: number | null;
+  lateFeePerHour: number | null;
+  depositAmount: number | null;
+  seasonalPricing: SeasonalPricingRule[];
   active: boolean;
   photoUrls: string[];
 };
@@ -41,6 +47,7 @@ type User = {
   name: string;
   email: string | null;
   role: string | null;
+  permissions?: string[] | null;
 };
 
 type Booking = {
@@ -53,7 +60,15 @@ type Booking = {
   serviceName: string | null;
 };
 
-type UserRole = 'USER' | 'ADMIN';
+type UserRole = 'CUSTOMER' | 'EMPLOYEE' | 'ADMIN';
+
+type SeasonalPricingRule = {
+  label: string | null;
+  startDate: string | null;
+  endDate: string | null;
+  dailyPrice: number | null;
+  hourlyPrice: number | null;
+};
 
 type OfferSection = {
   id: number;
@@ -74,6 +89,11 @@ type OfferSection = {
   titleYPercent: number;
   descriptionXPercent: number;
   descriptionYPercent: number;
+  enabled: boolean;
+  startDateTime: string | null;
+  endDateTime: string | null;
+  ctaLabel: string;
+  linkedResourceIds: number[];
 };
 
 type OfferPageSettings = {
@@ -90,6 +110,18 @@ type OfferDragState = {
   startTopPercent: number;
   canvasWidth: number;
   canvasHeight: number;
+};
+
+type OfferAnalytics = {
+  offerId: number;
+  title: string;
+  enabled: boolean;
+  activeNow: boolean;
+  startDateTime: string | null;
+  endDateTime: string | null;
+  linkedCarsCount: number;
+  bookingsCount: number;
+  revenueCents: number;
 };
 
 type LegalField = {
@@ -136,10 +168,13 @@ export class AdminPageComponent {
   protected readonly bookings = signal<Booking[]>([]);
   protected readonly offerDraftSections = signal<OfferSection[]>([]);
   protected readonly offerPublishedSections = signal<OfferSection[]>([]);
+  protected readonly offerAnalytics = signal<OfferAnalytics[]>([]);
   protected readonly offerDraftSettings = signal<OfferPageSettings>({ heroBackgroundImageUrl: '' });
   protected readonly offerPublishedSettings = signal<OfferPageSettings>({ heroBackgroundImageUrl: '' });
   protected readonly legalDraftContent = signal<LegalContent>({ impressumFields: [], datenschutzFields: [] });
   protected readonly legalPublishedContent = signal<LegalContent>({ impressumFields: [], datenschutzFields: [] });
+  protected readonly offerAnalyticsDateFrom = signal('');
+  protected readonly offerAnalyticsDateTo = signal('');
 
   protected carDraft = {
     name: '',
@@ -153,10 +188,16 @@ export class AdminPageComponent {
     transmission: 'Automatic',
     fuelType: 'Benzin',
     dailyPrice: null as number | null,
+    hourlyPrice: null as number | null,
     priceUnit: '€',
     baggageBags: null as number | null,
     hasAirConditioning: true,
     horsepower: null as number | null,
+    kmPerDayLimit: null as number | null,
+    extraKmFeePerKm: null as number | null,
+    lateFeePerHour: null as number | null,
+    depositAmount: null as number | null,
+    seasonalPricingText: '',
     active: true,
     photoUrlsText: '',
     uploadedPhotoUrls: [] as string[]
@@ -166,7 +207,8 @@ export class AdminPageComponent {
     name: '',
     email: '',
     password: '',
-    role: 'USER' as UserRole
+    role: 'CUSTOMER' as UserRole,
+    permissions: [] as string[]
   };
 
   protected readonly cars = computed(() =>
@@ -381,6 +423,62 @@ export class AdminPageComponent {
     );
   }
 
+  protected toggleOfferCarLink(section: OfferSection, carId: number, checked: boolean): void {
+    const linkedIds = checked
+      ? [...section.linkedResourceIds, carId]
+      : section.linkedResourceIds.filter((value) => value !== carId);
+    this.updateOfferSection(section.id, { linkedResourceIds: linkedIds });
+  }
+
+  protected isOfferCarLinked(section: OfferSection, carId: number): boolean {
+    return section.linkedResourceIds.includes(carId);
+  }
+
+  protected reloadOfferAnalytics(): void {
+    const params = new URLSearchParams();
+    if (this.offerAnalyticsDateFrom().trim()) {
+      params.set('dateFrom', this.offerAnalyticsDateFrom().trim());
+    }
+    if (this.offerAnalyticsDateTo().trim()) {
+      params.set('dateTo', this.offerAnalyticsDateTo().trim());
+    }
+    const query = params.toString();
+    const url = query ? `/api/offers/analytics?${query}` : '/api/offers/analytics';
+
+    this.busyKey.set('load-offer-analytics');
+    this.http
+      .get<OfferAnalytics[]>(url)
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        finalize(() => {
+          if (this.busyKey() === 'load-offer-analytics') {
+            this.busyKey.set(null);
+          }
+        })
+      )
+      .subscribe({
+        next: (analytics) => {
+          this.offerAnalytics.set(analytics.map((entry) => this.normalizeOfferAnalytics(entry)));
+        },
+        error: (error: HttpErrorResponse) => {
+          this.error.set(this.readApiError(error, 'Failed to load offer analytics.'));
+        }
+      });
+  }
+
+  protected formatMoneyFromCents(value: number | null | undefined, currency: string | null | undefined): string {
+    if (typeof value !== 'number' || Number.isNaN(value)) {
+      return this.i18n.t('common.notSet');
+    }
+
+    return new Intl.NumberFormat(this.i18n.locale(), {
+      style: 'currency',
+      currency: (currency ?? 'EUR').trim().toUpperCase(),
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(value / 100);
+  }
+
   protected updateOfferHeroBackgroundImageUrl(value: string): void {
     this.offerDraftSettings.set({
       heroBackgroundImageUrl: (value ?? '').trim()
@@ -534,10 +632,16 @@ export class AdminPageComponent {
       transmission: car.transmission ?? 'Automatic',
       fuelType: car.fuelType ?? 'Benzin',
       dailyPrice: car.dailyPrice,
+      hourlyPrice: car.hourlyPrice,
       priceUnit: car.priceUnit ?? '€',
       baggageBags: car.baggageBags,
       hasAirConditioning: car.hasAirConditioning ?? true,
       horsepower: car.horsepower,
+      kmPerDayLimit: car.kmPerDayLimit,
+      extraKmFeePerKm: car.extraKmFeePerKm,
+      lateFeePerHour: car.lateFeePerHour,
+      depositAmount: car.depositAmount,
+      seasonalPricingText: this.stringifySeasonalPricing(car.seasonalPricing),
       active: car.active,
       photoUrlsText: '',
       uploadedPhotoUrls: [...car.photoUrls]
@@ -653,7 +757,8 @@ export class AdminPageComponent {
         name,
         email,
         password,
-        role: this.userDraft.role
+        role: this.userDraft.role,
+        permissions: this.userDraft.permissions
       }),
       this.i18n.t('admin.success.userCreated'),
       () => {
@@ -661,7 +766,8 @@ export class AdminPageComponent {
           name: '',
           email: '',
           password: '',
-          role: 'USER'
+          role: 'CUSTOMER',
+          permissions: []
         };
       }
     );
@@ -680,9 +786,14 @@ export class AdminPageComponent {
   }
 
   protected roleLabel(role: string | null): string {
-    return role?.toUpperCase() === 'ADMIN'
-      ? this.i18n.t('app.role.admin')
-      : this.i18n.t('app.role.user');
+    const normalizedRole = (role ?? '').toUpperCase();
+    if (normalizedRole === 'ADMIN') {
+      return this.i18n.t('app.role.admin');
+    }
+    if (normalizedRole === 'EMPLOYEE') {
+      return 'Employee';
+    }
+    return 'Customer';
   }
 
   protected photoCountLabel(photoUrls: string[] | null | undefined): string {
@@ -763,6 +874,20 @@ export class AdminPageComponent {
     return resource.photoUrls[0] ?? null;
   }
 
+  protected hasDraftPermission(permission: string): boolean {
+    return this.userDraft.permissions.includes(permission);
+  }
+
+  protected toggleDraftPermission(permission: string, enabled: boolean): void {
+    const permissions = enabled
+      ? [...this.userDraft.permissions, permission]
+      : this.userDraft.permissions.filter((value) => value !== permission);
+    this.userDraft = {
+      ...this.userDraft,
+      permissions: [...new Set(permissions)]
+    };
+  }
+
   private resolvePageMode(): 'tools' | 'offers' | 'cars' | 'users' | 'legal' {
     const dataMode = this.route.snapshot.data['adminPageMode'];
     if (dataMode === 'offers' || dataMode === 'cars' || dataMode === 'users' || dataMode === 'tools' || dataMode === 'legal') {
@@ -805,6 +930,9 @@ export class AdminPageComponent {
       offerPublishedSettings: this.http
         .get<OfferPageSettings>('/api/offers/settings/published')
         .pipe(catchError(() => of({ heroBackgroundImageUrl: '' } as OfferPageSettings))),
+      offerAnalytics: this.http
+        .get<OfferAnalytics[]>('/api/offers/analytics')
+        .pipe(catchError(() => of([] as OfferAnalytics[]))),
       legalDraft: this.http.get<LegalContent>('/api/legal/draft'),
       legalPublished: this.http.get<LegalContent>('/api/legal/published')
     })
@@ -821,6 +949,7 @@ export class AdminPageComponent {
           offerPublished,
           offerDraftSettings,
           offerPublishedSettings,
+          offerAnalytics,
           legalDraft,
           legalPublished
         }) => {
@@ -839,6 +968,7 @@ export class AdminPageComponent {
           );
           this.offerDraftSettings.set(this.normalizeOfferPageSettings(offerDraftSettings));
           this.offerPublishedSettings.set(this.normalizeOfferPageSettings(offerPublishedSettings));
+          this.offerAnalytics.set(offerAnalytics.map((entry) => this.normalizeOfferAnalytics(entry)));
           this.legalDraftContent.set(this.normalizeLegalContent(legalDraft));
           this.legalPublishedContent.set(this.normalizeLegalContent(legalPublished));
           this.syncDraftDefaults();
@@ -889,10 +1019,16 @@ export class AdminPageComponent {
       transmission: 'Automatic',
       fuelType: 'Benzin',
       dailyPrice: null,
+      hourlyPrice: null,
       priceUnit: '€',
       baggageBags: null,
       hasAirConditioning: true,
       horsepower: null,
+      kmPerDayLimit: null,
+      extraKmFeePerKm: null,
+      lateFeePerHour: null,
+      depositAmount: null,
+      seasonalPricingText: '',
       active: true,
       photoUrlsText: '',
       uploadedPhotoUrls: []
@@ -935,7 +1071,12 @@ export class AdminPageComponent {
       titleXPercent: 8,
       titleYPercent: 12,
       descriptionXPercent: 8,
-      descriptionYPercent: 38
+      descriptionYPercent: 38,
+      enabled: true,
+      startDateTime: null,
+      endDateTime: null,
+      ctaLabel: 'Book now',
+      linkedResourceIds: []
     };
   }
 
@@ -976,7 +1117,30 @@ export class AdminPageComponent {
       titleXPercent: this.clampPercent(this.normalizeNumber(section.titleXPercent), 2, 80, 8),
       titleYPercent: this.clampPercent(this.normalizeNumber(section.titleYPercent), 2, 78, 12),
       descriptionXPercent: this.clampPercent(this.normalizeNumber(section.descriptionXPercent), 2, 80, 8),
-      descriptionYPercent: this.clampPercent(this.normalizeNumber(section.descriptionYPercent), 2, 88, 38)
+      descriptionYPercent: this.clampPercent(this.normalizeNumber(section.descriptionYPercent), 2, 88, 38),
+      enabled: section.enabled !== false,
+      startDateTime: this.normalizeText(section.startDateTime),
+      endDateTime: this.normalizeText(section.endDateTime),
+      ctaLabel: (section.ctaLabel ?? '').trim() || 'Book now',
+      linkedResourceIds: Array.isArray(section.linkedResourceIds)
+        ? section.linkedResourceIds
+            .filter((value): value is number => typeof value === 'number' && Number.isFinite(value) && value > 0)
+            .map((value) => Math.round(value))
+        : []
+    };
+  }
+
+  private normalizeOfferAnalytics(entry: Partial<OfferAnalytics>): OfferAnalytics {
+    return {
+      offerId: this.normalizePositiveInt(entry.offerId) ?? 0,
+      title: (entry.title ?? '').trim(),
+      enabled: entry.enabled !== false,
+      activeNow: entry.activeNow === true,
+      startDateTime: this.normalizeText(entry.startDateTime),
+      endDateTime: this.normalizeText(entry.endDateTime),
+      linkedCarsCount: this.normalizeNonNegativeInt(entry.linkedCarsCount) ?? 0,
+      bookingsCount: this.normalizeNonNegativeInt(entry.bookingsCount) ?? 0,
+      revenueCents: this.normalizeNonNegativeInt(entry.revenueCents) ?? 0
     };
   }
 
@@ -1034,11 +1198,25 @@ export class AdminPageComponent {
       transmission: resource.transmission ?? null,
       fuelType: resource.fuelType ?? null,
       dailyPrice: this.normalizeDecimal(resource.dailyPrice),
+      hourlyPrice: this.normalizeDecimal(resource.hourlyPrice),
       priceUnit: this.normalizePriceUnit(resource.priceUnit),
       baggageBags: this.normalizeWholeNumber(resource.baggageBags),
       hasAirConditioning:
         typeof resource.hasAirConditioning === 'boolean' ? resource.hasAirConditioning : null,
       horsepower: this.normalizeWholeNumber(resource.horsepower),
+      kmPerDayLimit: this.normalizeWholeNumber(resource.kmPerDayLimit),
+      extraKmFeePerKm: this.normalizeDecimal(resource.extraKmFeePerKm),
+      lateFeePerHour: this.normalizeDecimal(resource.lateFeePerHour),
+      depositAmount: this.normalizeDecimal(resource.depositAmount),
+      seasonalPricing: Array.isArray(resource.seasonalPricing)
+        ? resource.seasonalPricing.map((rule) => ({
+            label: this.normalizeText(rule.label),
+            startDate: this.normalizeText(rule.startDate),
+            endDate: this.normalizeText(rule.endDate),
+            dailyPrice: this.normalizeDecimal(rule.dailyPrice),
+            hourlyPrice: this.normalizeDecimal(rule.hourlyPrice)
+          }))
+        : [],
       photoUrls: Array.isArray(resource.photoUrls) ? resource.photoUrls : []
     };
   }
@@ -1057,13 +1235,53 @@ export class AdminPageComponent {
       transmission: this.carDraft.transmission.trim() || null,
       fuelType: this.carDraft.fuelType.trim() || null,
       dailyPrice: this.normalizeDecimal(this.carDraft.dailyPrice),
+      hourlyPrice: this.normalizeDecimal(this.carDraft.hourlyPrice),
       priceUnit: this.normalizePriceUnit(this.carDraft.priceUnit),
       baggageBags: this.normalizeWholeNumber(this.carDraft.baggageBags),
       hasAirConditioning: this.carDraft.hasAirConditioning,
       horsepower: this.normalizeWholeNumber(this.carDraft.horsepower),
+      kmPerDayLimit: this.normalizeWholeNumber(this.carDraft.kmPerDayLimit),
+      extraKmFeePerKm: this.normalizeDecimal(this.carDraft.extraKmFeePerKm),
+      lateFeePerHour: this.normalizeDecimal(this.carDraft.lateFeePerHour),
+      depositAmount: this.normalizeDecimal(this.carDraft.depositAmount),
+      seasonalPricing: this.parseSeasonalPricing(this.carDraft.seasonalPricingText),
       active: this.carDraft.active,
       photoUrls: this.buildPhotoUrls()
     };
+  }
+
+  private stringifySeasonalPricing(rules: SeasonalPricingRule[]): string {
+    if (!rules.length) {
+      return '';
+    }
+    return rules.map((rule) => JSON.stringify(rule)).join('\n');
+  }
+
+  private parseSeasonalPricing(value: string): SeasonalPricingRule[] {
+    return value
+      .split(/\r?\n/)
+      .map((entry) => entry.trim())
+      .filter(Boolean)
+      .map((entry) => {
+        try {
+          const parsed = JSON.parse(entry) as SeasonalPricingRule;
+          return {
+            label: this.normalizeText(parsed.label),
+            startDate: this.normalizeText(parsed.startDate),
+            endDate: this.normalizeText(parsed.endDate),
+            dailyPrice: this.normalizeDecimal(parsed.dailyPrice),
+            hourlyPrice: this.normalizeDecimal(parsed.hourlyPrice)
+          };
+        } catch {
+          return {
+            label: entry,
+            startDate: null,
+            endDate: null,
+            dailyPrice: null,
+            hourlyPrice: null
+          };
+        }
+      });
   }
 
   private normalizeWholeNumber(value: unknown): number | null {

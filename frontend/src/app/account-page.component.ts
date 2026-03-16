@@ -349,7 +349,7 @@ export class AccountPageComponent {
           this.auth.syncUser({
             ...(currentUser ?? {}),
             ...user,
-            role: user.role === 'ADMIN' ? 'ADMIN' : 'USER',
+            role: user.role === 'ADMIN' ? 'ADMIN' : user.role === 'EMPLOYEE' ? 'EMPLOYEE' : 'CUSTOMER',
             paymentMethods: this.normalizePaymentMethods(user.paymentMethods),
             paymentDetails: this.normalizePaymentDetails(user.paymentDetails, user.paymentMethods)
           });
@@ -443,7 +443,7 @@ export class AccountPageComponent {
           this.auth.syncUser({
             ...(currentUser ?? {}),
             ...user,
-            role: user.role === 'ADMIN' ? 'ADMIN' : 'USER',
+            role: user.role === 'ADMIN' ? 'ADMIN' : user.role === 'EMPLOYEE' ? 'EMPLOYEE' : 'CUSTOMER',
             paymentMethods: this.normalizePaymentMethods(user.paymentMethods),
             paymentDetails: this.normalizePaymentDetails(user.paymentDetails, user.paymentMethods)
           });

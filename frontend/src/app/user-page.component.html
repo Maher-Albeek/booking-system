@@ -164,6 +164,38 @@
           >
             {{ section.description }}
           </p>
+
+          <div class="offer-section-meta">
+            @if (offerCountdownLabel(section); as countdown) {
+              <span class="offer-badge countdown">{{ countdown }}</span>
+            }
+            @if (offerScheduleLabel(section); as schedule) {
+              <span class="offer-badge">{{ schedule }}</span>
+            }
+            <span class="offer-badge">{{ offerCars(section.id).length }} eligible cars</span>
+          </div>
+
+          @if (offerCars(section.id).length) {
+            <div class="offer-linked-cars">
+              @for (car of offerCars(section.id); track car.id) {
+                <article class="offer-linked-car">
+                  <div>
+                    <strong>{{ car.name }}</strong>
+                    <p>{{ car.carType || car.description || i18n.t('user.fleet.fleetVehicle') }}</p>
+                  </div>
+                  <div class="offer-linked-car-actions">
+                    <span>{{ formatPrice(car.dailyPrice, car.priceUnit) }} / {{ i18n.t('user.fleet.perDay') }}</span>
+                    <button type="button" class="submit-button compact-button" (click)="openOfferReservationModal(section.id, car.id)">
+                      <span class="button-content">
+                        <i class="button-icon fa-solid fa-bolt" aria-hidden="true"></i>
+                        <span>{{ section.ctaLabel }}</span>
+                      </span>
+                    </button>
+                  </div>
+                </article>
+              }
+            </div>
+          }
         </article>
       }
     </section>

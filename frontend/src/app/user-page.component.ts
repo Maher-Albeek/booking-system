@@ -4,7 +4,7 @@ import { Component, DestroyRef, computed, effect, inject, signal } from '@angula
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { catchError, finalize, forkJoin, fromEvent, of, timeout } from 'rxjs';
+import { Observable, catchError, finalize, forkJoin, fromEvent, of, timeout } from 'rxjs';
 
 import { AuthStateService, AuthUser } from './auth-state.service';
 import { I18nService } from './i18n.service';
@@ -97,6 +97,7 @@ type User = {
   name: string;
   email: string | null;
   role: string | null;
+  permissions: string[];
   firstName: string | null;
   lastName: string | null;
   addressStreet: string | null;
@@ -119,6 +120,7 @@ type Booking = {
   id: number;
   userId: number | null;
   resourceId: number;
+  offerId: number | null;
   startDateTime: string | null;
   endDateTime: string | null;
   status: string;
@@ -144,6 +146,7 @@ type Booking = {
 type BookingRequest = {
   userId: number;
   resourceId: number;
+  offerId?: number;
   startDateTime: string;
   endDateTime: string;
   serviceName: string;
@@ -204,6 +207,11 @@ type OfferSection = {
   titleYPercent: number;
   descriptionXPercent: number;
   descriptionYPercent: number;
+  enabled: boolean;
+  startDateTime: string | null;
+  endDateTime: string | null;
+  ctaLabel: string;
+  linkedResourceIds: number[];
 };
 
 type OfferPageSettings = {
@@ -263,7 +271,10 @@ export class UserPageComponent {
   protected readonly bookings = signal<Booking[]>([]);
   protected readonly profileUser = signal<User | null>(null);
   protected readonly publishedOfferSections = signal<OfferSection[]>([]);
+  protected readonly offerCarsBySectionId = signal<Record<number, Resource[]>>({});
   protected readonly heroBackgroundImageUrl = signal('');
+  protected readonly selectedOfferId = signal<number | null>(null);
+  protected readonly offerClock = signal(Date.now());
   protected readonly heroBackgroundStyle = computed(() => {
     const url = this.heroBackgroundImageUrl().trim();
     if (!url) {
@@ -602,6 +613,8 @@ export class UserPageComponent {
   });
 
   constructor() {
+    const offerClockInterval = window.setInterval(() => this.offerClock.set(Date.now()), 1000);
+    this.destroyRef.onDestroy(() => window.clearInterval(offerClockInterval));
     let wasGuestInfoVisible = false;
     let wasProfileInfoVisible = false;
 
@@ -711,10 +724,62 @@ export class UserPageComponent {
   }
 
   protected openReservationModal(carId: number): void {
+    this.openReservationModalForOffer(carId, null);
+  }
+
+  protected openOfferReservationModal(offerId: number, carId: number): void {
+    this.openReservationModalForOffer(carId, offerId);
+  }
+
+  protected offerCars(offerId: number): Resource[] {
+    return this.offerCarsBySectionId()[offerId] ?? [];
+  }
+
+  protected offerCountdownLabel(section: OfferSection): string | null {
+    const endValue = section.endDateTime?.trim();
+    if (!endValue) {
+      return null;
+    }
+
+    const endDate = new Date(endValue);
+    const remainingMs = endDate.getTime() - this.offerClock();
+    if (Number.isNaN(endDate.getTime()) || remainingMs <= 0) {
+      return 'Offer ended';
+    }
+
+    const totalSeconds = Math.floor(remainingMs / 1000);
+    const days = Math.floor(totalSeconds / 86400);
+    const hours = Math.floor((totalSeconds % 86400) / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+
+    if (days > 0) {
+      return `${days}d ${hours}h ${minutes}m left`;
+    }
+    return `${hours}h ${minutes}m ${seconds}s left`;
+  }
+
+  protected offerScheduleLabel(section: OfferSection): string | null {
+    const start = section.startDateTime?.trim();
+    const end = section.endDateTime?.trim();
+    if (start && end) {
+      return `${this.formatDay(start)} - ${this.formatDay(end)}`;
+    }
+    if (start) {
+      return `Starts ${this.formatDay(start)}`;
+    }
+    if (end) {
+      return `Ends ${this.formatDay(end)}`;
+    }
+    return null;
+  }
+
+  private openReservationModalForOffer(carId: number, offerId: number | null): void {
     this.selectedCarId.set(carId);
+    this.selectedOfferId.set(offerId);
     this.carDetailsId.set(null);
-    this.bookingStartDateTime.set('');
-    this.bookingEndDateTime.set('');
+    this.bookingStartDateTime.set(this.searchStartDate().trim());
+    this.bookingEndDateTime.set(this.searchEndDate().trim());
     this.resetBookingPaymentDetails();
     this.bookingPolicyAccepted.set(false);
     this.syncBookingFieldsFromUser(this.selectedUser(), this.selectedUser(), true);
@@ -727,6 +792,7 @@ export class UserPageComponent {
   protected closeReservationModal(): void {
     this.reservationModalOpen.set(false);
     this.paymentDetailsModalOpen.set(false);
+    this.selectedOfferId.set(null);
   }
 
   protected closeReservationModalOnBackdrop(event: MouseEvent): void {
@@ -945,6 +1011,7 @@ export class UserPageComponent {
     const payload: BookingRequest = {
       userId: selectedUser.id,
       resourceId: selectedCar.id,
+      ...(this.selectedOfferId() !== null ? { offerId: this.selectedOfferId()! } : {}),
       startDateTime,
       endDateTime,
       serviceName,
@@ -1206,7 +1273,7 @@ export class UserPageComponent {
       cancellationPolicy: this.http
         .get<CancellationPolicy>('/api/payments/cancellation-policy')
         .pipe(catchError(() => of(null))),
-      offers: this.http.get<OfferSection[]>('/api/offers/published'),
+      offers: this.http.get<OfferSection[]>('/api/offers/live'),
       offerSettings: this.http
         .get<OfferPageSettings>('/api/offers/settings/published')
         .pipe(catchError(() => of({ heroBackgroundImageUrl: '' } as OfferPageSettings)))
@@ -1231,6 +1298,7 @@ export class UserPageComponent {
           this.bookings.set(bookings);
           this.cancellationPolicy.set(cancellationPolicy);
           this.publishedOfferSections.set(normalizedOffers);
+          this.loadOfferCars(normalizedOffers);
           this.heroBackgroundImageUrl.set((offerSettings?.heroBackgroundImageUrl ?? '').trim());
 
           if (normalizedProfile) {
@@ -1527,8 +1595,41 @@ export class UserPageComponent {
       titleXPercent: this.clampNumber(section.titleXPercent ?? 8, 2, 80, 8),
       titleYPercent: this.clampNumber(section.titleYPercent ?? 12, 2, 78, 12),
       descriptionXPercent: this.clampNumber(section.descriptionXPercent ?? 8, 2, 80, 8),
-      descriptionYPercent: this.clampNumber(section.descriptionYPercent ?? 40, 2, 88, 40)
+      descriptionYPercent: this.clampNumber(section.descriptionYPercent ?? 40, 2, 88, 40),
+      enabled: section.enabled !== false,
+      startDateTime: this.normalizeText(section.startDateTime) ?? null,
+      endDateTime: this.normalizeText(section.endDateTime) ?? null,
+      ctaLabel: (section.ctaLabel ?? '').trim() || 'Book now',
+      linkedResourceIds: Array.isArray(section.linkedResourceIds)
+        ? section.linkedResourceIds
+            .filter((value): value is number => typeof value === 'number' && Number.isFinite(value) && value > 0)
+            .map((value) => Math.round(value))
+        : []
     };
+  }
+
+  private loadOfferCars(sections: OfferSection[]): void {
+    if (!sections.length) {
+      this.offerCarsBySectionId.set({});
+      return;
+    }
+
+    const requests = sections.reduce<Record<string, Observable<ResourceResponse[]>>>((acc, section) => {
+      acc[String(section.id)] = this.http
+        .get<ResourceResponse[]>(`/api/offers/${section.id}/cars`)
+        .pipe(catchError(() => of([] as ResourceResponse[])));
+      return acc;
+    }, {});
+
+    forkJoin(requests)
+      .pipe(takeUntilDestroyed(this.destroyRef), timeout(10000))
+      .subscribe((responseMap) => {
+        const mapped: Record<number, Resource[]> = {};
+        for (const [sectionId, resources] of Object.entries(responseMap)) {
+          mapped[Number(sectionId)] = (resources as ResourceResponse[]).map((resource) => this.normalizeResource(resource));
+        }
+        this.offerCarsBySectionId.set(mapped);
+      });
   }
 
   private normalizeUser(user: UserResponse): User {
@@ -1536,7 +1637,10 @@ export class UserPageComponent {
       id: user.id,
       name: user.name,
       email: user.email ?? null,
-      role: user.role ?? 'USER',
+      role: user.role ?? 'CUSTOMER',
+      permissions: Array.isArray((user as { permissions?: unknown[] }).permissions)
+        ? (user as { permissions?: unknown[] }).permissions!.filter((value): value is string => typeof value === 'string')
+        : [],
       firstName: user.firstName ?? null,
       lastName: user.lastName ?? null,
       addressStreet: user.addressStreet ?? null,
@@ -1570,6 +1674,7 @@ export class UserPageComponent {
       addressCountry: user.addressCountry,
       birthDate: user.birthDate,
       avatarUrl: user.avatarUrl,
+      permissions: [...user.permissions],
       paymentMethods: this.normalizePaymentMethods(user.paymentMethods),
       paymentDetails: this.normalizePaymentDetails(user.paymentDetails, user.paymentMethods)
     };
@@ -1580,7 +1685,7 @@ export class UserPageComponent {
       id: user.id,
       name: user.name,
       email: user.email,
-      role: user.role === 'ADMIN' ? 'ADMIN' : 'USER',
+      role: user.role === 'ADMIN' ? 'ADMIN' : user.role === 'EMPLOYEE' ? 'EMPLOYEE' : 'CUSTOMER',
       firstName: user.firstName,
       lastName: user.lastName,
       addressStreet: user.addressStreet,
@@ -1591,7 +1696,8 @@ export class UserPageComponent {
       birthDate: user.birthDate,
       avatarUrl: user.avatarUrl,
       paymentMethods: [...user.paymentMethods],
-      paymentDetails: this.normalizedPaymentDetailsForAuth(user.paymentDetails)
+      paymentDetails: this.normalizedPaymentDetailsForAuth(user.paymentDetails),
+      permissions: [...user.permissions]
     };
   }
 

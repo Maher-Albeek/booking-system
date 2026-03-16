@@ -42,7 +42,7 @@ public class UsersService {
         user.setName(name);
         user.setEmail(email);
         user.setPassword(password);
-        user.setRole("USER");
+        user.setRole("CUSTOMER");
         return createUser(user, true);
     }
 
@@ -177,7 +177,7 @@ public class UsersService {
         safeUser.setName(normalizedName);
         safeUser.setEmail(normalizedEmail);
         safeUser.setPassword(PASSWORD_ENCODER.encode(normalizedPassword));
-        safeUser.setRole(forceUserRole ? "USER" : normalizeRole(safeUser.getRole()));
+        safeUser.setRole(forceUserRole ? "CUSTOMER" : normalizeRole(safeUser.getRole()));
         safeUser.setFirstName(normalizeOptional(safeUser.getFirstName()));
         safeUser.setLastName(normalizeOptional(safeUser.getLastName()));
         String addressStreet = normalizeAddressPart(safeUser.getAddressStreet());
@@ -206,6 +206,7 @@ public class UsersService {
         );
         safeUser.setPaymentMethods(normalizedPaymentMethods);
         safeUser.setPaymentDetails(normalizedPaymentDetails);
+        safeUser.setPermissions(normalizePermissions(safeUser.getPermissions(), safeUser.getRole()));
 
         return toUserResponse(usersRepository.save(safeUser));
     }
@@ -263,7 +264,47 @@ public class UsersService {
     }
 
     private String normalizeRole(String role) {
-        return "ADMIN".equalsIgnoreCase(role) ? "ADMIN" : "USER";
+        if ("ADMIN".equalsIgnoreCase(role)) {
+            return "ADMIN";
+        }
+        if ("EMPLOYEE".equalsIgnoreCase(role)) {
+            return "EMPLOYEE";
+        }
+        if ("USER".equalsIgnoreCase(role) || "CUSTOMER".equalsIgnoreCase(role)) {
+            return "CUSTOMER";
+        }
+        return "CUSTOMER";
+    }
+
+    private List<String> normalizePermissions(List<String> permissions, String role) {
+        if (!"EMPLOYEE".equalsIgnoreCase(role) && !"ADMIN".equalsIgnoreCase(role)) {
+            return List.of();
+        }
+
+        if ("ADMIN".equalsIgnoreCase(role)) {
+            return List.of(
+                    "MANAGE_CARS",
+                    "VIEW_PAYMENTS",
+                    "CHECKIN_CHECKOUT",
+                    "VIEW_USERS",
+                    "VIEW_BOOKINGS"
+            );
+        }
+
+        if (permissions == null) {
+            return List.of();
+        }
+
+        return permissions.stream()
+                .filter(Objects::nonNull)
+                .map(String::trim)
+                .map(String::toUpperCase)
+                .filter(permission -> switch (permission) {
+                    case "MANAGE_CARS", "VIEW_PAYMENTS", "CHECKIN_CHECKOUT", "VIEW_USERS", "VIEW_BOOKINGS" -> true;
+                    default -> false;
+                })
+                .distinct()
+                .toList();
     }
 
     private Users getRequiredUser(Long id) {
@@ -358,7 +399,8 @@ public class UsersService {
                 user.getBirthDate(),
                 user.getAvatarUrl(),
                 List.copyOf(user.getPaymentMethods()),
-                Map.copyOf(user.getPaymentDetails())
+                Map.copyOf(user.getPaymentDetails()),
+                List.copyOf(user.getPermissions())
         );
     }
 }

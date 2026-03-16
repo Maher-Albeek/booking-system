@@ -11,6 +11,8 @@ public class CreateBookingRequest {
     @NotNull(message = "resourceId is required")
     private Long resourceId;
 
+    private Long offerId;
+
     @NotBlank(message = "startDateTime is required")
     private String startDateTime;
 
@@ -44,6 +46,9 @@ public class CreateBookingRequest {
 
     public Long getResourceId() { return resourceId; }
     public void setResourceId(Long resourceId) { this.resourceId = resourceId; }
+
+    public Long getOfferId() { return offerId; }
+    public void setOfferId(Long offerId) { this.offerId = offerId; }
 
     public String getStartDateTime() { return startDateTime; }
     public void setStartDateTime(String startDateTime) { this.startDateTime = startDateTime; }

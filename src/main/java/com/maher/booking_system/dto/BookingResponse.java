@@ -7,6 +7,7 @@ public class BookingResponse {
     private Long id;
     private Long userId;
     private Long resourceId;
+    private Long offerId;
     private Long timeSlotId;
     private LocalDateTime startDateTime;
     private LocalDateTime endDateTime;
@@ -43,6 +44,9 @@ public class BookingResponse {
 
     public Long getResourceId() { return resourceId; }
     public void setResourceId(Long resourceId) { this.resourceId = resourceId; }
+
+    public Long getOfferId() { return offerId; }
+    public void setOfferId(Long offerId) { this.offerId = offerId; }
 
     public Long getTimeSlotId() { return timeSlotId; }
     public void setTimeSlotId(Long timeSlotId) { this.timeSlotId = timeSlotId; }
