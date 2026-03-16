@@ -90,6 +90,51 @@ public class StripeApiClient {
         }
     }
 
+    public RefundResult createRefund(String paymentIntentId, long amountCents, String reason, String idempotencyKey) {
+        ensureConfigured();
+        if (paymentIntentId == null || paymentIntentId.isBlank()) {
+            throw new BadRequestException("Payment intent id is required for refund");
+        }
+        if (amountCents <= 0) {
+            throw new BadRequestException("Refund amount must be greater than zero");
+        }
+
+        Map<String, String> form = new LinkedHashMap<>();
+        form.put("payment_intent", paymentIntentId);
+        form.put("amount", String.valueOf(amountCents));
+        form.put("reason", "requested_by_customer");
+        form.put("metadata[refund_reason]", reason == null ? "" : reason);
+
+        HttpRequest httpRequest = HttpRequest.newBuilder(URI.create(STRIPE_BASE_URL + "/refunds"))
+                .timeout(Duration.ofSeconds(20))
+                .header("Authorization", "Bearer " + secretKey)
+                .header("Content-Type", "application/x-www-form-urlencoded")
+                .header("Idempotency-Key", idempotencyKey)
+                .POST(HttpRequest.BodyPublishers.ofString(encodeForm(form)))
+                .build();
+
+        try {
+            HttpResponse<String> response = httpClient.send(httpRequest, HttpResponse.BodyHandlers.ofString());
+            JsonNode json = objectMapper.readTree(response.body());
+
+            if (response.statusCode() < 200 || response.statusCode() >= 300) {
+                String message = json.path("error").path("message").asText("Stripe refund failed");
+                throw new BadRequestException("Payment provider rejected refund: " + message);
+            }
+
+            return new RefundResult(
+                    json.path("id").asText(),
+                    json.path("amount").asLong(amountCents),
+                    json.path("status").asText("pending")
+            );
+        } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt();
+            throw new BadRequestException("Unable to connect to payment provider");
+        } catch (IOException ex) {
+            throw new BadRequestException("Unable to connect to payment provider");
+        }
+    }
+
     public String providerName() {
         return PROVIDER;
     }
@@ -127,5 +172,8 @@ public class StripeApiClient {
     }
 
     public record CheckoutSession(String sessionId, String checkoutUrl, String paymentIntentId) {
+    }
+
+    public record RefundResult(String refundId, long amountCents, String status) {
     }
 }

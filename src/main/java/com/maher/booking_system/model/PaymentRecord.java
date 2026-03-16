@@ -16,6 +16,8 @@ public class PaymentRecord {
     private Long amountCents;
     private String currency;
     private Long refundedAmountCents;
+    private Integer refundedPercentage;
+    private String refundReason;
     private String lastError;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
@@ -52,6 +54,12 @@ public class PaymentRecord {
 
     public Long getRefundedAmountCents() { return refundedAmountCents; }
     public void setRefundedAmountCents(Long refundedAmountCents) { this.refundedAmountCents = refundedAmountCents; }
+
+    public Integer getRefundedPercentage() { return refundedPercentage; }
+    public void setRefundedPercentage(Integer refundedPercentage) { this.refundedPercentage = refundedPercentage; }
+
+    public String getRefundReason() { return refundReason; }
+    public void setRefundReason(String refundReason) { this.refundReason = refundReason; }
 
     public String getLastError() { return lastError; }
     public void setLastError(String lastError) { this.lastError = lastError; }

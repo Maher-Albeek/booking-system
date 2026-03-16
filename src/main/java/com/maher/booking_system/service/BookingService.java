@@ -25,10 +25,16 @@ public class BookingService {
 
     private final BookingRepository bookingRepository;
     private final TimeSlotRepository timeSlotRepository;
+    private final PaymentService paymentService;
 
-    public BookingService(BookingRepository bookingRepository, TimeSlotRepository timeSlotRepository) {
+    public BookingService(
+            BookingRepository bookingRepository,
+            TimeSlotRepository timeSlotRepository,
+            PaymentService paymentService
+    ) {
         this.bookingRepository = bookingRepository;
         this.timeSlotRepository = timeSlotRepository;
+        this.paymentService = paymentService;
     }
 
     public List<Booking> getAllBookings() {
@@ -112,9 +118,9 @@ public class BookingService {
         return timeSlotRepository.findByResourceIdAndAvailable(resourceId, available);
     }
 
-    public synchronized void cancelBooking(@NonNull Long bookingId) {
+    public synchronized @NonNull Booking cancelBooking(@NonNull Long bookingId) {
         Objects.requireNonNull(bookingId, "bookingId must not be null");
-        updateBookingStatus(bookingId, BookingStatus.CANCELLED);
+        return updateBookingStatus(bookingId, BookingStatus.CANCELLED);
     }
 
     public synchronized @NonNull Booking updateBooking(@NonNull Long bookingId, @NonNull UpdateBookingRequest request) {
@@ -123,6 +129,7 @@ public class BookingService {
 
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new NotFoundException("Booking not found"));
+        BookingStatus previousStatus = booking.getStatus() == null ? null : booking.getStatus().canonical();
 
         boolean changed = false;
 
@@ -147,6 +154,8 @@ public class BookingService {
         }
 
         Booking savedBooking = bookingRepository.save(booking);
+        paymentService.handleStatusTransition(savedBooking, previousStatus);
+        savedBooking = bookingRepository.save(savedBooking);
         syncTimeSlotAvailability(savedBooking.getTimeSlotId(), null);
         return savedBooking;
     }
@@ -158,8 +167,15 @@ public class BookingService {
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new NotFoundException("Booking not found"));
 
+        BookingStatus previousStatus = booking.getStatus() == null ? null : booking.getStatus().canonical();
         applyStatusTransition(booking, targetStatus);
-        Booking savedBooking = bookingRepository.save(booking);
+        Booking savedBooking;
+        if (targetStatus.canonical() == BookingStatus.CANCELLED) {
+            savedBooking = paymentService.processBookingCancellation(booking);
+        } else {
+            paymentService.handleStatusTransition(booking, previousStatus);
+            savedBooking = bookingRepository.save(booking);
+        }
         syncTimeSlotAvailability(savedBooking.getTimeSlotId(), null);
         return savedBooking;
     }

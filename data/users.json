@@ -14,10 +14,9 @@
   "addressCountry" : "DE",
   "birthDate" : "1990-01-01",
   "avatarUrl" : null,
-  "paymentMethods" : [ "PayPal", "Visa" ],
+  "paymentMethods" : [ "PayPal" ],
   "paymentDetails" : {
-    "PayPal" : "roomgan@gmail.com",
-    "Visa" : "4111 1111 1111 1111"
+    "PayPal" : "roomgan@gmail.com"
   }
 }, {
   "id" : 2,

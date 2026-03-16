@@ -46,8 +46,8 @@ public class BookingController {
     }
 
     @PatchMapping("/{id}/cancel")
-    public void cancel(@PathVariable @NonNull Long id) {
-        bookingService.cancelBooking(id);
+    public BookingResponse cancel(@PathVariable @NonNull Long id) {
+        return BookingMapper.toResponse(bookingService.cancelBooking(id));
     }
 
     @PatchMapping("/{id}")

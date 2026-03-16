@@ -134,6 +134,11 @@ type Booking = {
   payableAmountCents: number | null;
   payableCurrency: string | null;
   paymentProvider: string | null;
+  cancellationRefundPercentage: number | null;
+  refundedAmountCents: number | null;
+  refundReason: string | null;
+  depositHoldStatus: string | null;
+  depositHoldAmountCents: number | null;
 };
 
 type BookingRequest = {
@@ -154,6 +159,7 @@ type CreateCheckoutSessionRequest = {
   successUrl: string;
   cancelUrl: string;
   savePaymentMethod: boolean;
+  agreedToCancellationPolicy: boolean;
 };
 
 type CreateCheckoutSessionResponse = {
@@ -161,6 +167,18 @@ type CreateCheckoutSessionResponse = {
   paymentStatus: string;
   checkoutSessionId: string;
   checkoutUrl: string | null;
+};
+
+type CancellationPolicyRule = {
+  minimumHoursBeforePickup: number;
+  refundPercentage: number;
+  label: string;
+};
+
+type CancellationPolicy = {
+  version: string;
+  agreementText: string;
+  rules: CancellationPolicyRule[];
 };
 
 type CarSummary = Resource & {
@@ -232,6 +250,7 @@ export class UserPageComponent {
   protected readonly cancellingId = signal<number | null>(null);
   protected readonly error = signal<string | null>(null);
   protected readonly success = signal<string | null>(null);
+  protected readonly cancellationPolicy = signal<CancellationPolicy | null>(null);
   protected readonly reservationModalOpen = signal(false);
   protected readonly paymentDetailsModalOpen = signal(false);
   protected readonly carDetailsId = signal<number | null>(null);
@@ -270,6 +289,7 @@ export class UserPageComponent {
   protected readonly bookingCardCvv = signal('');
   protected readonly bookingWalletEmail = signal('');
   protected readonly serviceName = signal('');
+  protected readonly bookingPolicyAccepted = signal(false);
   protected readonly searchLocationInput = signal('');
   protected readonly searchStartDateInput = signal('');
   protected readonly searchEndDateInput = signal('');
@@ -563,6 +583,7 @@ export class UserPageComponent {
       this.loading() ||
       this.submitting() ||
       !this.auth.isAuthenticated() ||
+      this.cancellationPolicy() === null ||
       this.selectedCar() === null ||
       this.selectedUser() === null ||
       !this.bookingStartDateTime().trim() ||
@@ -572,7 +593,8 @@ export class UserPageComponent {
       !this.bookingAddress().trim() ||
       !this.bookingBirthDate().trim() ||
       !this.bookingPaymentMethod() ||
-      !this.serviceName().trim()
+      !this.serviceName().trim() ||
+      !this.bookingPolicyAccepted()
   );
 
   protected readonly bookingNeedsPaymentDetailsInput = computed(() => {
@@ -694,6 +716,7 @@ export class UserPageComponent {
     this.bookingStartDateTime.set('');
     this.bookingEndDateTime.set('');
     this.resetBookingPaymentDetails();
+    this.bookingPolicyAccepted.set(false);
     this.syncBookingFieldsFromUser(this.selectedUser(), this.selectedUser(), true);
     this.error.set(null);
     this.success.set(null);
@@ -876,6 +899,14 @@ export class UserPageComponent {
       this.error.set(this.i18n.t('user.error.loginBeforeBooking'));
       return;
     }
+    if (!this.cancellationPolicy()) {
+      this.error.set('Cancellation policy is currently unavailable. Please refresh and try again.');
+      return;
+    }
+    if (!this.bookingPolicyAccepted()) {
+      this.error.set('Please agree to the cancellation policy before payment.');
+      return;
+    }
 
     const selectedCar = this.selectedCar();
     const selectedUser = this.selectedUser();
@@ -937,7 +968,8 @@ export class UserPageComponent {
       booking: payload,
       successUrl: `${window.location.origin}/bookings`,
       cancelUrl: `${window.location.origin}/offers`,
-      savePaymentMethod: true
+      savePaymentMethod: true,
+      agreedToCancellationPolicy: this.bookingPolicyAccepted()
     };
     const idempotencyKey =
       typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
@@ -992,14 +1024,14 @@ export class UserPageComponent {
     this.success.set(null);
 
     this.http
-      .patch<void>(`/api/bookings/${bookingId}/cancel`, {})
+      .patch<Booking>(`/api/bookings/${bookingId}/cancel`, {})
       .pipe(
         takeUntilDestroyed(this.destroyRef),
         finalize(() => this.cancellingId.set(null))
       )
       .subscribe({
-        next: () => {
-          this.success.set(this.i18n.t('user.success.bookingCancelled'));
+        next: (booking) => {
+          this.success.set(this.buildCancellationMessage(booking));
           this.loadData();
         },
         error: (error: HttpErrorResponse) => {
@@ -1171,6 +1203,9 @@ export class UserPageComponent {
       users: usersRequest,
       bookings: bookingsRequest,
       profile: profileRequest,
+      cancellationPolicy: this.http
+        .get<CancellationPolicy>('/api/payments/cancellation-policy')
+        .pipe(catchError(() => of(null))),
       offers: this.http.get<OfferSection[]>('/api/offers/published'),
       offerSettings: this.http
         .get<OfferPageSettings>('/api/offers/settings/published')
@@ -1182,7 +1217,7 @@ export class UserPageComponent {
         finalize(() => this.loading.set(false))
       )
       .subscribe({
-        next: ({ cars, users, bookings, profile, offers, offerSettings }) => {
+        next: ({ cars, users, bookings, profile, cancellationPolicy, offers, offerSettings }) => {
           const normalizedCars = cars.map((car) => this.normalizeResource(car));
           const normalizedUsers = users.map((user) => this.normalizeUser(user));
           const normalizedProfile = profile ? this.normalizeUser(profile) : null;
@@ -1194,6 +1229,7 @@ export class UserPageComponent {
           this.catalogCars.set([]);
           this.users.set(normalizedUsers);
           this.bookings.set(bookings);
+          this.cancellationPolicy.set(cancellationPolicy);
           this.publishedOfferSections.set(normalizedOffers);
           this.heroBackgroundImageUrl.set((offerSettings?.heroBackgroundImageUrl ?? '').trim());
 
@@ -1754,6 +1790,19 @@ export class UserPageComponent {
     return `${formattedValue} ${normalizedUnit}`;
   }
 
+  protected formatMoneyFromCents(value: number | null | undefined, currency: string | null | undefined): string {
+    if (typeof value !== 'number' || Number.isNaN(value)) {
+      return this.i18n.t('common.notSet');
+    }
+
+    return new Intl.NumberFormat(this.i18n.locale(), {
+      style: 'currency',
+      currency: (currency ?? 'EUR').trim().toUpperCase(),
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(value / 100);
+  }
+
   private calculateRentalDays(startValue: string, endValue: string): number | null {
     if (!startValue || !endValue) {
       return null;
@@ -1953,6 +2002,21 @@ export class UserPageComponent {
     }
 
     return fallback;
+  }
+
+  private buildCancellationMessage(booking: Booking): string {
+    const refundedAmount = booking.refundedAmountCents ?? 0;
+    const refundPercentage = booking.cancellationRefundPercentage ?? 0;
+
+    if (refundedAmount > 0) {
+      return `Booking cancelled. Refund ${this.formatMoneyFromCents(refundedAmount, booking.payableCurrency)} (${refundPercentage}%).`;
+    }
+
+    if (booking.refundReason?.trim()) {
+      return `Booking cancelled. ${booking.refundReason.trim()}.`;
+    }
+
+    return this.i18n.t('user.success.bookingCancelled');
   }
 
   private readFileAsDataUrl(file: File): Promise<string> {

@@ -29,6 +29,17 @@ public final class BookingMapper {
         response.setPayableAmountCents(booking.getPayableAmountCents());
         response.setPayableCurrency(booking.getPayableCurrency());
         response.setPaymentProvider(booking.getPaymentProvider());
+        response.setAgreedToCancellationPolicy(booking.getAgreedToCancellationPolicy());
+        response.setCancellationPolicyVersion(booking.getCancellationPolicyVersion());
+        response.setCancellationRefundPercentage(booking.getCancellationRefundPercentage());
+        response.setRefundedAmountCents(booking.getRefundedAmountCents());
+        response.setRefundReason(booking.getRefundReason());
+        response.setCancelledAt(booking.getCancelledAt());
+        response.setDepositHoldStatus(booking.getDepositHoldStatus() == null ? null : booking.getDepositHoldStatus().name());
+        response.setDepositHoldAmountCents(booking.getDepositHoldAmountCents());
+        response.setDepositHoldProvider(booking.getDepositHoldProvider());
+        response.setDepositHoldCreatedAt(booking.getDepositHoldCreatedAt());
+        response.setDepositHoldReleasedAt(booking.getDepositHoldReleasedAt());
         return response;
     }
 }

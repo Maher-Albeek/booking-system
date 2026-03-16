@@ -8,10 +8,12 @@ import com.maher.booking_system.dto.CreateCheckoutSessionResponse;
 import com.maher.booking_system.exception.BadRequestException;
 import com.maher.booking_system.exception.NotFoundException;
 import com.maher.booking_system.model.Booking;
+import com.maher.booking_system.model.CancellationPolicy;
 import com.maher.booking_system.model.PaymentRecord;
 import com.maher.booking_system.model.PaymentWebhookEvent;
 import com.maher.booking_system.model.Resources;
 import com.maher.booking_system.model.enums.BookingStatus;
+import com.maher.booking_system.model.enums.DepositHoldStatus;
 import com.maher.booking_system.model.enums.PaymentStatus;
 import com.maher.booking_system.repository.BookingRepository;
 import com.maher.booking_system.repository.PaymentRepository;
@@ -41,6 +43,7 @@ public class PaymentService {
     private final ResourcesRepository resourcesRepository;
     private final TimeSlotRepository timeSlotRepository;
     private final StripeApiClient stripeApiClient;
+    private final CancellationPolicyService cancellationPolicyService;
     private final ObjectMapper objectMapper;
     private final String webhookSecret;
     private final String publishableKey;
@@ -53,6 +56,7 @@ public class PaymentService {
             ResourcesRepository resourcesRepository,
             TimeSlotRepository timeSlotRepository,
             StripeApiClient stripeApiClient,
+            CancellationPolicyService cancellationPolicyService,
             ObjectMapper objectMapper,
             @Value("${app.payment.stripe.webhook-secret:}") String webhookSecret,
             @Value("${app.payment.stripe.publishable-key:}") String publishableKey,
@@ -64,6 +68,7 @@ public class PaymentService {
         this.resourcesRepository = resourcesRepository;
         this.timeSlotRepository = timeSlotRepository;
         this.stripeApiClient = stripeApiClient;
+        this.cancellationPolicyService = cancellationPolicyService;
         this.objectMapper = objectMapper;
         this.webhookSecret = webhookSecret == null ? "" : webhookSecret.trim();
         this.publishableKey = publishableKey == null ? "" : publishableKey.trim();
@@ -85,9 +90,14 @@ public class PaymentService {
             );
         }
 
+        if (!request.isAgreedToCancellationPolicy()) {
+            throw new BadRequestException("You must agree to the cancellation policy before payment");
+        }
+
         CreateBookingRequest bookingRequest = Objects.requireNonNull(request.getBooking(), "booking is required");
+        CancellationPolicy cancellationPolicy = cancellationPolicyService.getCurrentPolicy();
         Pricing pricing = calculatePricing(bookingRequest.getResourceId(), bookingRequest.getStartDateTime(), bookingRequest.getEndDateTime());
-        Booking booking = createPendingBooking(bookingRequest, pricing);
+        Booking booking = createPendingBooking(bookingRequest, pricing, cancellationPolicy);
 
         StripeApiClient.CheckoutSession checkoutSession;
         try {
@@ -182,8 +192,105 @@ public class PaymentService {
         return Map.of(
                 "provider", PROVIDER,
                 "publishableKey", publishableKey,
-                "currency", defaultCurrency
+                "currency", defaultCurrency,
+                "depositHoldStage", "check-in"
         );
+    }
+
+    public void handleStatusTransition(Booking booking, BookingStatus previousStatus) {
+        if (booking == null || booking.getStatus() == null) {
+            return;
+        }
+
+        BookingStatus currentStatus = booking.getStatus().canonical();
+        BookingStatus normalizedPrevious = previousStatus == null ? null : previousStatus.canonical();
+
+        if (currentStatus == BookingStatus.ACTIVE && normalizedPrevious != BookingStatus.ACTIVE) {
+            applyDepositHold(booking);
+        }
+
+        if ((currentStatus == BookingStatus.COMPLETED || currentStatus == BookingStatus.CANCELLED)
+                && booking.getDepositHoldStatus() == DepositHoldStatus.HELD) {
+            releaseDepositHold(booking);
+        }
+    }
+
+    public synchronized Booking processBookingCancellation(Booking booking) {
+        if (booking == null) {
+            return null;
+        }
+
+        booking.setCancelledAt(LocalDateTime.now());
+
+        if (booking.getDepositHoldStatus() == DepositHoldStatus.HELD) {
+            releaseDepositHold(booking);
+        }
+
+        if (booking.getPaymentStatus() != PaymentStatus.SUCCEEDED) {
+            booking.setCancellationRefundPercentage(0);
+            booking.setRefundedAmountCents(0L);
+            booking.setRefundReason("Booking cancelled before successful payment");
+            Booking savedBooking = bookingRepository.save(booking);
+            syncTimeSlotAvailability(savedBooking);
+            return savedBooking;
+        }
+
+        CancellationPolicy policy = cancellationPolicyService.getCurrentPolicy();
+        CancellationPolicyService.RefundDecision refundDecision = cancellationPolicyService.calculateRefund(
+                policy,
+                booking.getStartDateTime(),
+                booking.getPayableAmountCents() == null ? 0L : booking.getPayableAmountCents()
+        );
+
+        booking.setCancellationRefundPercentage(refundDecision.refundPercentage());
+        booking.setRefundReason(refundDecision.reason());
+        booking.setRefundedAmountCents(refundDecision.refundedAmountCents());
+
+        PaymentRecord payment = paymentRepository.findAll().stream()
+                .filter(existing -> Objects.equals(existing.getBookingId(), booking.getId()))
+                .findFirst()
+                .orElse(null);
+
+        if (payment != null) {
+            payment.setRefundedPercentage(refundDecision.refundPercentage());
+            payment.setRefundReason(refundDecision.reason());
+        }
+
+        if (refundDecision.refundedAmountCents() <= 0L) {
+            if (payment != null) {
+                payment.setRefundedAmountCents(0L);
+                payment.setStatus(PaymentStatus.SUCCEEDED);
+                payment.setLastError("Cancellation did not qualify for a refund");
+                payment.setUpdatedAt(LocalDateTime.now());
+                paymentRepository.save(payment);
+            }
+            Booking savedBooking = bookingRepository.save(booking);
+            syncTimeSlotAvailability(savedBooking);
+            return savedBooking;
+        }
+
+        if (payment == null) {
+            throw new BadRequestException("Payment record not found for booking " + booking.getId());
+        }
+
+        if (PROVIDER.equalsIgnoreCase(payment.getProvider())) {
+            stripeApiClient.createRefund(
+                    payment.getProviderPaymentIntentId(),
+                    refundDecision.refundedAmountCents(),
+                    refundDecision.reason(),
+                    "refund-booking-" + booking.getId() + "-" + refundDecision.refundedAmountCents()
+            );
+        }
+
+        payment.setRefundedAmountCents(refundDecision.refundedAmountCents());
+        payment.setStatus(refundDecision.refundPercentage() >= 100 ? PaymentStatus.REFUNDED : PaymentStatus.PARTIALLY_REFUNDED);
+        payment.setUpdatedAt(LocalDateTime.now());
+        paymentRepository.save(payment);
+
+        booking.setPaymentStatus(refundDecision.refundPercentage() >= 100 ? PaymentStatus.REFUNDED : PaymentStatus.PARTIALLY_REFUNDED);
+        Booking savedBooking = bookingRepository.save(booking);
+        syncTimeSlotAvailability(savedBooking);
+        return savedBooking;
     }
 
     private Pricing calculatePricing(Long resourceId, String startDateTime, String endDateTime) {
@@ -214,7 +321,7 @@ public class PaymentService {
         return new Pricing(amountCents, defaultCurrency, start, end);
     }
 
-    private Booking createPendingBooking(CreateBookingRequest bookingRequest, Pricing pricing) {
+    private Booking createPendingBooking(CreateBookingRequest bookingRequest, Pricing pricing, CancellationPolicy cancellationPolicy) {
         Booking booking = new Booking();
         booking.setUserId(bookingRequest.getUserId());
         booking.setResourceId(bookingRequest.getResourceId());
@@ -233,6 +340,11 @@ public class PaymentService {
         booking.setPayableAmountCents(pricing.amountCents());
         booking.setPayableCurrency(pricing.currency());
         booking.setPaymentProvider(PROVIDER);
+        booking.setAgreedToCancellationPolicy(Boolean.TRUE);
+        booking.setCancellationPolicyVersion(cancellationPolicy.getVersion());
+        booking.setCancellationRefundPercentage(0);
+        booking.setRefundedAmountCents(0L);
+        booking.setDepositHoldStatus(resolveDepositRequirement(booking.getResourceId()));
         booking.setBookingTime(LocalDateTime.now());
         Booking savedBooking = bookingRepository.save(booking);
         syncTimeSlotAvailability(savedBooking);
@@ -324,12 +436,15 @@ public class PaymentService {
         }
 
         long refunded = charge.path("amount_refunded").asLong(0L);
-        payment.setStatus(PaymentStatus.REFUNDED);
+        payment.setStatus(refunded >= (payment.getAmountCents() == null ? 0L : payment.getAmountCents())
+                ? PaymentStatus.REFUNDED
+                : PaymentStatus.PARTIALLY_REFUNDED);
         payment.setRefundedAmountCents(refunded);
         payment.setUpdatedAt(LocalDateTime.now());
         paymentRepository.save(payment);
 
-        booking.setPaymentStatus(PaymentStatus.REFUNDED);
+        booking.setPaymentStatus(payment.getStatus());
+        booking.setRefundedAmountCents(refunded);
         bookingRepository.save(booking);
         syncTimeSlotAvailability(booking);
     }
@@ -387,6 +502,43 @@ public class PaymentService {
             slot.setAvailable(!blocked);
             timeSlotRepository.save(slot);
         });
+    }
+
+    private DepositHoldStatus resolveDepositRequirement(Long resourceId) {
+        if (resourceId == null) {
+            return DepositHoldStatus.NOT_REQUIRED;
+        }
+
+        return resourcesRepository.findById(resourceId)
+                .map(Resources::getDepositAmount)
+                .filter(amount -> amount != null && amount > 0)
+                .map(amount -> DepositHoldStatus.PENDING)
+                .orElse(DepositHoldStatus.NOT_REQUIRED);
+    }
+
+    private void applyDepositHold(Booking booking) {
+        Resources resource = resourcesRepository.findById(booking.getResourceId())
+                .orElseThrow(() -> new NotFoundException("Resource not found with id: " + booking.getResourceId()));
+        Double depositAmount = resource.getDepositAmount();
+        if (depositAmount == null || depositAmount <= 0) {
+            booking.setDepositHoldStatus(DepositHoldStatus.NOT_REQUIRED);
+            booking.setDepositHoldAmountCents(0L);
+            return;
+        }
+
+        booking.setDepositHoldStatus(DepositHoldStatus.HELD);
+        booking.setDepositHoldAmountCents(Math.round(depositAmount * 100.0d));
+        booking.setDepositHoldProvider(PROVIDER);
+        if (booking.getDepositHoldCreatedAt() == null) {
+            booking.setDepositHoldCreatedAt(LocalDateTime.now());
+        }
+    }
+
+    private void releaseDepositHold(Booking booking) {
+        booking.setDepositHoldStatus(DepositHoldStatus.RELEASED);
+        if (booking.getDepositHoldReleasedAt() == null) {
+            booking.setDepositHoldReleasedAt(LocalDateTime.now());
+        }
     }
 
     private record Pricing(long amountCents, String currency, LocalDateTime start, LocalDateTime end) {

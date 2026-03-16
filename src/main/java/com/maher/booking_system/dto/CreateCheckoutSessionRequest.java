@@ -16,6 +16,7 @@ public class CreateCheckoutSessionRequest {
     private String cancelUrl;
 
     private boolean savePaymentMethod;
+    private boolean agreedToCancellationPolicy;
 
     public CreateBookingRequest getBooking() { return booking; }
     public void setBooking(CreateBookingRequest booking) { this.booking = booking; }
@@ -28,4 +29,9 @@ public class CreateCheckoutSessionRequest {
 
     public boolean isSavePaymentMethod() { return savePaymentMethod; }
     public void setSavePaymentMethod(boolean savePaymentMethod) { this.savePaymentMethod = savePaymentMethod; }
+
+    public boolean isAgreedToCancellationPolicy() { return agreedToCancellationPolicy; }
+    public void setAgreedToCancellationPolicy(boolean agreedToCancellationPolicy) {
+        this.agreedToCancellationPolicy = agreedToCancellationPolicy;
+    }
 }

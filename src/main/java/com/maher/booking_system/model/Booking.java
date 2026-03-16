@@ -1,6 +1,7 @@
 package com.maher.booking_system.model;
 
 import com.maher.booking_system.model.enums.BookingStatus;
+import com.maher.booking_system.model.enums.DepositHoldStatus;
 import com.maher.booking_system.model.enums.PaymentStatus;
 
 import java.time.LocalDateTime;
@@ -26,6 +27,17 @@ public class Booking {
     private Long payableAmountCents;
     private String payableCurrency;
     private String paymentProvider;
+    private Boolean agreedToCancellationPolicy;
+    private String cancellationPolicyVersion;
+    private Integer cancellationRefundPercentage;
+    private Long refundedAmountCents;
+    private String refundReason;
+    private LocalDateTime cancelledAt;
+    private DepositHoldStatus depositHoldStatus;
+    private Long depositHoldAmountCents;
+    private String depositHoldProvider;
+    private LocalDateTime depositHoldCreatedAt;
+    private LocalDateTime depositHoldReleasedAt;
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -83,4 +95,49 @@ public class Booking {
 
     public String getPaymentProvider() { return paymentProvider; }
     public void setPaymentProvider(String paymentProvider) { this.paymentProvider = paymentProvider; }
+
+    public Boolean getAgreedToCancellationPolicy() { return agreedToCancellationPolicy; }
+    public void setAgreedToCancellationPolicy(Boolean agreedToCancellationPolicy) {
+        this.agreedToCancellationPolicy = agreedToCancellationPolicy;
+    }
+
+    public String getCancellationPolicyVersion() { return cancellationPolicyVersion; }
+    public void setCancellationPolicyVersion(String cancellationPolicyVersion) {
+        this.cancellationPolicyVersion = cancellationPolicyVersion;
+    }
+
+    public Integer getCancellationRefundPercentage() { return cancellationRefundPercentage; }
+    public void setCancellationRefundPercentage(Integer cancellationRefundPercentage) {
+        this.cancellationRefundPercentage = cancellationRefundPercentage;
+    }
+
+    public Long getRefundedAmountCents() { return refundedAmountCents; }
+    public void setRefundedAmountCents(Long refundedAmountCents) { this.refundedAmountCents = refundedAmountCents; }
+
+    public String getRefundReason() { return refundReason; }
+    public void setRefundReason(String refundReason) { this.refundReason = refundReason; }
+
+    public LocalDateTime getCancelledAt() { return cancelledAt; }
+    public void setCancelledAt(LocalDateTime cancelledAt) { this.cancelledAt = cancelledAt; }
+
+    public DepositHoldStatus getDepositHoldStatus() { return depositHoldStatus; }
+    public void setDepositHoldStatus(DepositHoldStatus depositHoldStatus) { this.depositHoldStatus = depositHoldStatus; }
+
+    public Long getDepositHoldAmountCents() { return depositHoldAmountCents; }
+    public void setDepositHoldAmountCents(Long depositHoldAmountCents) {
+        this.depositHoldAmountCents = depositHoldAmountCents;
+    }
+
+    public String getDepositHoldProvider() { return depositHoldProvider; }
+    public void setDepositHoldProvider(String depositHoldProvider) { this.depositHoldProvider = depositHoldProvider; }
+
+    public LocalDateTime getDepositHoldCreatedAt() { return depositHoldCreatedAt; }
+    public void setDepositHoldCreatedAt(LocalDateTime depositHoldCreatedAt) {
+        this.depositHoldCreatedAt = depositHoldCreatedAt;
+    }
+
+    public LocalDateTime getDepositHoldReleasedAt() { return depositHoldReleasedAt; }
+    public void setDepositHoldReleasedAt(LocalDateTime depositHoldReleasedAt) {
+        this.depositHoldReleasedAt = depositHoldReleasedAt;
+    }
 }

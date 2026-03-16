@@ -581,6 +581,28 @@
                   <dt>{{ i18n.t('user.booking.bookedAt') }}</dt>
                   <dd>{{ formatDate(booking.bookingTime) }}</dd>
                 </div>
+                @if (booking.depositHoldStatus) {
+                  <div>
+                    <dt>Deposit hold</dt>
+                    <dd>
+                      {{ booking.depositHoldStatus }}
+                      @if (booking.depositHoldAmountCents) {
+                        <span> | {{ formatMoneyFromCents(booking.depositHoldAmountCents, booking.payableCurrency) }}</span>
+                      }
+                    </dd>
+                  </div>
+                }
+                @if (booking.refundedAmountCents) {
+                  <div>
+                    <dt>Refund</dt>
+                    <dd>
+                      {{ formatMoneyFromCents(booking.refundedAmountCents, booking.payableCurrency) }}
+                      @if (booking.cancellationRefundPercentage !== null) {
+                        <span> | {{ booking.cancellationRefundPercentage }}%</span>
+                      }
+                    </dd>
+                  </div>
+                }
               </dl>
 
               @if (canCancelBooking(booking)) {
@@ -1016,6 +1038,34 @@
             </p>
           </section>
 
+          @if (cancellationPolicy()) {
+            <section class="policy-panel">
+              <div class="slot-header">
+                <span>Cancellation policy</span>
+                <strong>{{ cancellationPolicy()!.version }}</strong>
+              </div>
+
+              <ul class="policy-rule-list">
+                @for (rule of cancellationPolicy()!.rules; track rule.label + rule.minimumHoursBeforePickup) {
+                  <li>
+                    <strong>{{ rule.refundPercentage }}%</strong>
+                    <span>{{ rule.label || ('Cancel ' + rule.minimumHoursBeforePickup + '+ hours before pickup') }}</span>
+                  </li>
+                }
+              </ul>
+
+              <label class="policy-agreement">
+                <input
+                  type="checkbox"
+                  name="bookingPolicyAccepted"
+                  [ngModel]="bookingPolicyAccepted()"
+                  (ngModelChange)="bookingPolicyAccepted.set(!!$event)"
+                />
+                <span>{{ cancellationPolicy()!.agreementText || 'I agree to the cancellation policy shown above.' }}</span>
+              </label>
+            </section>
+          }
+
           @if (auth.isAuthenticated()) {
             <p class="form-note">
               {{ i18n.t('user.modal.savedDataNote') }}
@@ -1040,11 +1090,11 @@
               </button>
             </div>
 
-            <p class="form-note">{{ i18n.t('user.modal.livePostNote') }} <code>POST /api/bookings</code>.</p>
+            <p class="form-note">Checkout uses <code>POST /api/payments/checkout-session</code>.</p>
           } @else {
             <p class="form-note">
               {{ i18n.t('user.modal.guestBrowseNote') }}
-              <code>POST /api/bookings</code>.
+              <code>POST /api/payments/checkout-session</code>.
             </p>
           }
         </form>
