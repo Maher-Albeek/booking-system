@@ -1,1 +1,25 @@
-[ ]
+[ {
+  "id" : 1,
+  "sortOrder" : 0,
+  "title" : "TOP OFFER",
+  "description" : "New Offer",
+  "imageUrl" : "",
+  "backgroundColor" : "#10243a",
+  "textColor" : "#f7f2ea",
+  "heightPx" : 420,
+  "columns" : 1,
+  "descriptionColumnGapPx" : 24,
+  "descriptionColumnDividerWidthPx" : 1,
+  "descriptionColumnDividerColor" : "#f7f2ea",
+  "titleFontSizePx" : 38,
+  "descriptionFontSizePx" : 18,
+  "titleXPercent" : 43.05,
+  "titleYPercent" : 14.14,
+  "descriptionXPercent" : 46.69,
+  "descriptionYPercent" : 38.95,
+  "enabled" : true,
+  "startDateTime" : "2026-03-18T00:27:00",
+  "endDateTime" : "2026-03-19T00:27:00",
+  "ctaLabel" : "Book now",
+  "linkedResourceIds" : [ 12 ]
+} ]

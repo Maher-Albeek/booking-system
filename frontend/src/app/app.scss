@@ -882,3 +882,9 @@ input.payment-detail-input:focus {
   }
 
 }
+.offer-section-meta,.offer-linked-cars{position:relative;z-index:1}
+.offer-section-meta,.offer-linked-car-actions{display:flex;flex-wrap:wrap;gap:10px}
+.offer-section-meta{margin-top:auto}
+.offer-badge{padding:8px 12px;border-radius:999px;background:rgba(11,18,32,.72)}
+.offer-linked-cars{display:grid;gap:10px}
+.offer-linked-car{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:14px 16px;border-radius:18px;background:rgba(7,14,26,.72)}
