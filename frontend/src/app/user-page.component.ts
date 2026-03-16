@@ -293,7 +293,7 @@ export class UserPageComponent {
     },
     {
       label: this.i18n.t('user.stats.confirmedTrips'),
-      value: this.bookings().filter((booking) => booking.status === 'CONFIRMED').length,
+      value: this.bookings().filter((booking) => this.isBlockingBookingStatus(booking.status)).length,
       note: this.i18n.t('user.stats.liveReservations')
     },
     {
@@ -323,7 +323,7 @@ export class UserPageComponent {
         return {
           ...car,
           confirmedBookings: bookings.filter(
-            (booking) => booking.resourceId === car.id && booking.status === 'CONFIRMED'
+            (booking) => booking.resourceId === car.id && this.isBlockingBookingStatus(booking.status)
           ).length
         };
       });
@@ -417,7 +417,7 @@ export class UserPageComponent {
       .map((car) => ({
         ...car,
         confirmedBookings: bookings.filter(
-          (booking) => booking.resourceId === car.id && booking.status === 'CONFIRMED'
+          (booking) => booking.resourceId === car.id && this.isBlockingBookingStatus(booking.status)
         ).length
       }));
   });
@@ -446,7 +446,7 @@ export class UserPageComponent {
     return this.favoriteCars().map((car) => ({
       ...car,
       confirmedBookings: bookings.filter(
-        (booking) => booking.resourceId === car.id && booking.status === 'CONFIRMED'
+        (booking) => booking.resourceId === car.id && this.isBlockingBookingStatus(booking.status)
       ).length
     }));
   });
@@ -1056,8 +1056,8 @@ export class UserPageComponent {
     }).format(new Date(value));
   }
 
-  protected isConfirmed(booking: Booking): boolean {
-    return booking.status === 'CONFIRMED';
+  protected canCancelBooking(booking: Booking): boolean {
+    return booking.status === 'PENDING' || booking.status === 'ACTIVE';
   }
 
   protected hasPhotos(car: Resource | null | undefined): boolean {
@@ -1909,7 +1909,7 @@ export class UserPageComponent {
     return !this.bookings().some((booking) => {
       if (
         booking.resourceId !== resourceId ||
-        booking.status !== 'CONFIRMED' ||
+        !this.isBlockingBookingStatus(booking.status) ||
         !booking.startDateTime ||
         !booking.endDateTime
       ) {
@@ -1925,6 +1925,10 @@ export class UserPageComponent {
 
       return bookingStart < end && bookingEnd > start;
     });
+  }
+
+  private isBlockingBookingStatus(status: string): boolean {
+    return status === 'PENDING' || status === 'ACTIVE';
   }
 
   private readApiError(error: HttpErrorResponse, fallback: string): string {

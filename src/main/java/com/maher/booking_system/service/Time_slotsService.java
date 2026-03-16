@@ -32,12 +32,13 @@ public class Time_slotsService {
         TimeSlot existingTimeSlot = timeSlotRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Time slot not found with id: " + id));
 
-        boolean hasConfirmedBooking = bookingRepository.existsByTimeSlotIdAndStatus(id, BookingStatus.CONFIRMED);
-        if (hasConfirmedBooking && !Objects.equals(existingTimeSlot.getResourceId(), safeTimeSlot.getResourceId())) {
+        boolean hasBlockingBooking = bookingRepository.findByTimeSlotId(id).stream()
+                .anyMatch(booking -> booking.getStatus() != null && booking.getStatus().blocksAvailability());
+        if (hasBlockingBooking && !Objects.equals(existingTimeSlot.getResourceId(), safeTimeSlot.getResourceId())) {
             throw new BadRequestException("A booked time slot cannot be moved to another car.");
         }
 
-        if (hasConfirmedBooking && safeTimeSlot.isAvailable()) {
+        if (hasBlockingBooking && safeTimeSlot.isAvailable()) {
             throw new BadRequestException("A booked time slot cannot be marked as available.");
         }
 

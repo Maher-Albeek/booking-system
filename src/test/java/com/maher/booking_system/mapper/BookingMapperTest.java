@@ -11,13 +11,13 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 class BookingMapperTest {
 
     @Test
-    void toResponse_mapsStatusWhenPresent() {
+    void toResponse_mapsLegacyConfirmedToPending() {
         Booking booking = new Booking();
         booking.setStatus(BookingStatus.CONFIRMED);
 
         BookingResponse response = BookingMapper.toResponse(booking);
 
-        assertEquals("CONFIRMED", response.getStatus());
+        assertEquals("PENDING", response.getStatus());
     }
 
     @Test

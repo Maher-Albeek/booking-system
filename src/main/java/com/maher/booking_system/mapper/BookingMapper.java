@@ -16,7 +16,7 @@ public final class BookingMapper {
         response.setTimeSlotId(booking.getTimeSlotId());
         response.setStartDateTime(booking.getStartDateTime());
         response.setEndDateTime(booking.getEndDateTime());
-        response.setStatus(booking.getStatus() == null ? null : booking.getStatus().name());
+        response.setStatus(booking.getStatus() == null ? null : booking.getStatus().canonical().name());
         response.setBookingTime(booking.getBookingTime());
         response.setCustomerName(booking.getCustomerName());
         response.setServiceName(booking.getServiceName());

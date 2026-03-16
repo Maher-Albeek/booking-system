@@ -8,6 +8,7 @@ import java.util.stream.Collectors;
 
 import com.maher.booking_system.dto.BookingResponse;
 import com.maher.booking_system.dto.CreateBookingRequest;
+import com.maher.booking_system.dto.UpdateBookingRequest;
 import com.maher.booking_system.model.Booking;
 import com.maher.booking_system.service.BookingService;
 import org.springframework.lang.NonNull;
@@ -47,5 +48,14 @@ public class BookingController {
     @PatchMapping("/{id}/cancel")
     public void cancel(@PathVariable @NonNull Long id) {
         bookingService.cancelBooking(id);
+    }
+
+    @PatchMapping("/{id}")
+    public BookingResponse update(
+            @PathVariable @NonNull Long id,
+            @Valid @RequestBody UpdateBookingRequest request
+    ) {
+        Booking booking = bookingService.updateBooking(id, request);
+        return BookingMapper.toResponse(booking);
     }
 }

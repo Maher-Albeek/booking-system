@@ -216,7 +216,7 @@ export class AdminPageComponent {
     {
       label: this.i18n.t('admin.stats.bookings'),
       value: this.bookings().length,
-      note: `${this.bookings().filter((booking) => booking.status === 'CONFIRMED').length} ${this.i18n.t('admin.stats.confirmed')}`
+      note: `${this.bookings().filter((booking) => booking.status === 'PENDING' || booking.status === 'ACTIVE').length} ${this.i18n.t('admin.stats.confirmed')}`
     }
   ]);
 

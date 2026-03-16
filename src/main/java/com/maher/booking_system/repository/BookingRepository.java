@@ -30,4 +30,16 @@ public class BookingRepository extends JsonRepositorySupport<Booking> {
                 .filter(booking -> resourceId.equals(booking.getResourceId()) && status == booking.getStatus())
                 .toList();
     }
+
+    public List<Booking> findByResourceId(Long resourceId) {
+        return findAll().stream()
+                .filter(booking -> resourceId.equals(booking.getResourceId()))
+                .toList();
+    }
+
+    public List<Booking> findByTimeSlotId(Long timeSlotId) {
+        return findAll().stream()
+                .filter(booking -> timeSlotId.equals(booking.getTimeSlotId()))
+                .toList();
+    }
 }

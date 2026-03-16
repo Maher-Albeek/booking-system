@@ -1,6 +1,7 @@
 package com.maher.booking_system.service;
 
 import com.maher.booking_system.dto.CreateBookingRequest;
+import com.maher.booking_system.dto.UpdateBookingRequest;
 import com.maher.booking_system.exception.BadRequestException;
 import com.maher.booking_system.exception.ConflictException;
 import com.maher.booking_system.exception.NotFoundException;
@@ -21,8 +22,6 @@ import java.util.Objects;
 
 @Service
 public class BookingService {
-
-    private static final BookingStatus CONFIRMED_STATUS = BookingStatus.CONFIRMED;
 
     private final BookingRepository bookingRepository;
     private final TimeSlotRepository timeSlotRepository;
@@ -65,17 +64,16 @@ public class BookingService {
                 throw new ConflictException("Time slot is not available");
             }
 
-            boolean alreadyBooked = bookingRepository.existsByTimeSlotIdAndStatus(safeRequest.getTimeSlotId(), CONFIRMED_STATUS);
+            boolean alreadyBooked = bookingRepository.findByTimeSlotId(safeRequest.getTimeSlotId()).stream()
+                    .anyMatch(this::isBlockingBooking);
             if (alreadyBooked) {
                 throw new ConflictException("Time slot already booked");
             }
         }
 
-        boolean carAlreadyBookedInPeriod = bookingRepository.findByResourceIdAndStatus(
-                        safeRequest.getResourceId(),
-                        CONFIRMED_STATUS
-                )
+        boolean carAlreadyBookedInPeriod = bookingRepository.findByResourceId(safeRequest.getResourceId())
                 .stream()
+                .filter(this::isBlockingBooking)
                 .map(this::resolveBookingRange)
                 .filter(Objects::nonNull)
                 .anyMatch(range -> rangesOverlap(requestedStart, requestedEnd, range.start(), range.end()));
@@ -99,15 +97,11 @@ public class BookingService {
         booking.setPaymentProvider("manual");
         booking.setCustomerName(buildCustomerName(booking.getFirstName(), booking.getLastName()));
         booking.setServiceName(normalizeRequiredText(safeRequest.getServiceName(), "serviceName"));
-        booking.setStatus(CONFIRMED_STATUS);
+        booking.setStatus(BookingStatus.PENDING);
         booking.setBookingTime(LocalDateTime.now());
-
-        if (selectedSlot != null) {
-            selectedSlot.setAvailable(false);
-            timeSlotRepository.save(selectedSlot);
-        }
-
-        return bookingRepository.save(booking);
+        Booking savedBooking = bookingRepository.save(booking);
+        syncTimeSlotAvailability(savedBooking.getTimeSlotId(), selectedSlot);
+        return savedBooking;
     }
 
     public List<TimeSlot> getTimeSlotsByResource(@NonNull Long resourceId, Boolean available) {
@@ -120,24 +114,54 @@ public class BookingService {
 
     public synchronized void cancelBooking(@NonNull Long bookingId) {
         Objects.requireNonNull(bookingId, "bookingId must not be null");
+        updateBookingStatus(bookingId, BookingStatus.CANCELLED);
+    }
+
+    public synchronized @NonNull Booking updateBooking(@NonNull Long bookingId, @NonNull UpdateBookingRequest request) {
+        Objects.requireNonNull(bookingId, "bookingId must not be null");
+        UpdateBookingRequest safeRequest = Objects.requireNonNull(request, "request must not be null");
 
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new NotFoundException("Booking not found"));
 
-        if (booking.getStatus() == BookingStatus.CANCELLED) {
-            throw new BadRequestException("Booking already cancelled");
+        boolean changed = false;
+
+        if (safeRequest.getEndDateTime() != null && !safeRequest.getEndDateTime().trim().isBlank()) {
+            LocalDateTime updatedEnd = normalizeDateTime(safeRequest.getEndDateTime(), "endDateTime");
+            if (!booking.getStartDateTime().isBefore(updatedEnd)) {
+                throw new BadRequestException("endDateTime must be after startDateTime");
+            }
+            validateNoOverlap(booking, booking.getStartDateTime(), updatedEnd);
+            booking.setEndDateTime(updatedEnd);
+            changed = true;
         }
 
-        booking.setStatus(BookingStatus.CANCELLED);
-        bookingRepository.save(booking);
-
-        Long slotId = booking.getTimeSlotId();
-        if (slotId != null) {
-            timeSlotRepository.findByIdForUpdate(slotId).ifPresent(slot -> {
-                slot.setAvailable(true);
-                timeSlotRepository.save(slot);
-            });
+        if (safeRequest.getStatus() != null && !safeRequest.getStatus().trim().isBlank()) {
+            BookingStatus targetStatus = normalizeStatus(safeRequest.getStatus());
+            applyStatusTransition(booking, targetStatus);
+            changed = true;
         }
+
+        if (!changed) {
+            throw new BadRequestException("At least one booking field must be provided for update");
+        }
+
+        Booking savedBooking = bookingRepository.save(booking);
+        syncTimeSlotAvailability(savedBooking.getTimeSlotId(), null);
+        return savedBooking;
+    }
+
+    public synchronized @NonNull Booking updateBookingStatus(@NonNull Long bookingId, @NonNull BookingStatus targetStatus) {
+        Objects.requireNonNull(bookingId, "bookingId must not be null");
+        Objects.requireNonNull(targetStatus, "targetStatus must not be null");
+
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new NotFoundException("Booking not found"));
+
+        applyStatusTransition(booking, targetStatus);
+        Booking savedBooking = bookingRepository.save(booking);
+        syncTimeSlotAvailability(savedBooking.getTimeSlotId(), null);
+        return savedBooking;
     }
 
     private String normalizeRequiredText(String value, String fieldName) {
@@ -167,6 +191,62 @@ public class BookingService {
 
     private String buildCustomerName(String firstName, String lastName) {
         return firstName + " " + lastName;
+    }
+
+    private BookingStatus normalizeStatus(String value) {
+        String normalized = normalizeRequiredText(value, "status").replace('-', '_').toUpperCase();
+        try {
+            return BookingStatus.valueOf(normalized).canonical();
+        } catch (IllegalArgumentException ex) {
+            throw new BadRequestException("Unsupported booking status: " + value);
+        }
+    }
+
+    private void applyStatusTransition(Booking booking, BookingStatus targetStatus) {
+        BookingStatus currentStatus = booking.getStatus() == null ? BookingStatus.PENDING : booking.getStatus().canonical();
+        BookingStatus normalizedTarget = targetStatus.canonical();
+
+        if (!currentStatus.canTransitionTo(normalizedTarget)) {
+            throw new BadRequestException("Invalid booking status transition from "
+                    + currentStatus.name() + " to " + normalizedTarget.name());
+        }
+
+        booking.setStatus(normalizedTarget);
+    }
+
+    private void validateNoOverlap(Booking booking, LocalDateTime requestedStart, LocalDateTime requestedEnd) {
+        boolean overlaps = bookingRepository.findByResourceId(booking.getResourceId()).stream()
+                .filter(existing -> !Objects.equals(existing.getId(), booking.getId()))
+                .filter(this::isBlockingBooking)
+                .map(this::resolveBookingRange)
+                .filter(Objects::nonNull)
+                .anyMatch(range -> rangesOverlap(requestedStart, requestedEnd, range.start(), range.end()));
+
+        if (overlaps) {
+            throw new ConflictException("Car is already booked for the selected period");
+        }
+    }
+
+    private boolean isBlockingBooking(Booking booking) {
+        return booking.getStatus() != null && booking.getStatus().blocksAvailability();
+    }
+
+    private void syncTimeSlotAvailability(Long timeSlotId, TimeSlot lockedSlot) {
+        if (timeSlotId == null) {
+            return;
+        }
+
+        TimeSlot slot = lockedSlot;
+        if (slot == null) {
+            slot = timeSlotRepository.findByIdForUpdate(timeSlotId).orElse(null);
+        }
+        if (slot == null) {
+            return;
+        }
+
+        boolean blocked = bookingRepository.findByTimeSlotId(timeSlotId).stream().anyMatch(this::isBlockingBooking);
+        slot.setAvailable(!blocked);
+        timeSlotRepository.save(slot);
     }
 
     private BookingRange resolveBookingRange(Booking booking) {

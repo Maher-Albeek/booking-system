@@ -17,6 +17,7 @@ import com.maher.booking_system.repository.BookingRepository;
 import com.maher.booking_system.repository.PaymentRepository;
 import com.maher.booking_system.repository.PaymentWebhookEventRepository;
 import com.maher.booking_system.repository.ResourcesRepository;
+import com.maher.booking_system.repository.TimeSlotRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -38,6 +39,7 @@ public class PaymentService {
     private final PaymentRepository paymentRepository;
     private final PaymentWebhookEventRepository paymentWebhookEventRepository;
     private final ResourcesRepository resourcesRepository;
+    private final TimeSlotRepository timeSlotRepository;
     private final StripeApiClient stripeApiClient;
     private final ObjectMapper objectMapper;
     private final String webhookSecret;
@@ -49,6 +51,7 @@ public class PaymentService {
             PaymentRepository paymentRepository,
             PaymentWebhookEventRepository paymentWebhookEventRepository,
             ResourcesRepository resourcesRepository,
+            TimeSlotRepository timeSlotRepository,
             StripeApiClient stripeApiClient,
             ObjectMapper objectMapper,
             @Value("${app.payment.stripe.webhook-secret:}") String webhookSecret,
@@ -59,6 +62,7 @@ public class PaymentService {
         this.paymentRepository = paymentRepository;
         this.paymentWebhookEventRepository = paymentWebhookEventRepository;
         this.resourcesRepository = resourcesRepository;
+        this.timeSlotRepository = timeSlotRepository;
         this.stripeApiClient = stripeApiClient;
         this.objectMapper = objectMapper;
         this.webhookSecret = webhookSecret == null ? "" : webhookSecret.trim();
@@ -230,7 +234,9 @@ public class PaymentService {
         booking.setPayableCurrency(pricing.currency());
         booking.setPaymentProvider(PROVIDER);
         booking.setBookingTime(LocalDateTime.now());
-        return bookingRepository.save(booking);
+        Booking savedBooking = bookingRepository.save(booking);
+        syncTimeSlotAvailability(savedBooking);
+        return savedBooking;
     }
 
     private String normalizeRequired(String value, String fieldName) {
@@ -258,8 +264,9 @@ public class PaymentService {
         paymentRepository.save(payment);
 
         booking.setPaymentStatus(PaymentStatus.SUCCEEDED);
-        booking.setStatus(BookingStatus.CONFIRMED);
+        booking.setStatus(BookingStatus.PENDING);
         bookingRepository.save(booking);
+        syncTimeSlotAvailability(booking);
     }
 
     private void handleCheckoutExpired(JsonNode session) {
@@ -280,6 +287,7 @@ public class PaymentService {
 
         booking.setPaymentStatus(PaymentStatus.FAILED);
         bookingRepository.save(booking);
+        syncTimeSlotAvailability(booking);
     }
 
     private void handlePaymentFailed(JsonNode paymentIntent) {
@@ -301,6 +309,7 @@ public class PaymentService {
 
         booking.setPaymentStatus(PaymentStatus.FAILED);
         bookingRepository.save(booking);
+        syncTimeSlotAvailability(booking);
     }
 
     private void handleChargeRefunded(JsonNode charge) {
@@ -322,6 +331,7 @@ public class PaymentService {
 
         booking.setPaymentStatus(PaymentStatus.REFUNDED);
         bookingRepository.save(booking);
+        syncTimeSlotAvailability(booking);
     }
 
     private void verifyWebhookSignature(String payload, String signatureHeader) {
@@ -364,6 +374,19 @@ public class PaymentService {
         } catch (Exception ex) {
             throw new BadRequestException("Failed to validate webhook signature");
         }
+    }
+
+    private void syncTimeSlotAvailability(Booking booking) {
+        if (booking.getTimeSlotId() == null) {
+            return;
+        }
+
+        timeSlotRepository.findByIdForUpdate(booking.getTimeSlotId()).ifPresent(slot -> {
+            boolean blocked = bookingRepository.findByTimeSlotId(slot.getId()).stream()
+                    .anyMatch(existing -> existing.getStatus() != null && existing.getStatus().blocksAvailability());
+            slot.setAvailable(!blocked);
+            timeSlotRepository.save(slot);
+        });
     }
 
     private record Pricing(long amountCents, String currency, LocalDateTime start, LocalDateTime end) {

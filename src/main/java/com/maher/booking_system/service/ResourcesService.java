@@ -220,7 +220,8 @@ public class ResourcesService {
             return false;
         }
 
-        return bookingRepository.findByResourceIdAndStatus(car.getId(), BookingStatus.CONFIRMED).stream()
+        return bookingRepository.findByResourceId(car.getId()).stream()
+                .filter(booking -> booking.getStatus() != null && booking.getStatus().blocksAvailability())
                 .noneMatch(booking -> bookingOverlaps(booking, pickup, dropoff));
     }
 

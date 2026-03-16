@@ -547,7 +547,7 @@
                   <strong>{{ bookingContactName(booking) }}</strong>
                   <p>{{ resourceLabel(booking.resourceId) }}</p>
                 </div>
-                <span class="status-pill" [class.cancelled]="!isConfirmed(booking)">
+                <span class="status-pill" [class.cancelled]="!canCancelBooking(booking)">
                   {{ booking.status }}
                 </span>
               </div>
@@ -583,7 +583,7 @@
                 </div>
               </dl>
 
-              @if (isConfirmed(booking)) {
+              @if (canCancelBooking(booking)) {
                 <button
                   type="button"
                   class="ghost-button"
