@@ -49,8 +49,3 @@ Du könntest dein Projekt so beschreiben:
 > Das Frontend wurde mit **Angular** und **TypeScript** entwickelt, während das Backend auf **Java Spring Boot** basiert.  
 > Die Anwendung bietet eine moderne Weboberfläche, REST-APIs im Backend sowie Validierung und API-Dokumentation mit Swagger/OpenAPI.
 
-Wenn du willst, kann ich dir als Nächstes noch:
-1. **eine professionelle README-Beschreibung auf Deutsch**,  
-2. **eine kurze Bewerbung/Portfolio-Beschreibung**, oder  
-3. **eine technische Architektur-Beschreibung**  
-für dieses Projekt schreiben.
